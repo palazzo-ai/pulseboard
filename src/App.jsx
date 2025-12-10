@@ -266,6 +266,18 @@ export default function PalazzoTimeline() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef(null);
+  
+  // Linear Sync state
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncRecommendations, setSyncRecommendations] = useState([]);
+  const [syncError, setSyncError] = useState(null);
+  const [linearApiKey, setLinearApiKey] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('pulseboard_linear_key') || '';
+    }
+    return '';
+  });
 
   // Auto-scroll chat to bottom
   useEffect(() => {
@@ -397,6 +409,106 @@ export default function PalazzoTimeline() {
       showNotification('Failed to delete from database', 'warning');
     }
   };
+
+  // ========== LINEAR SYNC FUNCTIONS ==========
+  const handleLinearSync = async () => {
+    if (!linearApiKey) {
+      setSyncError('Please enter your Linear API key');
+      return;
+    }
+    
+    setSyncLoading(true);
+    setSyncError(null);
+    setSyncRecommendations([]);
+    
+    try {
+      const response = await fetch('/api/sync-linear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          opportunities: opportunities.filter(o => o.issues && o.issues.length > 0),
+          linearApiKey: linearApiKey
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Sync failed');
+      }
+      
+      const data = await response.json();
+      setSyncRecommendations(data.recommendations || []);
+      
+      if (data.recommendations?.length === 0) {
+        showNotification('All opportunities are in sync with Linear!', 'success');
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      setSyncError(error.message);
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  const applyRecommendation = (rec) => {
+    saveToUndo();
+    
+    const updatedOpp = opportunities.find(o => o.id === rec.opportunityId);
+    if (!updatedOpp) return;
+    
+    const newOpp = {
+      ...updatedOpp,
+      status: rec.recommendedStatus,
+      atRisk: rec.recommendAtRisk,
+      atRiskReason: rec.atRiskReason || ''
+    };
+    
+    setOpportunities(prev => prev.map(o => 
+      o.id === rec.opportunityId ? newOpp : o
+    ));
+    saveOpportunity(newOpp);
+    
+    // Remove from recommendations
+    setSyncRecommendations(prev => prev.filter(r => r.opportunityId !== rec.opportunityId));
+    showNotification(`Updated "${rec.opportunityTitle}"`, 'success');
+  };
+
+  const applyAllRecommendations = () => {
+    saveToUndo();
+    
+    const updates = syncRecommendations.map(rec => {
+      const opp = opportunities.find(o => o.id === rec.opportunityId);
+      if (!opp) return null;
+      return {
+        ...opp,
+        status: rec.recommendedStatus,
+        atRisk: rec.recommendAtRisk,
+        atRiskReason: rec.atRiskReason || ''
+      };
+    }).filter(Boolean);
+    
+    setOpportunities(prev => prev.map(opp => {
+      const update = updates.find(u => u.id === opp.id);
+      return update || opp;
+    }));
+    
+    updates.forEach(opp => saveOpportunity(opp));
+    setSyncRecommendations([]);
+    setSyncModalOpen(false);
+    showNotification(`Applied ${updates.length} updates from Linear`, 'success');
+  };
+
+  const dismissRecommendation = (rec) => {
+    setSyncRecommendations(prev => prev.filter(r => r.opportunityId !== rec.opportunityId));
+  };
+
+  const saveLinearApiKey = (key) => {
+    setLinearApiKey(key);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pulseboard_linear_key', key);
+    }
+  };
+  // ========== END LINEAR SYNC FUNCTIONS ==========
 
   // Export current state as JSON
   const exportData = () => {
@@ -1008,6 +1120,194 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
     );
   };
 
+  // ========== LINEAR SYNC MODAL ==========
+  const LinearSyncModal = () => {
+    const [keyInput, setKeyInput] = useState(linearApiKey);
+    
+    return (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setSyncModalOpen(false)}>
+        <div 
+          className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full shadow-2xl max-h-[85vh] overflow-hidden flex flex-col"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-indigo-900/50 to-purple-900/50">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Linear Sync</h2>
+                <p className="text-xs text-slate-400">Sync opportunity statuses from Linear issues</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setSyncModalOpen(false)}
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* API Key Input */}
+            <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+              <label className="block text-xs text-slate-400 uppercase tracking-wide mb-2">
+                Linear API Key
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={keyInput}
+                  onChange={e => setKeyInput(e.target.value)}
+                  placeholder="lin_api_..."
+                  className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  onClick={() => saveLinearApiKey(keyInput)}
+                  className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors"
+                >
+                  Save
+                </button>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                Get your API key from Linear Settings → API → Personal API keys
+              </p>
+            </div>
+            
+            {/* Sync Button */}
+            <button
+              onClick={handleLinearSync}
+              disabled={syncLoading || !linearApiKey}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              {syncLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Analyzing with Claude...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Sync from Linear
+                </>
+              )}
+            </button>
+            
+            {/* Error */}
+            {syncError && (
+              <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 text-red-400 text-sm">
+                {syncError}
+              </div>
+            )}
+            
+            {/* Recommendations */}
+            {syncRecommendations.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-white">
+                    Recommended Updates ({syncRecommendations.length})
+                  </h3>
+                  <button
+                    onClick={applyAllRecommendations}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors"
+                  >
+                    Apply All
+                  </button>
+                </div>
+                
+                {syncRecommendations.map((rec, idx) => (
+                  <div 
+                    key={rec.opportunityId}
+                    className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-white">{rec.opportunityTitle}</h4>
+                        <p className="text-xs text-slate-400 mt-1">{rec.issuesSummary}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Status Change */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span 
+                        className="px-2 py-1 rounded text-xs font-medium"
+                        style={{ 
+                          backgroundColor: STATUSES[rec.currentStatus]?.bgColor || '#6b728020',
+                          color: STATUSES[rec.currentStatus]?.color || '#6b7280'
+                        }}
+                      >
+                        {STATUSES[rec.currentStatus]?.label || rec.currentStatus}
+                      </span>
+                      <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                      <span 
+                        className="px-2 py-1 rounded text-xs font-medium"
+                        style={{ 
+                          backgroundColor: STATUSES[rec.recommendedStatus]?.bgColor || '#6b728020',
+                          color: STATUSES[rec.recommendedStatus]?.color || '#6b7280'
+                        }}
+                      >
+                        {STATUSES[rec.recommendedStatus]?.label || rec.recommendedStatus}
+                      </span>
+                    </div>
+                    
+                    {/* At Risk Change */}
+                    {rec.recommendAtRisk && !rec.currentAtRisk && (
+                      <div className="flex items-center gap-2 text-sm text-orange-400">
+                        <span className="text-orange-500">⚠</span>
+                        <span>Flag as At Risk: {rec.atRiskReason}</span>
+                      </div>
+                    )}
+                    
+                    {/* Reason */}
+                    <p className="text-xs text-slate-400">{rec.statusReason}</p>
+                    
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-2 border-t border-slate-700">
+                      <button
+                        onClick={() => applyRecommendation(rec)}
+                        className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors"
+                      >
+                        Apply
+                      </button>
+                      <button
+                        onClick={() => dismissRecommendation(rec)}
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-colors"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Empty State */}
+            {!syncLoading && syncRecommendations.length === 0 && !syncError && linearApiKey && (
+              <div className="text-center py-8 text-slate-500">
+                <svg className="w-12 h-12 mx-auto mb-3 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p>Click "Sync from Linear" to analyze your issues</p>
+                <p className="text-xs mt-1">Claude will recommend status updates based on Linear issue statuses</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+  // ========== END LINEAR SYNC MODAL ==========
+
   // Loading state
   if (loading) {
     return (
@@ -1048,6 +1348,15 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
               <span>🤖</span> Claude
             </button>
           )}
+          <button 
+            onClick={() => setSyncModalOpen(true)} 
+            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Linear Sync
+          </button>
           <button onClick={() => setShowDataModal(true)} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-lg transition-colors">
             📁 Data
           </button>
@@ -1616,6 +1925,9 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
           </div>
         </div>
       )}
+      
+      {/* Linear Sync Modal */}
+      {syncModalOpen && <LinearSyncModal />}
     </div>
   );
 }
