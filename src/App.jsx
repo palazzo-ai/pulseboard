@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { supabase } from './supabase';
 
 // Status definitions
 const STATUSES = {
@@ -184,29 +185,58 @@ const ensureStatusFields = (opp) => ({
   atRiskReason: opp.atRiskReason || ''
 });
 
-// Load initial state from localStorage or fall back to defaults
-const loadFromStorage = () => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        opportunities: (parsed.opportunities || initialOpportunities).map(ensureStatusFields),
-        milestones: parsed.milestones || initialMilestones
-      };
-    }
-  } catch (e) {
-    console.warn('Failed to load from localStorage:', e);
-  }
-  return {
-    opportunities: initialOpportunities.map(ensureStatusFields),
-    milestones: initialMilestones
-  };
-};
+// Convert DB row to app format
+const dbToOpportunity = (row) => ({
+  id: row.id,
+  title: row.title,
+  area: row.area,
+  initiative: row.initiative,
+  month: row.month,
+  description: row.description || '',
+  milestoneId: row.milestone_id,
+  issues: row.issues || [],
+  status: row.status || 'not_started',
+  atRisk: row.at_risk || false,
+  atRiskReason: row.at_risk_reason || ''
+});
+
+// Convert app format to DB row
+const opportunityToDb = (opp) => ({
+  id: opp.id,
+  title: opp.title,
+  area: opp.area,
+  initiative: opp.initiative,
+  month: opp.month,
+  description: opp.description || '',
+  milestone_id: opp.milestoneId,
+  issues: opp.issues || [],
+  status: opp.status || 'not_started',
+  at_risk: opp.atRisk || false,
+  at_risk_reason: opp.atRiskReason || '',
+  updated_at: new Date().toISOString()
+});
+
+const dbToMilestone = (row) => ({
+  id: row.id,
+  title: row.title,
+  area: row.area,
+  month: row.month,
+  description: row.description || ''
+});
+
+const milestoneToDb = (m) => ({
+  id: m.id,
+  title: m.title,
+  area: m.area,
+  month: m.month,
+  description: m.description || '',
+  updated_at: new Date().toISOString()
+});
 
 export default function PalazzoTimeline() {
-  const [opportunities, setOpportunities] = useState(() => loadFromStorage().opportunities);
-  const [milestones, setMilestones] = useState(() => loadFromStorage().milestones);
+  const [opportunities, setOpportunities] = useState([]);
+  const [milestones, setMilestones] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedOpportunity, setSelectedOpportunity] = useState(null);
   const [selectedMilestone, setSelectedMilestone] = useState(null);
   const [editingOpportunity, setEditingOpportunity] = useState(null);
@@ -247,14 +277,126 @@ export default function PalazzoTimeline() {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // Save to localStorage whenever opportunities or milestones change
+  // Load data from Supabase on mount
   useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ opportunities, milestones }));
-    } catch (e) {
-      console.warn('Failed to save to localStorage:', e);
+      // Load opportunities
+      const { data: oppsData, error: oppsError } = await supabase
+        .from('opportunities')
+        .select('*')
+        .order('id');
+      
+      // Load milestones
+      const { data: milestonesData, error: milestonesError } = await supabase
+        .from('milestones')
+        .select('*')
+        .order('id');
+
+      if (oppsError) throw oppsError;
+      if (milestonesError) throw milestonesError;
+
+      // If database is empty, seed with initial data
+      if (oppsData.length === 0 && milestonesData.length === 0) {
+        await seedDatabase();
+        return;
+      }
+
+      setOpportunities(oppsData.map(dbToOpportunity));
+      setMilestones(milestonesData.map(dbToMilestone));
+    } catch (error) {
+      console.error('Error loading data:', error);
+      showNotification('Failed to load data from database', 'warning');
+      // Fall back to initial data
+      setOpportunities(initialOpportunities.map(ensureStatusFields));
+      setMilestones(initialMilestones);
+    } finally {
+      setLoading(false);
     }
-  }, [opportunities, milestones]);
+  };
+
+  const seedDatabase = async () => {
+    try {
+      showNotification('Setting up database...', 'info');
+      
+      // Insert milestones
+      const { error: mError } = await supabase
+        .from('milestones')
+        .insert(initialMilestones.map(milestoneToDb));
+      if (mError) throw mError;
+
+      // Insert opportunities
+      const { error: oError } = await supabase
+        .from('opportunities')
+        .insert(initialOpportunities.map(o => opportunityToDb(ensureStatusFields(o))));
+      if (oError) throw oError;
+
+      // Reload data
+      await loadData();
+      showNotification('Database initialized!', 'success');
+    } catch (error) {
+      console.error('Error seeding database:', error);
+      showNotification('Failed to initialize database', 'warning');
+    }
+  };
+
+  // Save opportunity to Supabase
+  const saveOpportunity = async (opp) => {
+    try {
+      const { error } = await supabase
+        .from('opportunities')
+        .upsert(opportunityToDb(opp));
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error saving opportunity:', error);
+      showNotification('Failed to save to database', 'warning');
+    }
+  };
+
+  // Save milestone to Supabase
+  const saveMilestone = async (m) => {
+    try {
+      const { error } = await supabase
+        .from('milestones')
+        .upsert(milestoneToDb(m));
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error saving milestone:', error);
+      showNotification('Failed to save to database', 'warning');
+    }
+  };
+
+  // Delete opportunity from Supabase
+  const deleteOpportunityFromDb = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('opportunities')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting opportunity:', error);
+      showNotification('Failed to delete from database', 'warning');
+    }
+  };
+
+  // Delete milestone from Supabase
+  const deleteMilestoneFromDb = async (id) => {
+    try {
+      const { error } = await supabase
+        .from('milestones')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting milestone:', error);
+      showNotification('Failed to delete from database', 'warning');
+    }
+  };
 
   // Export current state as JSON
   const exportData = () => {
@@ -494,18 +636,18 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
     if (draggedItem) {
       saveToUndo();
       if (dragType === 'opportunity') {
+        const updatedOpp = { ...draggedItem, area: areaId, month: monthId };
         setOpportunities(prev => prev.map(opp => 
-          opp.id === draggedItem.id 
-            ? { ...opp, area: areaId, month: monthId }
-            : opp
+          opp.id === draggedItem.id ? updatedOpp : opp
         ));
+        saveOpportunity(updatedOpp);
         showNotification(`Moved "${draggedItem.title}"`, 'success');
       } else if (dragType === 'milestone') {
+        const updatedMilestone = { ...draggedItem, area: areaId, month: monthId };
         setMilestones(prev => prev.map(m => 
-          m.id === draggedItem.id 
-            ? { ...m, area: areaId, month: monthId }
-            : m
+          m.id === draggedItem.id ? updatedMilestone : m
         ));
+        saveMilestone(updatedMilestone);
         showNotification(`Moved milestone "${draggedItem.title}"`, 'success');
       }
     }
@@ -525,11 +667,12 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
     const opp = opportunities.find(o => o.id === id);
     saveToUndo();
     setOpportunities(prev => prev.filter(o => o.id !== id));
+    deleteOpportunityFromDb(id);
     setSelectedOpportunity(null);
     showNotification(`Deleted "${opp?.title}"`, 'warning');
   };
 
-  const saveOpportunity = (opp) => {
+  const handleSaveOpportunity = (opp) => {
     saveToUndo();
     if (isCreatingOpp) {
       setOpportunities(prev => [...prev, opp]);
@@ -538,6 +681,7 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
       setOpportunities(prev => prev.map(o => o.id === opp.id ? opp : o));
       showNotification(`Updated "${opp.title}"`, 'success');
     }
+    saveOpportunity(opp);
     setEditingOpportunity(null);
     setIsCreatingOpp(false);
     setSelectedOpportunity(null);
@@ -547,6 +691,7 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
     saveToUndo();
     const newOpp = { ...opp, id: Date.now(), title: `${opp.title} (copy)` };
     setOpportunities(prev => [...prev, newOpp]);
+    saveOpportunity(newOpp);
     showNotification(`Duplicated "${opp.title}"`, 'success');
   };
 
@@ -555,15 +700,19 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
     const m = milestones.find(m => m.id === id);
     saveToUndo();
     // Unlink opportunities from this milestone
+    const updatedOpps = opportunities.filter(opp => opp.milestoneId === id);
     setOpportunities(prev => prev.map(opp => 
       opp.milestoneId === id ? { ...opp, milestoneId: null } : opp
     ));
+    // Save unlinked opportunities to DB
+    updatedOpps.forEach(opp => saveOpportunity({ ...opp, milestoneId: null }));
     setMilestones(prev => prev.filter(m => m.id !== id));
+    deleteMilestoneFromDb(id);
     setSelectedMilestone(null);
     showNotification(`Deleted milestone "${m?.title}"`, 'warning');
   };
 
-  const saveMilestone = (m) => {
+  const handleSaveMilestone = (m) => {
     saveToUndo();
     if (isCreatingMilestone) {
       setMilestones(prev => [...prev, m]);
@@ -572,6 +721,7 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
       setMilestones(prev => prev.map(existing => existing.id === m.id ? m : existing));
       showNotification(`Updated milestone "${m.title}"`, 'success');
     }
+    saveMilestone(m);
     setEditingMilestone(null);
     setIsCreatingMilestone(false);
     setSelectedMilestone(null);
@@ -857,6 +1007,18 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
       </div>
     );
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-slate-700 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading Pulseboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4">
@@ -1286,7 +1448,7 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
       {editingOpportunity && (
         <OpportunityForm
           opportunity={editingOpportunity}
-          onSave={saveOpportunity}
+          onSave={handleSaveOpportunity}
           onCancel={() => { setEditingOpportunity(null); setIsCreatingOpp(false); }}
           isNew={isCreatingOpp}
         />
@@ -1295,7 +1457,7 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
       {editingMilestone && (
         <MilestoneForm
           milestone={editingMilestone}
-          onSave={saveMilestone}
+          onSave={handleSaveMilestone}
           onCancel={() => { setEditingMilestone(null); setIsCreatingMilestone(false); }}
           isNew={isCreatingMilestone}
         />
