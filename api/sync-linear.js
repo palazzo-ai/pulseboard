@@ -201,7 +201,7 @@ async function fetchLinearIssues(issueIds, apiKey) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': apiKey,
+      'Authorization': apiKey.startsWith('Bearer ') ? apiKey : `Bearer ${apiKey}`,
     },
     body: JSON.stringify({ query, variables: { filter } }),
   });
