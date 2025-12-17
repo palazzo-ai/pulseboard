@@ -1,34 +1,21 @@
 // Vercel Serverless Function for Linear Sync
 // This endpoint fetches Linear issues and uses Claude to analyze status recommendations
 
-export const config = {
-  runtime: 'edge',
-};
-
-export default async function handler(req) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { opportunities, linearApiKey } = await req.json();
+    const { opportunities, linearApiKey } = req.body;
     
     const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     if (!anthropicApiKey) {
-      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
     }
 
     if (!linearApiKey) {
-      return new Response(JSON.stringify({ error: 'Linear API key required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(400).json({ error: 'Linear API key required' });
     }
 
     // Collect all unique issue IDs from opportunities
@@ -38,12 +25,9 @@ export default async function handler(req) {
     });
 
     if (allIssueIds.size === 0) {
-      return new Response(JSON.stringify({ 
+      return res.status(200).json({ 
         recommendations: [],
         message: 'No opportunities have linked Linear issues' 
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
       });
     }
 
@@ -143,10 +127,7 @@ If no changes needed, return an empty array: []`
     if (!claudeResponse.ok) {
       const error = await claudeResponse.text();
       console.error('Claude API error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to analyze with Claude' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(500).json({ error: 'Failed to analyze with Claude' });
     }
 
     const claudeData = await claudeResponse.json();
@@ -167,21 +148,15 @@ If no changes needed, return an empty array: []`
       }
     }
 
-    return new Response(JSON.stringify({ 
+    return res.status(200).json({ 
       recommendations,
       issuesFetched: linearIssues.length,
       opportunitiesAnalyzed: opportunitiesWithIssues.length
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     console.error('Sync error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ error: error.message });
   }
 }
 
