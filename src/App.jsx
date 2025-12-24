@@ -233,6 +233,383 @@ const milestoneToDb = (m) => ({
   updated_at: new Date().toISOString()
 });
 
+// ========== TEAM MEMBER COMPONENTS ==========
+// Copy this entire block and paste after line 234 in App.jsx (before `export default function PalazzoTimeline()`)
+
+// Team Member Badge - Small colored avatar
+const TeamMemberBadge = ({ member, size = 'sm', showName = false, showPoints = false, points = 0 }) => {
+  const sizeClasses = {
+    xs: 'w-5 h-5 text-[9px]',
+    sm: 'w-6 h-6 text-[10px]',
+    md: 'w-8 h-8 text-xs',
+    lg: 'w-10 h-10 text-sm'
+  };
+
+  const initials = (member?.name || '?')
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <div
+        className={`${sizeClasses[size]} rounded-full flex items-center justify-center text-white font-medium flex-shrink-0`}
+        style={{ backgroundColor: member?.color || '#6b7280' }}
+        title={member?.name || 'Unknown'}
+      >
+        {initials}
+      </div>
+      {(showName || showPoints) && (
+        <div className="flex flex-col min-w-0">
+          {showName && <span className="text-xs font-medium text-slate-300 truncate">{member?.name}</span>}
+          {showPoints && <span className="text-[10px] text-slate-500">{points} pts</span>}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Assignment Badges Row - Shows all assignees for an opportunity
+const AssignmentBadges = ({ 
+  assignments = [], 
+  onAddClick, 
+  maxVisible = 3,
+  showWarning = true,
+  size = 'xs'
+}) => {
+  const visibleAssignments = assignments.slice(0, maxVisible);
+  const remainingCount = Math.max(0, assignments.length - maxVisible);
+  const totalPoints = assignments.reduce((sum, a) => sum + (a.points || 0), 0);
+  const isUnstaffed = assignments.length === 0;
+
+  return (
+    <div className="flex items-center gap-1">
+      {isUnstaffed && showWarning && (
+        <div className="flex items-center gap-0.5 text-amber-500 text-[9px]" title="No team assigned">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+      )}
+
+      <div className="flex -space-x-1">
+        {visibleAssignments.map((assignment, idx) => (
+          <div
+            key={assignment.team_member?.id || idx}
+            className="relative ring-1 ring-slate-900 rounded-full"
+            title={`${assignment.team_member?.name || 'Unknown'}: ${assignment.points || 0} pts`}
+          >
+            <TeamMemberBadge member={assignment.team_member} size={size} />
+          </div>
+        ))}
+        
+        {remainingCount > 0 && (
+          <div className={`${size === 'xs' ? 'w-5 h-5 text-[8px]' : 'w-6 h-6 text-[9px]'} rounded-full bg-slate-700 flex items-center justify-center text-slate-400 font-medium ring-1 ring-slate-900`}>
+            +{remainingCount}
+          </div>
+        )}
+      </div>
+
+      {assignments.length > 0 && (
+        <span className="text-[9px] text-slate-500 ml-0.5">{totalPoints}p</span>
+      )}
+
+      {onAddClick && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onAddClick(); }}
+          className={`${size === 'xs' ? 'w-4 h-4' : 'w-5 h-5'} rounded-full border border-dashed border-slate-600 flex items-center justify-center text-slate-500 hover:border-indigo-400 hover:text-indigo-400 hover:bg-indigo-900/20 transition-colors`}
+          title="Assign team"
+        >
+          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+};
+
+// Assign Team Member Modal
+const AssignTeamMemberModal = ({ isOpen, onClose, opportunity, teamMembers = [], existingAssignments = [], onSave }) => {
+  const [assignments, setAssignments] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && existingAssignments) {
+      setAssignments(existingAssignments.map(a => ({
+        team_member_id: a.team_member_id || a.team_member?.id,
+        points: a.points || 0,
+        role: a.role || 'Contributor'
+      })));
+    }
+  }, [isOpen, existingAssignments]);
+
+  const toggleMember = (memberId) => {
+    const exists = assignments.find(a => a.team_member_id === memberId);
+    if (exists) {
+      setAssignments(assignments.filter(a => a.team_member_id !== memberId));
+    } else {
+      setAssignments([...assignments, { team_member_id: memberId, points: 5, role: 'Contributor' }]);
+    }
+  };
+
+  const updateAssignment = (memberId, field, value) => {
+    setAssignments(assignments.map(a => a.team_member_id === memberId ? { ...a, [field]: value } : a));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave(opportunity.id, assignments);
+      onClose();
+    } catch (err) {
+      console.error('Failed to save assignments:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!isOpen) return null;
+  const totalPoints = assignments.reduce((sum, a) => sum + (a.points || 0), 0);
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-lg w-full shadow-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="p-4 border-b border-slate-800 bg-gradient-to-r from-indigo-900/50 to-purple-900/50">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-semibold text-white">Assign Team</h2>
+              <p className="text-xs text-slate-400 truncate">{opportunity?.title}</p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="mb-4 p-3 bg-slate-800/50 rounded-lg flex justify-between items-center">
+            <span className="text-sm text-slate-400">Total Estimated Points</span>
+            <span className="text-lg font-semibold text-indigo-400">{totalPoints} pts</span>
+          </div>
+
+          <div className="space-y-2">
+            {teamMembers.map(member => {
+              const assignment = assignments.find(a => a.team_member_id === member.id);
+              const isSelected = !!assignment;
+
+              return (
+                <div key={member.id} className={`p-3 rounded-lg border transition-colors ${isSelected ? 'border-indigo-500/50 bg-indigo-900/20' : 'border-slate-700 hover:border-slate-600'}`}>
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => toggleMember(member.id)} className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-600'}`}>
+                        {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                      <TeamMemberBadge member={member} size="md" showName />
+                    </button>
+                    <span className="text-xs text-slate-500">{member.role}</span>
+                  </div>
+
+                  {isSelected && (
+                    <div className="mt-3 pt-3 border-t border-slate-700/50 grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] text-slate-500 uppercase tracking-wide mb-1">Points</label>
+                        <input
+                          type="number" min="0" max="50"
+                          value={assignment.points}
+                          onChange={(e) => updateAssignment(member.id, 'points', parseInt(e.target.value) || 0)}
+                          className="w-full px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-slate-500 uppercase tracking-wide mb-1">Role</label>
+                        <select
+                          value={assignment.role}
+                          onChange={(e) => updateAssignment(member.id, 'role', e.target.value)}
+                          className="w-full px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        >
+                          <option value="Lead">Lead</option>
+                          <option value="Contributor">Contributor</option>
+                          <option value="Reviewer">Reviewer</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-slate-800 flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-slate-400 hover:text-white transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
+            {saving ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>Saving...</> : 'Save Assignments'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Team Management Panel
+const TeamManagementPanel = ({ isOpen, onClose, teamMembers, onRefresh }) => {
+  const [editingMember, setEditingMember] = useState(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
+  const roles = ['Engineering Lead', 'Full Stack', 'Frontend', 'Backend', 'DevOps', 'QA', 'Design', 'Product'];
+
+  const handleSaveMember = async (memberData) => {
+    try {
+      if (memberData.id) {
+        const { error } = await supabase.from('team_members').update({
+          name: memberData.name, email: memberData.email, role: memberData.role,
+          color: memberData.color, capacity_points_per_sprint: memberData.capacity_points_per_sprint
+        }).eq('id', memberData.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('team_members').insert([{
+          name: memberData.name, email: memberData.email, role: memberData.role,
+          color: memberData.color, capacity_points_per_sprint: memberData.capacity_points_per_sprint || 18
+        }]);
+        if (error) throw error;
+      }
+      onRefresh();
+      setEditingMember(null);
+      setIsAdding(false);
+    } catch (err) { console.error('Failed to save team member:', err); }
+  };
+
+  const handleDeactivate = async (memberId) => {
+    if (!confirm('Deactivate this team member?')) return;
+    try {
+      const { error } = await supabase.from('team_members').update({ is_active: false }).eq('id', memberId);
+      if (error) throw error;
+      onRefresh();
+    } catch (err) { console.error('Failed to deactivate:', err); }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full shadow-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="p-4 border-b border-slate-800 bg-gradient-to-r from-emerald-900/50 to-teal-900/50 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Team Management</h2>
+            <p className="text-xs text-slate-400">{teamMembers.length} active members</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setIsAdding(true)} className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              Add
+            </button>
+            <button onClick={onClose} className="text-slate-400 hover:text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-2">
+            {teamMembers.map(member => (
+              <div key={member.id} className="p-3 border border-slate-700 rounded-lg flex items-center justify-between hover:bg-slate-800/50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <TeamMemberBadge member={member} size="lg" />
+                  <div>
+                    <div className="font-medium text-white">{member.name}</div>
+                    <div className="text-xs text-slate-500">{member.role} • {member.capacity_points_per_sprint} pts/sprint</div>
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={() => setEditingMember(member)} className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-900/20 rounded transition-colors" title="Edit">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  </button>
+                  <button onClick={() => handleDeactivate(member.id)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors" title="Deactivate">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {(editingMember || isAdding) && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={() => { setEditingMember(null); setIsAdding(false); }}>
+            <div className="bg-slate-800 border border-slate-600 rounded-xl max-w-md w-full p-4 mx-4" onClick={e => e.stopPropagation()}>
+              <h3 className="text-base font-semibold text-white mb-4">{editingMember ? 'Edit Team Member' : 'Add Team Member'}</h3>
+              <TeamMemberFormInner member={editingMember} colors={colors} roles={roles} onSave={handleSaveMember} onCancel={() => { setEditingMember(null); setIsAdding(false); }} />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const TeamMemberFormInner = ({ member, colors, roles, onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
+    id: member?.id || null, name: member?.name || '', email: member?.email || '',
+    role: member?.role || 'Full Stack', color: member?.color || '#6366f1',
+    capacity_points_per_sprint: member?.capacity_points_per_sprint || 18
+  });
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Name</label>
+        <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="John Doe" />
+      </div>
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Email</label>
+        <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="john@palazzo.ai" />
+      </div>
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Role</label>
+        <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          {roles.map(role => (<option key={role} value={role}>{role}</option>))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Color</label>
+        <div className="flex gap-2">
+          {colors.map(color => (
+            <button key={color} type="button" onClick={() => setFormData({ ...formData, color })}
+              className={`w-7 h-7 rounded-full border-2 transition-transform ${formData.color === color ? 'border-white scale-110' : 'border-transparent hover:scale-105'}`}
+              style={{ backgroundColor: color }} />
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Capacity (points/sprint)</label>
+        <input type="number" min="0" max="50" value={formData.capacity_points_per_sprint}
+          onChange={(e) => setFormData({ ...formData, capacity_points_per_sprint: parseInt(e.target.value) || 0 })}
+          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+      <div className="flex justify-end gap-2 pt-2">
+        <button type="button" onClick={onCancel} className="px-4 py-2 text-slate-400 hover:text-white transition-colors">Cancel</button>
+        <button type="button" onClick={() => onSave(formData)} disabled={!formData.name}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors disabled:opacity-50">Save</button>
+      </div>
+    </div>
+  );
+};
+
+// ========== END TEAM MEMBER COMPONENTS ==========
+
 export default function PalazzoTimeline() {
   const [opportunities, setOpportunities] = useState([]);
   const [milestones, setMilestones] = useState([]);
@@ -279,6 +656,14 @@ export default function PalazzoTimeline() {
     return '';
   });
 
+  // ========== TEAM/RESOURCE STATE ==========
+const [teamMembers, setTeamMembers] = useState([]);
+const [assignments, setAssignments] = useState({}); // Map: opportunityId -> array of assignments
+const [teamPanelOpen, setTeamPanelOpen] = useState(false);
+const [assignModalOpen, setAssignModalOpen] = useState(false);
+const [assignModalOpp, setAssignModalOpp] = useState(null);
+
+
   // Auto-scroll chat to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -292,6 +677,8 @@ export default function PalazzoTimeline() {
   // Load data from Supabase on mount
   useEffect(() => {
     loadData();
+    loadTeamMembers();     // ADD THIS
+    loadAllAssignments();
   }, []);
 
   const loadData = async () => {
@@ -329,6 +716,82 @@ export default function PalazzoTimeline() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadTeamMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) {
+        console.log('team_members table not found:', error.message);
+        return;
+      }
+      setTeamMembers(data || []);
+    } catch (err) {
+      console.log('Failed to load team members:', err);
+    }
+  };
+  
+  const loadAllAssignments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('assignments')
+        .select(`
+          id, opportunity_id, team_member_id, points, role,
+          team_members (id, name, email, color, role)
+        `);
+      
+      if (error) {
+        console.log('assignments table not found:', error.message);
+        return;
+      }
+      
+      const grouped = {};
+      (data || []).forEach(a => {
+        const oppId = a.opportunity_id;
+        if (!grouped[oppId]) grouped[oppId] = [];
+        grouped[oppId].push({
+          ...a,
+          team_member: a.team_members
+        });
+      });
+      setAssignments(grouped);
+    } catch (err) {
+      console.log('Failed to load assignments:', err);
+    }
+  };
+  
+  const saveAssignments = async (opportunityId, newAssignments) => {
+    try {
+      await supabase.from('assignments').delete().eq('opportunity_id', opportunityId);
+      
+      if (newAssignments.length > 0) {
+        const toInsert = newAssignments.map(a => ({
+          opportunity_id: opportunityId,
+          team_member_id: a.team_member_id,
+          points: a.points || 0,
+          role: a.role || 'Contributor'
+        }));
+        
+        const { error } = await supabase.from('assignments').insert(toInsert);
+        if (error) throw error;
+      }
+      
+      await loadAllAssignments();
+      showNotification('Team assignments saved', 'success');
+    } catch (err) {
+      console.error('Failed to save assignments:', err);
+      showNotification('Failed to save assignments', 'warning');
+    }
+  };
+  
+  const openAssignModal = (opp) => {
+    setAssignModalOpp(opp);
+    setAssignModalOpen(true);
   };
 
   const seedDatabase = async () => {
@@ -1031,6 +1494,7 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
               <button type="submit" disabled={!form.title.trim()} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm rounded-lg transition-colors">
                 {isNew ? 'Create' : 'Save Changes'}
               </button>
+              
             </div>
           </form>
         </div>
@@ -1357,6 +1821,15 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
             </svg>
             Linear Sync
           </button>
+          <button 
+  onClick={() => setTeamPanelOpen(true)} 
+  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5"
+>
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+  </svg>
+  Team
+</button>
           <button onClick={() => setShowDataModal(true)} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-lg transition-colors">
             📁 Data
           </button>
@@ -1577,11 +2050,20 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
                                   </span>
                                 )}
                               </div>
-                              {opp.issues.length > 0 && (
-                                <div className="text-slate-500 text-[9px] mt-0.5">
-                                  {opp.issues.slice(0, 2).join(', ')}{opp.issues.length > 2 ? '...' : ''}
-                                </div>
-                              )}
+                              {/* Team Assignments */}
+<div className="mt-1 flex items-center justify-between">
+  <AssignmentBadges
+    assignments={assignments[opp.id] || []}
+    onAddClick={() => openAssignModal(opp)}
+    maxVisible={2}
+    size="xs"
+  />
+  {opp.issues.length > 0 && (
+    <span className="text-slate-500 text-[9px]">
+      {opp.issues.length} issues
+    </span>
+  )}
+</div>
                             </div>
                           );
                         })}
@@ -1928,6 +2410,23 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
       
       {/* Linear Sync Modal */}
       {syncModalOpen && <LinearSyncModal />}
+      {/* Team Management Panel */}
+<TeamManagementPanel
+  isOpen={teamPanelOpen}
+  onClose={() => setTeamPanelOpen(false)}
+  teamMembers={teamMembers}
+  onRefresh={loadTeamMembers}
+/>
+
+{/* Assign Team Member Modal */}
+<AssignTeamMemberModal
+  isOpen={assignModalOpen}
+  onClose={() => { setAssignModalOpen(false); setAssignModalOpp(null); }}
+  opportunity={assignModalOpp}
+  teamMembers={teamMembers}
+  existingAssignments={assignModalOpp ? (assignments[assignModalOpp.id] || []) : []}
+  onSave={saveAssignments}
+/>
     </div>
   );
 }
