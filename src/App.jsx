@@ -234,95 +234,58 @@ const milestoneToDb = (m) => ({
 });
 
 // ========== TEAM MEMBER COMPONENTS ==========
-// Copy this entire block and paste after line 234 in App.jsx (before `export default function PalazzoTimeline()`)
 
-// Team Member Badge - Small colored avatar
-const TeamMemberBadge = ({ member, size = 'sm', showName = false, showPoints = false, points = 0 }) => {
+const TeamMemberBadge = ({ member, size = 'sm', showName = false }) => {
   const sizeClasses = {
     xs: 'w-5 h-5 text-[9px]',
     sm: 'w-6 h-6 text-[10px]',
     md: 'w-8 h-8 text-xs',
     lg: 'w-10 h-10 text-sm'
   };
-
-  const initials = (member?.name || '?')
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-
+  const initials = (member?.name || '?').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   return (
     <div className="flex items-center gap-1.5">
-      <div
-        className={`${sizeClasses[size]} rounded-full flex items-center justify-center text-white font-medium flex-shrink-0`}
-        style={{ backgroundColor: member?.color || '#6b7280' }}
-        title={member?.name || 'Unknown'}
-      >
+      <div className={`${sizeClasses[size]} rounded-full flex items-center justify-center text-white font-medium flex-shrink-0`}
+        style={{ backgroundColor: member?.color || '#6b7280' }} title={member?.name || 'Unknown'}>
         {initials}
       </div>
-      {(showName || showPoints) && (
-        <div className="flex flex-col min-w-0">
-          {showName && <span className="text-xs font-medium text-slate-300 truncate">{member?.name}</span>}
-          {showPoints && <span className="text-[10px] text-slate-500">{points} pts</span>}
-        </div>
-      )}
+      {showName && <span className="text-xs font-medium text-slate-300 truncate">{member?.name}</span>}
     </div>
   );
 };
 
-// Assignment Badges Row - Shows all assignees for an opportunity
-const AssignmentBadges = ({ 
-  assignments = [], 
-  onAddClick, 
-  maxVisible = 3,
-  showWarning = true,
-  size = 'xs'
-}) => {
+const AssignmentBadges = ({ assignments = [], onAddClick, maxVisible = 3, showWarning = true, size = 'xs' }) => {
   const visibleAssignments = assignments.slice(0, maxVisible);
   const remainingCount = Math.max(0, assignments.length - maxVisible);
   const totalPoints = assignments.reduce((sum, a) => sum + (a.points || 0), 0);
   const isUnstaffed = assignments.length === 0;
-
   return (
     <div className="flex items-center gap-1">
       {isUnstaffed && showWarning && (
         <div className="flex items-center gap-0.5 text-amber-500 text-[9px]" title="No team assigned">
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
       )}
-
       <div className="flex -space-x-1">
         {visibleAssignments.map((assignment, idx) => (
-          <div
-            key={assignment.team_member?.id || idx}
-            className="relative ring-1 ring-slate-900 rounded-full"
-            title={`${assignment.team_member?.name || 'Unknown'}: ${assignment.points || 0} pts`}
-          >
+          <div key={assignment.team_member?.id || idx} className="relative ring-1 ring-slate-900 rounded-full"
+            title={`${assignment.team_member?.name || 'Unknown'}: ${assignment.points || 0} pts`}>
             <TeamMemberBadge member={assignment.team_member} size={size} />
           </div>
         ))}
-        
         {remainingCount > 0 && (
           <div className={`${size === 'xs' ? 'w-5 h-5 text-[8px]' : 'w-6 h-6 text-[9px]'} rounded-full bg-slate-700 flex items-center justify-center text-slate-400 font-medium ring-1 ring-slate-900`}>
             +{remainingCount}
           </div>
         )}
       </div>
-
-      {assignments.length > 0 && (
-        <span className="text-[9px] text-slate-500 ml-0.5">{totalPoints}p</span>
-      )}
-
+      {assignments.length > 0 && <span className="text-[9px] text-slate-500 ml-0.5">{totalPoints}p</span>}
       {onAddClick && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onAddClick(); }}
+        <button onClick={(e) => { e.stopPropagation(); onAddClick(); }}
           className={`${size === 'xs' ? 'w-4 h-4' : 'w-5 h-5'} rounded-full border border-dashed border-slate-600 flex items-center justify-center text-slate-500 hover:border-indigo-400 hover:text-indigo-400 hover:bg-indigo-900/20 transition-colors`}
-          title="Assign team"
-        >
+          title="Assign team">
           <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
@@ -332,49 +295,32 @@ const AssignmentBadges = ({
   );
 };
 
-// Assign Team Member Modal
 const AssignTeamMemberModal = ({ isOpen, onClose, opportunity, teamMembers = [], existingAssignments = [], onSave }) => {
   const [assignments, setAssignments] = useState([]);
   const [saving, setSaving] = useState(false);
-
   useEffect(() => {
     if (isOpen && existingAssignments) {
       setAssignments(existingAssignments.map(a => ({
-        team_member_id: a.team_member_id || a.team_member?.id,
-        points: a.points || 0,
-        role: a.role || 'Contributor'
+        team_member_id: a.team_member_id || a.team_member?.id, points: a.points || 0, role: a.role || 'Contributor'
       })));
     }
   }, [isOpen, existingAssignments]);
-
   const toggleMember = (memberId) => {
     const exists = assignments.find(a => a.team_member_id === memberId);
-    if (exists) {
-      setAssignments(assignments.filter(a => a.team_member_id !== memberId));
-    } else {
-      setAssignments([...assignments, { team_member_id: memberId, points: 5, role: 'Contributor' }]);
-    }
+    if (exists) setAssignments(assignments.filter(a => a.team_member_id !== memberId));
+    else setAssignments([...assignments, { team_member_id: memberId, points: 5, role: 'Contributor' }]);
   };
-
   const updateAssignment = (memberId, field, value) => {
     setAssignments(assignments.map(a => a.team_member_id === memberId ? { ...a, [field]: value } : a));
   };
-
   const handleSave = async () => {
     setSaving(true);
-    try {
-      await onSave(opportunity.id, assignments);
-      onClose();
-    } catch (err) {
-      console.error('Failed to save assignments:', err);
-    } finally {
-      setSaving(false);
-    }
+    try { await onSave(opportunity.id, assignments); onClose(); }
+    catch (err) { console.error('Failed to save:', err); }
+    finally { setSaving(false); }
   };
-
   if (!isOpen) return null;
   const totalPoints = assignments.reduce((sum, a) => sum + (a.points || 0), 0);
-
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-lg w-full shadow-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
@@ -396,18 +342,15 @@ const AssignTeamMemberModal = ({ isOpen, onClose, opportunity, teamMembers = [],
             </button>
           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto p-4">
           <div className="mb-4 p-3 bg-slate-800/50 rounded-lg flex justify-between items-center">
-            <span className="text-sm text-slate-400">Total Estimated Points</span>
+            <span className="text-sm text-slate-400">Total Points</span>
             <span className="text-lg font-semibold text-indigo-400">{totalPoints} pts</span>
           </div>
-
           <div className="space-y-2">
             {teamMembers.map(member => {
               const assignment = assignments.find(a => a.team_member_id === member.id);
               const isSelected = !!assignment;
-
               return (
                 <div key={member.id} className={`p-3 rounded-lg border transition-colors ${isSelected ? 'border-indigo-500/50 bg-indigo-900/20' : 'border-slate-700 hover:border-slate-600'}`}>
                   <div className="flex items-center justify-between">
@@ -419,25 +362,18 @@ const AssignTeamMemberModal = ({ isOpen, onClose, opportunity, teamMembers = [],
                     </button>
                     <span className="text-xs text-slate-500">{member.role}</span>
                   </div>
-
                   {isSelected && (
                     <div className="mt-3 pt-3 border-t border-slate-700/50 grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] text-slate-500 uppercase tracking-wide mb-1">Points</label>
-                        <input
-                          type="number" min="0" max="50"
-                          value={assignment.points}
+                        <label className="block text-[10px] text-slate-500 uppercase mb-1">Points</label>
+                        <input type="number" min="0" max="50" value={assignment.points}
                           onChange={(e) => updateAssignment(member.id, 'points', parseInt(e.target.value) || 0)}
-                          className="w-full px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                        />
+                          className="w-full px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-sm text-white" />
                       </div>
                       <div>
-                        <label className="block text-[10px] text-slate-500 uppercase tracking-wide mb-1">Role</label>
-                        <select
-                          value={assignment.role}
-                          onChange={(e) => updateAssignment(member.id, 'role', e.target.value)}
-                          className="w-full px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                        >
+                        <label className="block text-[10px] text-slate-500 uppercase mb-1">Role</label>
+                        <select value={assignment.role} onChange={(e) => updateAssignment(member.id, 'role', e.target.value)}
+                          className="w-full px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-sm text-white">
                           <option value="Lead">Lead</option>
                           <option value="Contributor">Contributor</option>
                           <option value="Reviewer">Reviewer</option>
@@ -450,11 +386,10 @@ const AssignTeamMemberModal = ({ isOpen, onClose, opportunity, teamMembers = [],
             })}
           </div>
         </div>
-
         <div className="p-4 border-t border-slate-800 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-slate-400 hover:text-white transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
-            {saving ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>Saving...</> : 'Save Assignments'}
+          <button onClick={onClose} className="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
+          <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg disabled:opacity-50">
+            {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>
@@ -462,147 +397,37 @@ const AssignTeamMemberModal = ({ isOpen, onClose, opportunity, teamMembers = [],
   );
 };
 
-// Team Management Panel
 const TeamManagementPanel = ({ isOpen, onClose, teamMembers, onRefresh }) => {
-  const [editingMember, setEditingMember] = useState(null);
-  const [isAdding, setIsAdding] = useState(false);
-  const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
-  const roles = ['Engineering Lead', 'Full Stack', 'Frontend', 'Backend', 'DevOps', 'QA', 'Design', 'Product'];
-
-  const handleSaveMember = async (memberData) => {
-    try {
-      if (memberData.id) {
-        const { error } = await supabase.from('team_members').update({
-          name: memberData.name, email: memberData.email, role: memberData.role,
-          color: memberData.color, capacity_points_per_sprint: memberData.capacity_points_per_sprint
-        }).eq('id', memberData.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('team_members').insert([{
-          name: memberData.name, email: memberData.email, role: memberData.role,
-          color: memberData.color, capacity_points_per_sprint: memberData.capacity_points_per_sprint || 18
-        }]);
-        if (error) throw error;
-      }
-      onRefresh();
-      setEditingMember(null);
-      setIsAdding(false);
-    } catch (err) { console.error('Failed to save team member:', err); }
-  };
-
-  const handleDeactivate = async (memberId) => {
-    if (!confirm('Deactivate this team member?')) return;
-    try {
-      const { error } = await supabase.from('team_members').update({ is_active: false }).eq('id', memberId);
-      if (error) throw error;
-      onRefresh();
-    } catch (err) { console.error('Failed to deactivate:', err); }
-  };
-
   if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full shadow-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="p-4 border-b border-slate-800 bg-gradient-to-r from-emerald-900/50 to-teal-900/50 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-white">Team Management</h2>
-            <p className="text-xs text-slate-400">{teamMembers.length} active members</p>
+            <p className="text-xs text-slate-400">{teamMembers.length} members</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setIsAdding(true)} className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-              Add
-            </button>
-            <button onClick={onClose} className="text-slate-400 hover:text-white">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-
         <div className="flex-1 overflow-y-auto p-4">
           <div className="space-y-2">
             {teamMembers.map(member => (
-              <div key={member.id} className="p-3 border border-slate-700 rounded-lg flex items-center justify-between hover:bg-slate-800/50 transition-colors">
+              <div key={member.id} className="p-3 border border-slate-700 rounded-lg flex items-center justify-between hover:bg-slate-800/50">
                 <div className="flex items-center gap-3">
                   <TeamMemberBadge member={member} size="lg" />
                   <div>
                     <div className="font-medium text-white">{member.name}</div>
-                    <div className="text-xs text-slate-500">{member.role} • {member.capacity_points_per_sprint} pts/sprint</div>
+                    <div className="text-xs text-slate-500">{member.role} • {member.capacity_points_per_sprint || 18} pts/sprint</div>
                   </div>
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => setEditingMember(member)} className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-900/20 rounded transition-colors" title="Edit">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                  </button>
-                  <button onClick={() => handleDeactivate(member.id)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors" title="Deactivate">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
                 </div>
               </div>
             ))}
           </div>
         </div>
-
-        {(editingMember || isAdding) && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]" onClick={() => { setEditingMember(null); setIsAdding(false); }}>
-            <div className="bg-slate-800 border border-slate-600 rounded-xl max-w-md w-full p-4 mx-4" onClick={e => e.stopPropagation()}>
-              <h3 className="text-base font-semibold text-white mb-4">{editingMember ? 'Edit Team Member' : 'Add Team Member'}</h3>
-              <TeamMemberFormInner member={editingMember} colors={colors} roles={roles} onSave={handleSaveMember} onCancel={() => { setEditingMember(null); setIsAdding(false); }} />
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const TeamMemberFormInner = ({ member, colors, roles, onSave, onCancel }) => {
-  const [formData, setFormData] = useState({
-    id: member?.id || null, name: member?.name || '', email: member?.email || '',
-    role: member?.role || 'Full Stack', color: member?.color || '#6366f1',
-    capacity_points_per_sprint: member?.capacity_points_per_sprint || 18
-  });
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-xs text-slate-400 mb-1">Name</label>
-        <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="John Doe" />
-      </div>
-      <div>
-        <label className="block text-xs text-slate-400 mb-1">Email</label>
-        <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="john@palazzo.ai" />
-      </div>
-      <div>
-        <label className="block text-xs text-slate-400 mb-1">Role</label>
-        <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-          {roles.map(role => (<option key={role} value={role}>{role}</option>))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-xs text-slate-400 mb-1">Color</label>
-        <div className="flex gap-2">
-          {colors.map(color => (
-            <button key={color} type="button" onClick={() => setFormData({ ...formData, color })}
-              className={`w-7 h-7 rounded-full border-2 transition-transform ${formData.color === color ? 'border-white scale-110' : 'border-transparent hover:scale-105'}`}
-              style={{ backgroundColor: color }} />
-          ))}
-        </div>
-      </div>
-      <div>
-        <label className="block text-xs text-slate-400 mb-1">Capacity (points/sprint)</label>
-        <input type="number" min="0" max="50" value={formData.capacity_points_per_sprint}
-          onChange={(e) => setFormData({ ...formData, capacity_points_per_sprint: parseInt(e.target.value) || 0 })}
-          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-      </div>
-      <div className="flex justify-end gap-2 pt-2">
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-slate-400 hover:text-white transition-colors">Cancel</button>
-        <button type="button" onClick={() => onSave(formData)} disabled={!formData.name}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors disabled:opacity-50">Save</button>
       </div>
     </div>
   );
@@ -624,12 +449,15 @@ export default function PalazzoTimeline() {
   const [filterArea, setFilterArea] = useState(null);
   const [filterMilestone, setFilterMilestone] = useState(null);
   const [filterStatus, setFilterStatus] = useState(null);
+  const [filterAssignee, setFilterAssignee] = useState(null);
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragType, setDragType] = useState(null); // 'opportunity' or 'milestone'
   const [dropTarget, setDropTarget] = useState(null);
   const [undoStack, setUndoStack] = useState([]);
   const [notification, setNotification] = useState(null);
-  const [viewMode, setViewMode] = useState('all'); // 'all', 'milestones', 'opportunities'
+  const [viewMode, setViewMode] = useState('all'); // 'all', 'milestones', 'opportunities', 'capacity', 'timeline'
+  const [selectedSprint, setSelectedSprint] = useState('dec25');
+  const [timelineRange, setTimelineRange] = useState({ start: 0, end: 6 });
   const [showDataModal, setShowDataModal] = useState(false);
   const [importText, setImportText] = useState('');
   
@@ -656,13 +484,12 @@ export default function PalazzoTimeline() {
     return '';
   });
 
-  // ========== TEAM/RESOURCE STATE ==========
-const [teamMembers, setTeamMembers] = useState([]);
-const [assignments, setAssignments] = useState({}); // Map: opportunityId -> array of assignments
-const [teamPanelOpen, setTeamPanelOpen] = useState(false);
-const [assignModalOpen, setAssignModalOpen] = useState(false);
-const [assignModalOpp, setAssignModalOpp] = useState(null);
-
+  // Team/Resource state
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [assignments, setAssignments] = useState({});
+  const [teamPanelOpen, setTeamPanelOpen] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignModalOpp, setAssignModalOpp] = useState(null);
 
   // Auto-scroll chat to bottom
   useEffect(() => {
@@ -677,9 +504,48 @@ const [assignModalOpp, setAssignModalOpp] = useState(null);
   // Load data from Supabase on mount
   useEffect(() => {
     loadData();
-    loadTeamMembers();     // ADD THIS
+    loadTeamMembers();
     loadAllAssignments();
   }, []);
+
+  const loadTeamMembers = async () => {
+    try {
+      const { data, error } = await supabase.from('team_members').select('*').eq('is_active', true).order('name');
+      if (error) { console.log('team_members table not found:', error.message); return; }
+      setTeamMembers(data || []);
+    } catch (err) { console.log('Failed to load team members:', err); }
+  };
+
+  const loadAllAssignments = async () => {
+    try {
+      const { data, error } = await supabase.from('assignments').select(`id, opportunity_id, team_member_id, points, role, team_members (id, name, email, color, role)`);
+      if (error) { console.log('assignments table not found:', error.message); return; }
+      const grouped = {};
+      (data || []).forEach(a => {
+        const oppId = a.opportunity_id;
+        if (!grouped[oppId]) grouped[oppId] = [];
+        grouped[oppId].push({ ...a, team_member: a.team_members });
+      });
+      setAssignments(grouped);
+    } catch (err) { console.log('Failed to load assignments:', err); }
+  };
+
+  const saveAssignments = async (opportunityId, newAssignments) => {
+    try {
+      await supabase.from('assignments').delete().eq('opportunity_id', opportunityId);
+      if (newAssignments.length > 0) {
+        const toInsert = newAssignments.map(a => ({
+          opportunity_id: opportunityId, team_member_id: a.team_member_id, points: a.points || 0, role: a.role || 'Contributor'
+        }));
+        const { error } = await supabase.from('assignments').insert(toInsert);
+        if (error) throw error;
+      }
+      await loadAllAssignments();
+      showNotification('Team assignments saved', 'success');
+    } catch (err) { console.error('Failed to save assignments:', err); showNotification('Failed to save assignments', 'warning'); }
+  };
+
+  const openAssignModal = (opp) => { setAssignModalOpp(opp); setAssignModalOpen(true); };
 
   const loadData = async () => {
     setLoading(true);
@@ -716,82 +582,6 @@ const [assignModalOpp, setAssignModalOpp] = useState(null);
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadTeamMembers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-      
-      if (error) {
-        console.log('team_members table not found:', error.message);
-        return;
-      }
-      setTeamMembers(data || []);
-    } catch (err) {
-      console.log('Failed to load team members:', err);
-    }
-  };
-  
-  const loadAllAssignments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('assignments')
-        .select(`
-          id, opportunity_id, team_member_id, points, role,
-          team_members (id, name, email, color, role)
-        `);
-      
-      if (error) {
-        console.log('assignments table not found:', error.message);
-        return;
-      }
-      
-      const grouped = {};
-      (data || []).forEach(a => {
-        const oppId = a.opportunity_id;
-        if (!grouped[oppId]) grouped[oppId] = [];
-        grouped[oppId].push({
-          ...a,
-          team_member: a.team_members
-        });
-      });
-      setAssignments(grouped);
-    } catch (err) {
-      console.log('Failed to load assignments:', err);
-    }
-  };
-  
-  const saveAssignments = async (opportunityId, newAssignments) => {
-    try {
-      await supabase.from('assignments').delete().eq('opportunity_id', opportunityId);
-      
-      if (newAssignments.length > 0) {
-        const toInsert = newAssignments.map(a => ({
-          opportunity_id: opportunityId,
-          team_member_id: a.team_member_id,
-          points: a.points || 0,
-          role: a.role || 'Contributor'
-        }));
-        
-        const { error } = await supabase.from('assignments').insert(toInsert);
-        if (error) throw error;
-      }
-      
-      await loadAllAssignments();
-      showNotification('Team assignments saved', 'success');
-    } catch (err) {
-      console.error('Failed to save assignments:', err);
-      showNotification('Failed to save assignments', 'warning');
-    }
-  };
-  
-  const openAssignModal = (opp) => {
-    setAssignModalOpp(opp);
-    setAssignModalOpen(true);
   };
 
   const seedDatabase = async () => {
@@ -1169,6 +959,14 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
     if (filterMilestone && opp.milestoneId !== filterMilestone) return false;
     if (filterStatus === 'at_risk' && !opp.atRisk) return false;
     if (filterStatus && filterStatus !== 'at_risk' && opp.status !== filterStatus) return false;
+    if (filterAssignee) {
+      if (filterAssignee === 'unassigned') {
+        if (assignments[opp.id] && assignments[opp.id].length > 0) return false;
+      } else {
+        const oppAssignments = assignments[opp.id] || [];
+        if (!oppAssignments.some(a => a.team_member_id === filterAssignee)) return false;
+      }
+    }
     return true;
   });
 
@@ -1494,7 +1292,6 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
               <button type="submit" disabled={!form.title.trim()} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm rounded-lg transition-colors">
                 {isNew ? 'Create' : 'Save Changes'}
               </button>
-              
             </div>
           </form>
         </div>
@@ -1821,15 +1618,12 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
             </svg>
             Linear Sync
           </button>
-          <button 
-  onClick={() => setTeamPanelOpen(true)} 
-  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5"
->
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-  </svg>
-  Team
-</button>
+          <button onClick={() => setTeamPanelOpen(true)} className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            Team
+          </button>
           <button onClick={() => setShowDataModal(true)} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-lg transition-colors">
             📁 Data
           </button>
@@ -1851,16 +1645,32 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-500 uppercase tracking-wide">View:</span>
           <div className="flex gap-1">
-            {['all', 'milestones', 'opportunities'].map(mode => (
+            {['all', 'milestones', 'opportunities', 'capacity', 'timeline'].map(mode => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
                 className={`px-2 py-1 text-xs rounded capitalize ${viewMode === mode ? 'bg-slate-700 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
               >
-                {mode}
+                {mode === 'capacity' ? '📊 Capacity' : mode === 'timeline' ? '👤 Timeline' : mode}
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Assignee Filter */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 uppercase tracking-wide">Assignee:</span>
+          <select
+            value={filterAssignee || ''}
+            onChange={e => setFilterAssignee(e.target.value || null)}
+            className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white"
+          >
+            <option value="">All</option>
+            <option value="unassigned">⚠ Unassigned</option>
+            {teamMembers.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
         </div>
 
         {/* Initiative Filter */}
@@ -1935,7 +1745,144 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
         </div>
       </div>
 
+      {/* Capacity Dashboard View */}
+      {viewMode === 'capacity' && (
+        <div className="border border-slate-800 rounded-lg bg-slate-900 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              📊 Sprint Capacity Dashboard
+            </h3>
+            <select value={selectedSprint} onChange={e => setSelectedSprint(e.target.value)}
+              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white">
+              {initialData.months.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {teamMembers.map(member => {
+              const memberAssignments = Object.entries(assignments).flatMap(([oppId, assignList]) => 
+                assignList.filter(a => a.team_member_id === member.id).map(a => ({ ...a, opportunityId: parseInt(oppId) }))
+              );
+              const sprintAssignments = memberAssignments.filter(a => {
+                const opp = opportunities.find(o => o.id === a.opportunityId);
+                return opp && opp.month === selectedSprint;
+              });
+              const allocatedPoints = sprintAssignments.reduce((sum, a) => sum + (a.points || 0), 0);
+              const capacity = member.capacity_points_per_sprint || 18;
+              const utilizationPct = Math.min(100, (allocatedPoints / capacity) * 100);
+              const isOverallocated = allocatedPoints > capacity;
+              return (
+                <div key={member.id} className={`p-4 rounded-lg border ${isOverallocated ? 'border-red-500/50 bg-red-900/10' : 'border-slate-700 bg-slate-800/50'}`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <TeamMemberBadge member={member} size="lg" />
+                    <div>
+                      <div className="font-medium text-white">{member.name}</div>
+                      <div className="text-xs text-slate-500">{member.role}</div>
+                    </div>
+                  </div>
+                  <div className="mb-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-400">Capacity</span>
+                      <span className={isOverallocated ? 'text-red-400' : 'text-slate-300'}>{allocatedPoints} / {capacity} pts</span>
+                    </div>
+                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                      <div className={`h-full transition-all ${isOverallocated ? 'bg-red-500' : utilizationPct > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${Math.min(100, utilizationPct)}%` }} />
+                    </div>
+                  </div>
+                  <div className="space-y-1 mt-3">
+                    {sprintAssignments.slice(0, 3).map(a => {
+                      const opp = opportunities.find(o => o.id === a.opportunityId);
+                      return opp && (
+                        <div key={a.opportunityId} className="text-xs text-slate-400 flex justify-between">
+                          <span className="truncate">{opp.title}</span>
+                          <span className="text-slate-500 ml-2">{a.points}p</span>
+                        </div>
+                      );
+                    })}
+                    {sprintAssignments.length > 3 && <div className="text-xs text-slate-500">+{sprintAssignments.length - 3} more</div>}
+                    {sprintAssignments.length === 0 && <div className="text-xs text-slate-500 italic">No assignments</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Timeline Lanes View */}
+      {viewMode === 'timeline' && (
+        <div className="border border-slate-800 rounded-lg bg-slate-900 overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b border-slate-800">
+            <h3 className="text-lg font-semibold text-white">👤 Team Timeline</h3>
+            <div className="flex gap-2">
+              <button onClick={() => setTimelineRange({ start: Math.max(0, timelineRange.start - 3), end: Math.max(3, timelineRange.end - 3) })}
+                disabled={timelineRange.start === 0} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 rounded text-xs">←</button>
+              <span className="text-sm text-slate-400">{initialData.months[timelineRange.start]?.name} - {initialData.months[timelineRange.end]?.name}</span>
+              <button onClick={() => setTimelineRange({ start: Math.min(initialData.months.length - 7, timelineRange.start + 3), end: Math.min(initialData.months.length - 1, timelineRange.end + 3) })}
+                disabled={timelineRange.end >= initialData.months.length - 1} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 rounded text-xs">→</button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="min-w-[900px]">
+              <div className="flex border-b border-slate-700 bg-slate-800/50">
+                <div className="w-48 flex-shrink-0 p-2 text-xs font-medium text-slate-400 border-r border-slate-700">Team Member</div>
+                {initialData.months.slice(timelineRange.start, timelineRange.end + 1).map(month => (
+                  <div key={month.id} className={`flex-1 p-2 text-xs font-medium text-center border-r border-slate-700/50 last:border-r-0 ${month.current ? 'bg-emerald-950/30 text-emerald-400' : 'text-slate-400'}`}>
+                    {month.name}
+                  </div>
+                ))}
+              </div>
+              {teamMembers.map(member => {
+                const memberOpps = opportunities.filter(opp => {
+                  const oppAssignments = assignments[opp.id] || [];
+                  return oppAssignments.some(a => a.team_member_id === member.id);
+                });
+                return (
+                  <div key={member.id} className="flex border-b border-slate-700/50 hover:bg-slate-800/30">
+                    <div className="w-48 flex-shrink-0 p-3 bg-slate-800/30 border-r border-slate-700 flex items-center gap-2">
+                      <TeamMemberBadge member={member} size="sm" />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-white truncate">{member.name}</div>
+                        <div className="text-[10px] text-slate-500">{member.role}</div>
+                      </div>
+                    </div>
+                    <div className="flex-1 flex">
+                      {initialData.months.slice(timelineRange.start, timelineRange.end + 1).map(month => {
+                        const monthOpps = memberOpps.filter(o => o.month === month.id);
+                        return (
+                          <div key={month.id} className={`flex-1 p-1.5 border-r border-slate-700/50 last:border-r-0 ${month.current ? 'bg-emerald-950/10' : ''}`}>
+                            <div className="space-y-1">
+                              {monthOpps.map(opp => {
+                                const statusInfo = STATUSES[opp.status] || STATUSES.not_started;
+                                return (
+                                  <div key={opp.id} onClick={() => setSelectedOpportunity(opp)}
+                                    className={`p-1.5 rounded text-[10px] cursor-pointer transition-all hover:translate-x-0.5 ${opp.atRisk ? 'ring-1 ring-orange-500' : ''}`}
+                                    style={{ backgroundColor: `${getInitiativeColor(opp.initiative)}20`, borderLeft: `2px solid ${getInitiativeColor(opp.initiative)}` }}>
+                                    <div className="flex items-center gap-1">
+                                      {opp.atRisk && <span className="text-orange-500">⚠</span>}
+                                      <span className="font-medium text-slate-200 truncate">{opp.title}</span>
+                                    </div>
+                                    <span className="px-1 py-0.5 rounded text-[8px] font-medium" style={{ backgroundColor: statusInfo.bgColor, color: statusInfo.color }}>
+                                      {statusInfo.label}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Timeline Grid */}
+      {viewMode !== 'capacity' && viewMode !== 'timeline' && (
       <div className="overflow-x-auto border border-slate-800 rounded-lg bg-slate-900">
         <table className="w-full min-w-[1400px] border-collapse">
           <thead>
@@ -2050,20 +1997,11 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
                                   </span>
                                 )}
                               </div>
-                              {/* Team Assignments */}
-<div className="mt-1 flex items-center justify-between">
-  <AssignmentBadges
-    assignments={assignments[opp.id] || []}
-    onAddClick={() => openAssignModal(opp)}
-    maxVisible={2}
-    size="xs"
-  />
-  {opp.issues.length > 0 && (
-    <span className="text-slate-500 text-[9px]">
-      {opp.issues.length} issues
-    </span>
-  )}
-</div>
+                              {opp.issues.length > 0 && (
+                                <div className="text-slate-500 text-[9px] mt-0.5">
+                                  {opp.issues.slice(0, 2).join(', ')}{opp.issues.length > 2 ? '...' : ''}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -2080,6 +2018,7 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
           </tbody>
         </table>
       </div>
+      )}
 
       {/* Stats */}
       <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500">
@@ -2410,23 +2349,14 @@ Be concise, actionable, and specific. Reference actual opportunities and milesto
       
       {/* Linear Sync Modal */}
       {syncModalOpen && <LinearSyncModal />}
-      {/* Team Management Panel */}
-<TeamManagementPanel
-  isOpen={teamPanelOpen}
-  onClose={() => setTeamPanelOpen(false)}
-  teamMembers={teamMembers}
-  onRefresh={loadTeamMembers}
-/>
 
-{/* Assign Team Member Modal */}
-<AssignTeamMemberModal
-  isOpen={assignModalOpen}
-  onClose={() => { setAssignModalOpen(false); setAssignModalOpp(null); }}
-  opportunity={assignModalOpp}
-  teamMembers={teamMembers}
-  existingAssignments={assignModalOpp ? (assignments[assignModalOpp.id] || []) : []}
-  onSave={saveAssignments}
-/>
+      {/* Team Management Panel */}
+      <TeamManagementPanel isOpen={teamPanelOpen} onClose={() => setTeamPanelOpen(false)} teamMembers={teamMembers} onRefresh={loadTeamMembers} />
+
+      {/* Assign Team Member Modal */}
+      <AssignTeamMemberModal isOpen={assignModalOpen} onClose={() => { setAssignModalOpen(false); setAssignModalOpp(null); }}
+        opportunity={assignModalOpp} teamMembers={teamMembers} existingAssignments={assignModalOpp ? (assignments[assignModalOpp.id] || []) : []}
+        onSave={saveAssignments} />
     </div>
   );
 }
