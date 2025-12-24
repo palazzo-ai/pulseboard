@@ -845,98 +845,174 @@ export default function PalazzoTimeline() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Palazzo Opportunities Timeline</h1>
-          <p className="text-slate-500 text-sm">Milestones are delivery dates • Opportunities feed into milestones</p>
+      {/* ========== HEADER ========== */}
+      <div className="mb-6">
+        {/* Row 1: Title + Actions */}
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-white">Pulseboard</h1>
+              <p className="text-slate-500 text-xs">Palazzo Product Roadmap</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {/* Primary Actions */}
+            <button onClick={() => setSyncModalOpen(true)} className="p-2 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-lg transition-colors" title="Linear Sync">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </button>
+            <button onClick={() => setTeamPanelOpen(true)} className="p-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg transition-colors" title="Team Management">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </button>
+            <button onClick={() => setShowDataModal(true)} className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg transition-colors" title="Data Management">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+              </svg>
+            </button>
+            <button onClick={undo} disabled={undoStack.length === 0} className="p-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-400 rounded-lg transition-colors" title={`Undo (${undoStack.length})`}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+              </svg>
+            </button>
+            
+            <div className="w-px h-6 bg-slate-700 mx-1"></div>
+            
+            {/* Create Actions */}
+            <button onClick={() => startCreateMilestone('showcase', 'mar26')} className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Milestone
+            </button>
+            <button onClick={() => startCreateOpportunity('visualizer', 'dec25')} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Opportunity
+            </button>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => setSyncModalOpen(true)} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            Linear Sync
-          </button>
-          <button onClick={() => setTeamPanelOpen(true)} className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-            Team
-          </button>
-          <button onClick={() => setShowDataModal(true)} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-lg transition-colors">📁 Data</button>
-          <button onClick={undo} disabled={undoStack.length === 0} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white text-sm rounded-lg transition-colors">↶ Undo</button>
-          <button onClick={() => startCreateMilestone('showcase', 'mar26')} className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white text-sm rounded-lg transition-colors">+ Milestone</button>
-          <button onClick={() => startCreateOpportunity('visualizer', 'dec25')} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors">+ Opportunity</button>
-        </div>
-      </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 mb-4">
-        {/* View Mode */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 uppercase tracking-wide">View:</span>
-          <div className="flex gap-1">
+        {/* Row 2: View Tabs */}
+        <div className="flex items-center justify-between gap-4 border-b border-slate-800">
+          <div className="flex">
             {[
-              { key: 'all', label: 'All' },
-              { key: 'milestones', label: 'Milestones' },
-              { key: 'opportunities', label: 'Opportunities' },
-              { key: 'capacity', label: '📊 Capacity' },
-              { key: 'timeline', label: '👤 Timeline' }
+              { key: 'all', label: 'Timeline', icon: '📅' },
+              { key: 'milestones', label: 'Milestones', icon: '🎯' },
+              { key: 'opportunities', label: 'Opportunities', icon: '💡' },
+              { key: 'capacity', label: 'Capacity', icon: '📊' },
+              { key: 'timeline', label: 'Team View', icon: '👥' }
             ].map(mode => (
-              <button key={mode.key} onClick={() => setViewMode(mode.key)}
-                className={`px-2 py-1 text-xs rounded ${viewMode === mode.key ? 'bg-slate-700 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
+              <button
+                key={mode.key}
+                onClick={() => setViewMode(mode.key)}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  viewMode === mode.key 
+                    ? 'text-white border-indigo-500 bg-slate-800/50' 
+                    : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/30'
+                }`}
+              >
+                <span className="mr-1.5">{mode.icon}</span>
                 {mode.label}
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Initiative Filter */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 uppercase tracking-wide">Initiative:</span>
-          <div className="flex flex-wrap gap-1">
-            <button onClick={() => setFilterInitiative(null)} className={`px-2 py-1 text-xs rounded ${!filterInitiative ? 'bg-slate-700 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>All</button>
-            {initiatives.map(init => (
-              <button key={init.id} onClick={() => setFilterInitiative(filterInitiative === init.id ? null : init.id)}
-                className="px-2 py-1 text-xs rounded flex items-center gap-1 hover:opacity-80"
-                style={{ backgroundColor: filterInitiative === init.id ? init.color : `${init.color}30`, color: filterInitiative === init.id ? '#fff' : init.color }}>
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: init.color }}></span>
-                {init.name}
+          {/* Row 2 Right: Compact Filters */}
+          <div className="flex items-center gap-2 pb-2">
+            {/* Initiative Dropdown */}
+            <select 
+              value={filterInitiative || ''} 
+              onChange={e => setFilterInitiative(e.target.value || null)}
+              className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white min-w-[140px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="">All Initiatives</option>
+              {initiatives.map(init => (
+                <option key={init.id} value={init.id}>{init.name}</option>
+              ))}
+            </select>
+
+            {/* Status Dropdown */}
+            <select 
+              value={filterStatus || ''} 
+              onChange={e => setFilterStatus(e.target.value || null)}
+              className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white min-w-[120px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="">All Statuses</option>
+              {Object.entries(STATUSES).map(([key, { label }]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+              <option value="at_risk">⚠ At Risk</option>
+            </select>
+
+            {/* Assignee Dropdown */}
+            <select 
+              value={filterAssignee || ''} 
+              onChange={e => setFilterAssignee(e.target.value || null)}
+              className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white min-w-[130px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="">All Assignees</option>
+              <option value="unassigned">⚠ Unassigned</option>
+              {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+
+            {/* Clear Filters */}
+            {(filterInitiative || filterStatus || filterAssignee || filterArea) && (
+              <button 
+                onClick={() => { setFilterInitiative(null); setFilterStatus(null); setFilterAssignee(null); setFilterArea(null); }}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                title="Clear all filters"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-            ))}
+            )}
           </div>
         </div>
 
-        {/* Assignee Filter */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 uppercase tracking-wide">Assignee:</span>
-          <select value={filterAssignee || ''} onChange={e => setFilterAssignee(e.target.value || null)}
-            className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white">
-            <option value="">All</option>
-            <option value="unassigned">⚠ Unassigned</option>
-            {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
-        </div>
-
-        {/* Status Filter */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 uppercase tracking-wide">Status:</span>
-          <div className="flex flex-wrap gap-1">
-            <button onClick={() => setFilterStatus(null)} className={`px-2 py-1 text-xs rounded ${!filterStatus ? 'bg-slate-700 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>All</button>
-            {Object.entries(STATUSES).map(([key, { label, color }]) => (
-              <button key={key} onClick={() => setFilterStatus(filterStatus === key ? null : key)}
-                className="px-2 py-1 text-xs rounded flex items-center gap-1 transition-colors"
-                style={{ backgroundColor: filterStatus === key ? color : `${color}30`, color: filterStatus === key ? '#fff' : color }}>
-                {label}
-              </button>
-            ))}
-            <button onClick={() => setFilterStatus(filterStatus === 'at_risk' ? null : 'at_risk')}
-              className={`px-2 py-1 text-xs rounded flex items-center gap-1 transition-colors ${filterStatus === 'at_risk' ? 'bg-orange-500 text-white' : 'bg-orange-500/30 text-orange-400 hover:bg-orange-500/50'}`}>
-              ⚠ At Risk
-            </button>
+        {/* Active Filters Chips */}
+        {(filterInitiative || filterStatus || filterAssignee || filterArea) && (
+          <div className="flex items-center gap-2 mt-3">
+            <span className="text-xs text-slate-500">Filters:</span>
+            {filterInitiative && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 rounded-full text-xs">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: initiatives.find(i => i.id === filterInitiative)?.color }}></span>
+                {initiatives.find(i => i.id === filterInitiative)?.name}
+                <button onClick={() => setFilterInitiative(null)} className="ml-1 text-slate-400 hover:text-white">×</button>
+              </span>
+            )}
+            {filterStatus && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" 
+                style={{ backgroundColor: filterStatus === 'at_risk' ? '#f9731630' : STATUSES[filterStatus]?.bgColor, color: filterStatus === 'at_risk' ? '#fb923c' : STATUSES[filterStatus]?.color }}>
+                {filterStatus === 'at_risk' ? '⚠ At Risk' : STATUSES[filterStatus]?.label}
+                <button onClick={() => setFilterStatus(null)} className="ml-1 hover:opacity-70">×</button>
+              </span>
+            )}
+            {filterAssignee && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 rounded-full text-xs text-slate-300">
+                {filterAssignee === 'unassigned' ? '⚠ Unassigned' : teamMembers.find(m => m.id === filterAssignee)?.name}
+                <button onClick={() => setFilterAssignee(null)} className="ml-1 text-slate-400 hover:text-white">×</button>
+              </span>
+            )}
+            {filterArea && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 rounded-full text-xs">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: areas.find(a => a.id === filterArea)?.color }}></span>
+                {areas.find(a => a.id === filterArea)?.name}
+                <button onClick={() => setFilterArea(null)} className="ml-1 text-slate-400 hover:text-white">×</button>
+              </span>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
       {/* Capacity Dashboard View */}
