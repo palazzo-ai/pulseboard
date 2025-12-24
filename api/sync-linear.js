@@ -1,231 +1,192 @@
-// Vercel Serverless Function for Linear Sync
-// This endpoint fetches Linear issues and uses Claude to analyze status recommendations
+import Anthropic from "@anthropic-ai/sdk";
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  // Set CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  const { opportunities, linearApiKey } = req.body;
+
+  if (!linearApiKey) {
+    return res.status(400).json({ error: "Linear API key is required" });
+  }
+
+  if (!opportunities || !Array.isArray(opportunities)) {
+    return res.status(400).json({ error: "Opportunities array is required" });
   }
 
   try {
-    const { opportunities, linearApiKey } = req.body;
-    
-    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-    if (!anthropicApiKey) {
-      return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
-    }
-
-    if (!linearApiKey) {
-      return res.status(400).json({ error: 'Linear API key required' });
-    }
-
-    // Collect all unique issue IDs from opportunities
-    const allIssueIds = new Set();
-    opportunities.forEach(opp => {
-      (opp.issues || []).forEach(issue => allIssueIds.add(issue));
-    });
-
-    if (allIssueIds.size === 0) {
-      return res.status(200).json({ 
-        recommendations: [],
-        message: 'No opportunities have linked Linear issues' 
-      });
-    }
-
-    // Fetch issues from Linear GraphQL API
-    const linearIssues = await fetchLinearIssues(Array.from(allIssueIds), linearApiKey);
-
-    // Build context for Claude
-    const opportunitiesWithIssues = opportunities
-      .filter(opp => opp.issues && opp.issues.length > 0)
-      .map(opp => ({
-        id: opp.id,
-        title: opp.title,
-        currentStatus: opp.status || 'not_started',
-        currentAtRisk: opp.atRisk || false,
-        currentAtRiskReason: opp.atRiskReason || '',
-        month: opp.month,
-        milestoneId: opp.milestoneId,
-        issues: opp.issues.map(issueId => {
-          const issue = linearIssues.find(i => i.identifier === issueId);
-          return issue ? {
-            id: issueId,
-            title: issue.title,
-            status: issue.status,
-            priority: issue.priority,
-            dueDate: issue.dueDate,
-            assignee: issue.assignee,
-            labels: issue.labels
-          } : { id: issueId, status: 'NOT_FOUND' };
-        })
-      }));
-
-    // Call Claude to analyze and recommend
-    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
+    // Fetch issues from Linear
+    const linearResponse = await fetch("https://api.linear.app/graphql", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': anthropicApiKey,
-        'anthropic-version': '2023-06-01',
+        "Content-Type": "application/json",
+        "Authorization": linearApiKey, // NO Bearer prefix for Linear
+        "apollo-require-preflight": "true", // Required by Linear to prevent CSRF
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
-        messages: [{
-          role: 'user',
-          content: `You are analyzing Linear issues to recommend status updates for a product roadmap tool called Pulseboard.
-
-## Context
-- Each "opportunity" is a high-level roadmap item that may have multiple Linear issues
-- Status options: not_started, in_progress, done, blocked
-- You need to recommend status changes based on Linear issue statuses
-- You can also flag items as "at risk" with a reason
-
-## Status Mapping Logic
-- Linear "Triage", "Backlog", "Todo" → not_started
-- Linear "In Progress", "In Review" → in_progress  
-- Linear "Done", "Canceled" → done
-- Linear "Blocked" → blocked
-
-## Rollup Logic for Multiple Issues
-- If ALL issues are Done → opportunity is done
-- If ANY issue is In Progress/In Review → opportunity is in_progress
-- If ANY issue is Blocked → opportunity is blocked
-- If ALL issues are not started → opportunity is not_started
-
-## At-Risk Criteria
-- Due date passed but not done
-- Milestone approaching (within current month) but not done
-- Blocked status
-- Issues stuck in same status for extended time
-
-## Current Data
-${JSON.stringify(opportunitiesWithIssues, null, 2)}
-
-## Your Task
-Analyze each opportunity and return a JSON array of recommendations. Only include opportunities that need changes.
-
-Return ONLY a JSON array with this structure (no markdown, no explanation):
-[
-  {
-    "opportunityId": number,
-    "opportunityTitle": "string",
-    "currentStatus": "string",
-    "recommendedStatus": "string",
-    "statusReason": "string explaining why",
-    "currentAtRisk": boolean,
-    "recommendAtRisk": boolean,
-    "atRiskReason": "string or null",
-    "issuesSummary": "brief summary of issue statuses"
-  }
-]
-
-If no changes needed, return an empty array: []`
-        }]
+        query: `
+          query {
+            issues(first: 100) {
+              nodes {
+                id
+                identifier
+                title
+                state {
+                  name
+                  type
+                }
+                dueDate
+                project {
+                  name
+                }
+                labels {
+                  nodes {
+                    name
+                  }
+                }
+                updatedAt
+              }
+            }
+          }
+        `,
       }),
     });
 
-    if (!claudeResponse.ok) {
-      const error = await claudeResponse.text();
-      console.error('Claude API error:', error);
-      return res.status(500).json({ error: 'Failed to analyze with Claude' });
+    const linearData = await linearResponse.json();
+
+    if (linearData.errors) {
+      console.error("Linear API errors:", linearData.errors);
+      return res.status(400).json({
+        error: "Failed to fetch from Linear API",
+        details: linearData.errors,
+      });
     }
 
-    const claudeData = await claudeResponse.json();
-    const analysisText = claudeData.content[0].text;
-    
-    // Parse Claude's response
-    let recommendations;
-    try {
-      recommendations = JSON.parse(analysisText);
-    } catch (e) {
-      // Try to extract JSON from the response
-      const jsonMatch = analysisText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        recommendations = JSON.parse(jsonMatch[0]);
-      } else {
-        console.error('Failed to parse Claude response:', analysisText);
-        recommendations = [];
-      }
+    const issues = linearData.data?.issues?.nodes || [];
+
+    if (issues.length === 0) {
+      return res.json({ recommendations: [], message: "No issues found in Linear" });
     }
 
-    return res.status(200).json({ 
-      recommendations,
-      issuesFetched: linearIssues.length,
-      opportunitiesAnalyzed: opportunitiesWithIssues.length
+    // Use Claude to analyze and match
+    const anthropic = new Anthropic();
+
+    const prompt = `You are analyzing Linear issues to recommend status updates for a product roadmap.
+
+Here are the current roadmap opportunities:
+${JSON.stringify(
+  opportunities.map((o) => ({
+    id: o.id,
+    title: o.title,
+    status: o.status,
+    area: o.area,
+    initiative: o.initiative,
+  })),
+  null,
+  2
+)}
+
+Here are the Linear issues:
+${JSON.stringify(
+  issues.map((i) => ({
+    identifier: i.identifier,
+    title: i.title,
+    state: i.state?.name,
+    stateType: i.state?.type,
+    dueDate: i.dueDate,
+    project: i.project?.name,
+    labels: i.labels?.nodes?.map((l) => l.name),
+  })),
+  null,
+  2
+)}
+
+Analyze the Linear issues and match them to roadmap opportunities. For each match, recommend a status update if the Linear status suggests the roadmap status should change.
+
+Status mapping:
+- Linear "Triage", "Backlog", "Todo" → roadmap "not_started"
+- Linear "In Progress", "In Review" → roadmap "in_progress"
+- Linear "Done" → roadmap "done"
+- Linear "Canceled" → roadmap "done" (or keep current)
+- Linear "Blocked" → roadmap "blocked"
+
+For opportunities with multiple related issues, use this rollup logic:
+- If ALL issues are done → "done"
+- If ANY issue is in progress/review → "in_progress"
+- If ANY issue is blocked → "blocked"
+- If ALL issues are not started → "not_started"
+
+Also flag opportunities as "at risk" if:
+- Due date has passed but not done
+- Issues are blocked
+- No progress on issues that should have started
+
+Return a JSON array of recommendations:
+[
+  {
+    "opportunityId": <number>,
+    "opportunityTitle": "<string>",
+    "currentStatus": "<string>",
+    "recommendedStatus": "<string>",
+    "reason": "<brief explanation>",
+    "relatedIssues": ["PAL-123", "PAL-456"],
+    "atRisk": <boolean>,
+    "atRiskReason": "<string or null>"
+  }
+]
+
+Only include opportunities where you recommend a change or want to flag a risk. Return valid JSON only, no markdown.`;
+
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
     });
 
-  } catch (error) {
-    console.error('Sync error:', error);
-    return res.status(500).json({ error: error.message });
-  }
-}
+    const responseText =
+      message.content[0].type === "text" ? message.content[0].text : "";
 
-async function fetchLinearIssues(issueIds, apiKey) {
-  // Build GraphQL query to fetch multiple issues by identifier
-  const query = `
-    query GetIssues($filter: IssueFilter) {
-      issues(filter: $filter, first: 250) {
-        nodes {
-          id
-          identifier
-          title
-          description
-          priority
-          priorityLabel
-          state {
-            name
-            type
-          }
-          dueDate
-          assignee {
-            name
-          }
-          labels {
-            nodes {
-              name
-            }
-          }
-          createdAt
-          updatedAt
-        }
+    // Parse the JSON response
+    let recommendations = [];
+    try {
+      // Try to extract JSON from the response
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        recommendations = JSON.parse(jsonMatch[0]);
       }
+    } catch (parseError) {
+      console.error("Failed to parse Claude response:", parseError);
+      return res.status(500).json({
+        error: "Failed to parse recommendations",
+        rawResponse: responseText,
+      });
     }
-  `;
 
-  // Linear doesn't support IN queries by identifier directly, so we need to use OR filters
-  const filter = {
-    or: issueIds.map(id => ({ identifier: { eq: id } }))
-  };
-
-  const response = await fetch('https://api.linear.app/graphql', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': apiKey.startsWith('Bearer ') ? apiKey : `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({ query, variables: { filter } }),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch from Linear API');
+    return res.json({
+      recommendations,
+      issuesAnalyzed: issues.length,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Sync error:", error);
+    return res.status(500).json({
+      error: "Internal server error",
+      message: error.message,
+    });
   }
-
-  const data = await response.json();
-  
-  if (data.errors) {
-    console.error('Linear GraphQL errors:', data.errors);
-    throw new Error('Linear API returned errors');
-  }
-
-  return (data.data?.issues?.nodes || []).map(issue => ({
-    identifier: issue.identifier,
-    title: issue.title,
-    status: issue.state?.name || 'Unknown',
-    statusType: issue.state?.type || 'unknown',
-    priority: issue.priorityLabel,
-    dueDate: issue.dueDate,
-    assignee: issue.assignee?.name,
-    labels: issue.labels?.nodes?.map(l => l.name) || [],
-    updatedAt: issue.updatedAt
-  }));
 }
