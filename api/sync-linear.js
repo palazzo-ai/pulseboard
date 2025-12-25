@@ -24,14 +24,22 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Opportunities array is required" });
   }
 
+  // Check for Anthropic API key
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ 
+      error: "Server configuration error", 
+      message: "ANTHROPIC_API_KEY environment variable is not set" 
+    });
+  }
+
   try {
     // Fetch issues from Linear
     const linearResponse = await fetch("https://api.linear.app/graphql", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": linearApiKey, // NO Bearer prefix for Linear
-        "apollo-require-preflight": "true", // Required by Linear to prevent CSRF
+        "Authorization": linearApiKey,
+        "apollo-require-preflight": "true",
       },
       body: JSON.stringify({
         query: `
@@ -62,6 +70,15 @@ export default async function handler(req, res) {
       }),
     });
 
+    if (!linearResponse.ok) {
+      const errorText = await linearResponse.text();
+      return res.status(400).json({
+        error: "Linear API request failed",
+        status: linearResponse.status,
+        details: errorText,
+      });
+    }
+
     const linearData = await linearResponse.json();
 
     if (linearData.errors) {
@@ -91,6 +108,7 @@ ${JSON.stringify(
     status: o.status,
     area: o.area,
     initiative: o.initiative,
+    issues: o.issues || [],
   })),
   null,
   2
@@ -111,13 +129,17 @@ ${JSON.stringify(
   2
 )}
 
-Analyze the Linear issues and match them to roadmap opportunities. For each match, recommend a status update if the Linear status suggests the roadmap status should change.
+Analyze the Linear issues and match them to roadmap opportunities. Match by:
+1. Exact issue identifier match (e.g., opportunity has "PAL-123" in its issues array)
+2. Title similarity if no exact match
+
+For each match, recommend a status update if the Linear status suggests the roadmap status should change.
 
 Status mapping:
 - Linear "Triage", "Backlog", "Todo" → roadmap "not_started"
 - Linear "In Progress", "In Review" → roadmap "in_progress"
-- Linear "Done" → roadmap "done"
-- Linear "Canceled" → roadmap "done" (or keep current)
+- Linear "Done", "Completed" → roadmap "done"
+- Linear "Canceled", "Cancelled" → roadmap "done" (or keep current)
 - Linear "Blocked" → roadmap "blocked"
 
 For opportunities with multiple related issues, use this rollup logic:
@@ -126,7 +148,7 @@ For opportunities with multiple related issues, use this rollup logic:
 - If ANY issue is blocked → "blocked"
 - If ALL issues are not started → "not_started"
 
-Also flag opportunities as "at risk" if:
+Also flag opportunities as "at risk" (recommendAtRisk: true) if:
 - Due date has passed but not done
 - Issues are blocked
 - No progress on issues that should have started
@@ -137,15 +159,17 @@ Return a JSON array of recommendations:
     "opportunityId": <number>,
     "opportunityTitle": "<string>",
     "currentStatus": "<string>",
+    "currentAtRisk": <boolean>,
     "recommendedStatus": "<string>",
-    "reason": "<brief explanation>",
-    "relatedIssues": ["PAL-123", "PAL-456"],
-    "atRisk": <boolean>,
-    "atRiskReason": "<string or null>"
+    "recommendAtRisk": <boolean>,
+    "statusReason": "<brief explanation of status change>",
+    "atRiskReason": "<string or null>",
+    "issuesSummary": "<e.g., '2/3 issues done'>",
+    "relatedIssues": ["PAL-123", "PAL-456"]
   }
 ]
 
-Only include opportunities where you recommend a change or want to flag a risk. Return valid JSON only, no markdown.`;
+Only include opportunities where you recommend a status change OR want to flag/unflag risk. Return valid JSON only, no markdown code blocks.`;
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
