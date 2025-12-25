@@ -5,3 +5,5 @@ export { default as TeamManagementPanel } from './TeamManagementPanel';
 export { default as CapacityDashboard } from './CapacityDashboard';
 export { default as TimelineLanes } from './TimelineLanes';
 export { StatusBadge } from './StatusBadge';
+export { default as AIAdvisorPanel } from './AIAdvisorPanel';
+export { default as PrioritizationMatrix } from './PrioritizationMatrix';

@@ -11,7 +11,8 @@ import {
 } from './utils/helpers';
 import {
   TeamMemberBadge, AssignmentBadges, AssignTeamMemberModal,
-  TeamManagementPanel, CapacityDashboard, TimelineLanes, StatusBadge
+  TeamManagementPanel, CapacityDashboard, TimelineLanes, StatusBadge,
+  AIAdvisorPanel, PrioritizationMatrix
 } from './components';
 
 export default function PalazzoTimeline() {
@@ -65,6 +66,9 @@ export default function PalazzoTimeline() {
     }
     return '';
   });
+
+  // AI Advisor state
+  const [aiAdvisorOpen, setAiAdvisorOpen] = useState(false);
 
   // Notification helper
   const showNotification = (message, type = 'info') => {
@@ -863,6 +867,11 @@ export default function PalazzoTimeline() {
           
           <div className="flex items-center gap-2">
             {/* Primary Actions */}
+            <button onClick={() => setAiAdvisorOpen(true)} className="p-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg transition-colors shadow-lg shadow-purple-500/20" title="AI Advisor">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </button>
             <button onClick={() => setSyncModalOpen(true)} className="p-2 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-lg transition-colors" title="Linear Sync">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -909,6 +918,7 @@ export default function PalazzoTimeline() {
               { key: 'all', label: 'Timeline', icon: '📅' },
               { key: 'milestones', label: 'Milestones', icon: '🎯' },
               { key: 'opportunities', label: 'Opportunities', icon: '💡' },
+              { key: 'prioritize', label: 'Prioritize', icon: '⚖️' },
               { key: 'capacity', label: 'Capacity', icon: '📊' },
               { key: 'timeline', label: 'Team View', icon: '👥' }
             ].map(mode => (
@@ -1041,8 +1051,27 @@ export default function PalazzoTimeline() {
         />
       )}
 
+      {/* Prioritization Matrix View */}
+      {viewMode === 'prioritize' && (
+        <PrioritizationMatrix
+          opportunities={opportunities}
+          milestones={milestones}
+          assignments={assignments}
+          onUpdateOpportunity={(opp) => {
+            saveToUndo();
+            setOpportunities(prev => prev.map(o => o.id === opp.id ? opp : o));
+            saveOpportunity(opp);
+          }}
+          getInitiativeColor={getInitiativeColor}
+          getAreaName={getAreaName}
+          filterInitiative={filterInitiative}
+          filterArea={filterArea}
+          filterStatus={filterStatus}
+        />
+      )}
+
       {/* Main Timeline Grid */}
-      {viewMode !== 'capacity' && viewMode !== 'timeline' && (
+      {viewMode !== 'capacity' && viewMode !== 'timeline' && viewMode !== 'prioritize' && (
         <div className="overflow-x-auto border border-slate-800 rounded-lg bg-slate-900">
           <table className="w-full min-w-[1400px] border-collapse">
             <thead>
@@ -1344,6 +1373,16 @@ export default function PalazzoTimeline() {
           </div>
         </div>
       )}
+
+      {/* AI Advisor Panel */}
+      <AIAdvisorPanel
+        isOpen={aiAdvisorOpen}
+        onClose={() => setAiAdvisorOpen(false)}
+        opportunities={opportunities}
+        milestones={milestones}
+        teamMembers={teamMembers}
+        assignments={assignments}
+      />
     </div>
   );
 }
