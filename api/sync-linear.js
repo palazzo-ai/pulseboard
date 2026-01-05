@@ -36,12 +36,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Calculate date filter - last sync or 3 weeks ago for first sync
-    const sinceDate = lastSyncAt 
-      ? new Date(lastSyncAt).toISOString()
-      : new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString();
-
-    // Fetch issues from Linear with expanded data
+    // Fetch issues from Linear
     const linearResponse = await fetch("https://api.linear.app/graphql", {
       method: "POST",
       headers: {
@@ -51,14 +46,8 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         query: `
-          query GetIssuesSince($since: DateTime!) {
-            issues(
-              first: 250
-              filter: { 
-                updatedAt: { gte: $since }
-              }
-              orderBy: updatedAt
-            ) {
+          query {
+            issues(first: 250, orderBy: updatedAt) {
               nodes {
                 id
                 identifier
@@ -76,8 +65,6 @@ export default async function handler(req, res) {
                 project {
                   id
                   name
-                  state
-                  targetDate
                 }
                 team {
                   key
@@ -93,31 +80,8 @@ export default async function handler(req, res) {
                 }
               }
             }
-            projects(first: 50) {
-              nodes {
-                id
-                name
-                description
-                state
-                targetDate
-                teams {
-                  nodes {
-                    key
-                    name
-                  }
-                }
-                issues {
-                  nodes {
-                    identifier
-                  }
-                }
-              }
-            }
           }
-        `,
-        variables: {
-          since: sinceDate
-        }
+        `
       }),
     });
 
@@ -141,7 +105,6 @@ export default async function handler(req, res) {
     }
 
     const issues = linearData.data?.issues?.nodes || [];
-    const projects = linearData.data?.projects?.nodes || [];
 
     // Filter out excluded issues
     const filteredIssues = issues.filter(
@@ -221,17 +184,6 @@ ${JSON.stringify(filteredIssues.map(i => ({
   isSubIssue: !!i.parent
 })), null, 2)}
 
-### Active Projects
-${JSON.stringify(projects.filter(p => p.state !== 'completed' && p.state !== 'canceled').map(p => ({
-  id: p.id,
-  name: p.name,
-  description: p.description?.substring(0, 200),
-  state: p.state,
-  targetDate: p.targetDate,
-  teams: p.teams?.nodes?.map(t => t.name) || [],
-  issueCount: p.issues?.nodes?.length || 0
-})), null, 2)}
-
 ## YOUR TASK
 
 Analyze the Linear data and produce recommendations in these categories:
@@ -239,7 +191,6 @@ Analyze the Linear data and produce recommendations in these categories:
 ### 1. NEW OPPORTUNITIES
 Look for clusters of related issues that suggest work not captured in the roadmap:
 - Multiple issues around a common theme with no matching opportunity
-- New Linear projects with significant scope
 - Issues with high priority/estimate that seem strategic
 
 For each, suggest:
