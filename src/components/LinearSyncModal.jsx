@@ -428,6 +428,12 @@ export default function LinearSyncModal({
   const [error, setError] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   
+  // Debug: track when analysis changes
+  useEffect(() => {
+    console.log('Analysis state changed:', analysis);
+    console.log('Analysis is truthy:', !!analysis);
+  }, [analysis]);
+  
   // Track dismissed items
   const [dismissedNewOpps, setDismissedNewOpps] = useState(new Set());
   const [dismissedScopeChanges, setDismissedScopeChanges] = useState(new Set());
@@ -473,7 +479,17 @@ export default function LinearSyncModal({
       }
 
       const data = await response.json();
+      console.log('Sync response:', data);
+      console.log('Response has newOpportunities:', !!data?.newOpportunities);
+      console.log('Response has orphanedIssues:', !!data?.orphanedIssues);
+      
+      // Check if we got valid data
+      if (!data) {
+        throw new Error('Empty response from server');
+      }
+      
       setAnalysis(data);
+      console.log('Analysis state set to:', data);
       
       // Save sync timestamp
       if (onSyncComplete) {
@@ -481,6 +497,7 @@ export default function LinearSyncModal({
       }
     } catch (err) {
       console.error('Sync error:', err);
+      console.error('Error details:', err.message, err.stack);
       setError(err.message);
     } finally {
       setLoading(false);
