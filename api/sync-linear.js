@@ -17,15 +17,19 @@ export default async function handler(req, res) {
   const { 
     linearApiKey, 
     lastSyncAt,  // ISO timestamp or null for first sync
-    opportunities, 
-    milestones,
+    opportunities = [], 
+    milestones = [],
     excludedIssues = [],  // Issue identifiers to ignore
-    areas,  // Area definitions for context
-    initiatives  // Initiative definitions for context
-  } = req.body;
+    areas = [],  // Area definitions for context
+    initiatives = []  // Initiative definitions for context
+  } = req.body || {};
 
   if (!linearApiKey) {
     return res.status(400).json({ error: "Linear API key is required" });
+  }
+
+  if (!opportunities || !Array.isArray(opportunities)) {
+    return res.status(400).json({ error: "Opportunities array is required" });
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -125,7 +129,7 @@ export default async function handler(req, res) {
 
     // Get all currently linked issues across opportunities
     const linkedIssues = new Set();
-    opportunities.forEach(opp => {
+    (opportunities || []).forEach(opp => {
       (opp.issues || []).forEach(issue => linkedIssues.add(issue));
     });
 
@@ -134,13 +138,13 @@ export default async function handler(req, res) {
 ## CONTEXT
 
 ### Roadmap Areas (product verticals)
-${JSON.stringify(areas, null, 2)}
+${JSON.stringify(areas || [], null, 2)}
 
 ### Roadmap Initiatives (strategic themes)
-${JSON.stringify(initiatives, null, 2)}
+${JSON.stringify(initiatives || [], null, 2)}
 
 ### Current Roadmap Opportunities
-${JSON.stringify(opportunities.map(o => ({
+${JSON.stringify((opportunities || []).map(o => ({
   id: o.id,
   title: o.title,
   area: o.area,
@@ -153,7 +157,7 @@ ${JSON.stringify(opportunities.map(o => ({
 })), null, 2)}
 
 ### Current Milestones
-${JSON.stringify(milestones.map(m => ({
+${JSON.stringify((milestones || []).map(m => ({
   id: m.id,
   title: m.title,
   area: m.area,
@@ -164,7 +168,7 @@ ${JSON.stringify(milestones.map(m => ({
 ### Issues Already Linked to Opportunities
 ${JSON.stringify([...linkedIssues], null, 2)}
 
-## NEW LINEAR DATA (since ${sinceDate})
+## NEW LINEAR DATA
 
 ### Issues (${filteredIssues.length} total)
 ${JSON.stringify(filteredIssues.map(i => ({
@@ -316,15 +320,16 @@ Be conservative - only suggest new opportunities when there's a clear cluster of
     return res.json({
       ...analysis,
       analyzedCount: filteredIssues.length,
-      syncTimestamp: new Date().toISOString(),
-      sinceDate: sinceDate
+      syncTimestamp: new Date().toISOString()
     });
 
   } catch (error) {
     console.error("Sync error:", error);
+    console.error("Error stack:", error.stack);
     return res.status(500).json({
       error: "Internal server error",
       message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
