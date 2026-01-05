@@ -468,8 +468,8 @@ export default function LinearSyncModal({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Sync failed');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || `Sync failed with status ${response.status}`);
       }
 
       const data = await response.json();
