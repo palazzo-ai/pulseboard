@@ -7,3 +7,4 @@ export { default as TimelineLanes } from './TimelineLanes';
 export { StatusBadge } from './StatusBadge';
 export { default as AIAdvisorPanel } from './AIAdvisorPanel';
 export { default as PrioritizationMatrix } from './PrioritizationMatrix';
+export { default as LinearSyncModal } from './LinearSyncModal';
