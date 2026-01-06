@@ -243,7 +243,7 @@ export default function AIScoringModal({
     setAdjustments({});
 
     try {
-      // Build context for Claude
+      // Build context for the API
       const context = {
         opportunities: oppsToAnalyze.map(o => ({
           id: o.id,
@@ -267,76 +267,27 @@ export default function AIScoringModal({
         })),
       };
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      // Call the serverless API endpoint instead of Anthropic directly
+      const response = await fetch('/api/ai-score', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
         },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 4096,
-          messages: [{
-            role: 'user',
-            content: `You are helping prioritize a product roadmap. Analyze these opportunities and suggest Impact (0-100) and Effort (0-100) scores.
-
-**Scoring Guidelines:**
-- **Impact (0-100):** Business value, user benefit, strategic importance, milestone criticality
-  - 80-100: Critical for major milestones, high revenue/user impact, strategic differentiator
-  - 60-79: Important feature, meaningful user benefit, supports key initiatives  
-  - 40-59: Nice to have, incremental improvement, indirect benefit
-  - 0-39: Low priority, minimal impact, could be cut
-
-- **Effort (0-100):** Engineering complexity, time required, dependencies, risk
-  - 80-100: Multi-month, multiple teams, high technical risk, many dependencies
-  - 60-79: Several weeks, significant complexity, some dependencies
-  - 40-59: 1-2 weeks, moderate complexity, few dependencies
-  - 0-39: Days, straightforward, minimal risk
-
-**Context to consider:**
-- Items linked to near-term milestones should have higher impact
-- More Linear issues often indicates higher effort
-- More assignees may indicate higher effort/complexity
-- "At risk" items may need recalibration
-- Platform/infrastructure work often has high effort but enables other work
-
-**Opportunities to analyze:**
-${JSON.stringify(context.opportunities, null, 2)}
-
-**Upcoming milestones for context:**
-${JSON.stringify(context.milestones, null, 2)}
-
-**Respond with a JSON array only (no markdown, no explanation outside the array):**
-[
-  {
-    "id": <opportunity_id>,
-    "impactScore": <0-100>,
-    "effortScore": <0-100>,
-    "reasoning": "<1-2 sentence explanation>"
-  },
-  ...
-]`
-          }]
-        })
+        body: JSON.stringify(context)
       });
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `API error: ${response.status}`);
       }
 
       const data = await response.json();
-      const text = data.content?.[0]?.text || '';
       
-      // Parse JSON response
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) {
-        throw new Error('Could not parse Claude response');
+      if (data.scores && Array.isArray(data.scores)) {
+        setSuggestions(data.scores);
+      } else {
+        throw new Error('Invalid response format from API');
       }
-      
-      const parsed = JSON.parse(jsonMatch[0]);
-      setSuggestions(parsed);
       
     } catch (err) {
       console.error('AI Scoring error:', err);
