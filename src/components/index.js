@@ -8,3 +8,5 @@ export { StatusBadge } from './StatusBadge';
 export { default as AIAdvisorPanel } from './AIAdvisorPanel';
 export { default as PrioritizationMatrix } from './PrioritizationMatrix';
 export { default as LinearSyncModal } from './LinearSyncModal';
+export { default as MultiSelectFilter } from './MultiSelectFilter';
+export { default as AIScoringModal } from './AIScoringModal';

@@ -12,7 +12,8 @@ import {
 import {
   TeamMemberBadge, AssignmentBadges, AssignTeamMemberModal,
   TeamManagementPanel, CapacityDashboard, TimelineLanes, StatusBadge,
-  AIAdvisorPanel, PrioritizationMatrix, LinearSyncModal
+  AIAdvisorPanel, PrioritizationMatrix, LinearSyncModal,
+  MultiSelectFilter, AIScoringModal  // ADD THESE
 } from './components';
 
 export default function PalazzoTimeline() {
@@ -29,12 +30,12 @@ export default function PalazzoTimeline() {
   const [isCreatingOpp, setIsCreatingOpp] = useState(false);
   const [isCreatingMilestone, setIsCreatingMilestone] = useState(false);
   
-  // Filter state
-  const [filterInitiative, setFilterInitiative] = useState(null);
-  const [filterArea, setFilterArea] = useState(null);
-  const [filterMilestone, setFilterMilestone] = useState(null);
-  const [filterStatus, setFilterStatus] = useState(null);
-  const [filterAssignee, setFilterAssignee] = useState(null);
+  // Filter state - UPDATED to arrays for multi-select
+  const [filterInitiative, setFilterInitiative] = useState([]);
+  const [filterArea, setFilterArea] = useState([]);
+  const [filterMilestone, setFilterMilestone] = useState(null); // Keep single-select for milestone dropdown
+  const [filterStatus, setFilterStatus] = useState([]);
+  const [filterAssignee, setFilterAssignee] = useState([]);
   
   // View and UI state
   const [viewMode, setViewMode] = useState('all');
@@ -75,6 +76,9 @@ export default function PalazzoTimeline() {
 
   // AI Advisor state
   const [aiAdvisorOpen, setAiAdvisorOpen] = useState(false);
+
+  // AI Scoring Modal state
+  const [aiScoringOpen, setAiScoringOpen] = useState(false);
 
   // Notification helper
   const showNotification = (message, type = 'info') => {
@@ -235,26 +239,68 @@ export default function PalazzoTimeline() {
     }
   };
 
-  // ========== FILTERING ==========
+  // ========== FILTERING - UPDATED for multi-select ==========
   const filteredOpportunities = opportunities.filter(opp => {
-    if (filterInitiative && opp.initiative !== filterInitiative) return false;
-    if (filterArea && opp.area !== filterArea) return false;
+    // Initiative filter (array-based)
+    if (filterInitiative.length > 0 && !filterInitiative.includes(opp.initiative)) return false;
+    
+    // Area filter (array-based)
+    if (filterArea.length > 0 && !filterArea.includes(opp.area)) return false;
+    
+    // Milestone filter (single-select)
     if (filterMilestone && opp.milestoneId !== filterMilestone) return false;
-    if (filterStatus === 'at_risk' && !opp.atRisk) return false;
-    if (filterStatus && filterStatus !== 'at_risk' && opp.status !== filterStatus) return false;
-    if (filterAssignee === 'unassigned') {
-      if (assignments[opp.id] && assignments[opp.id].length > 0) return false;
-    } else if (filterAssignee) {
-      const oppAssignments = assignments[opp.id] || [];
-      if (!oppAssignments.some(a => a.team_member_id === filterAssignee)) return false;
+    
+    // Status filter (array-based with special 'at_risk' handling)
+    if (filterStatus.length > 0) {
+      const hasAtRisk = filterStatus.includes('at_risk');
+      const statusFilters = filterStatus.filter(s => s !== 'at_risk');
+      const matchesStatus = statusFilters.length === 0 || statusFilters.includes(opp.status);
+      const matchesAtRisk = hasAtRisk && opp.atRisk;
+      
+      if (hasAtRisk && statusFilters.length === 0) {
+        if (!opp.atRisk) return false;
+      } else if (hasAtRisk) {
+        if (!matchesStatus && !matchesAtRisk) return false;
+      } else {
+        if (!matchesStatus) return false;
+      }
     }
+    
+    // Assignee filter (array-based with special 'unassigned' handling)
+    if (filterAssignee.length > 0) {
+      const hasUnassigned = filterAssignee.includes('unassigned');
+      const assigneeIds = filterAssignee.filter(a => a !== 'unassigned');
+      const oppAssignments = assignments[opp.id] || [];
+      const isUnassigned = oppAssignments.length === 0;
+      const matchesAssignee = assigneeIds.length > 0 && oppAssignments.some(a => assigneeIds.includes(a.team_member_id));
+      
+      if (hasUnassigned && assigneeIds.length === 0) {
+        if (!isUnassigned) return false;
+      } else if (hasUnassigned) {
+        if (!isUnassigned && !matchesAssignee) return false;
+      } else {
+        if (!matchesAssignee) return false;
+      }
+    }
+    
     return true;
   });
 
   const filteredMilestones = milestones.filter(m => {
-    if (filterArea && m.area !== filterArea) return false;
+    if (filterArea.length > 0 && !filterArea.includes(m.area)) return false;
     return true;
   });
+
+  // Helper variables for filter state
+  const hasActiveFilters = filterInitiative.length > 0 || filterArea.length > 0 || filterStatus.length > 0 || filterAssignee.length > 0 || filterMilestone;
+
+  const clearAllFilters = () => {
+    setFilterInitiative([]);
+    setFilterArea([]);
+    setFilterStatus([]);
+    setFilterAssignee([]);
+    setFilterMilestone(null);
+  };
 
   // ========== HELPERS ==========
   const getOpportunitiesForMilestone = (milestoneId) => opportunities.filter(opp => opp.milestoneId === milestoneId);
@@ -841,48 +887,49 @@ export default function PalazzoTimeline() {
             ))}
           </div>
 
-          {/* Row 2 Right: Compact Filters */}
+          {/* Row 2 Right: Multi-Select Filters */}
           <div className="flex items-center gap-2 pb-2">
-            {/* Initiative Dropdown */}
-            <select 
-              value={filterInitiative || ''} 
-              onChange={e => setFilterInitiative(e.target.value || null)}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white min-w-[140px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="">All Initiatives</option>
-              {initiatives.map(init => (
-                <option key={init.id} value={init.id}>{init.name}</option>
-              ))}
-            </select>
+            <MultiSelectFilter
+              label="Initiative"
+              options={initiatives}
+              selected={filterInitiative}
+              onChange={setFilterInitiative}
+              allLabel="All Initiatives"
+            />
 
-            {/* Status Dropdown */}
-            <select 
-              value={filterStatus || ''} 
-              onChange={e => setFilterStatus(e.target.value || null)}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white min-w-[120px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="">All Statuses</option>
-              {Object.entries(STATUSES).map(([key, { label }]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-              <option value="at_risk">⚠ At Risk</option>
-            </select>
+            <MultiSelectFilter
+              label="Area"
+              options={areas}
+              selected={filterArea}
+              onChange={setFilterArea}
+              allLabel="All Areas"
+            />
 
-            {/* Assignee Dropdown */}
-            <select 
-              value={filterAssignee || ''} 
-              onChange={e => setFilterAssignee(e.target.value || null)}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white min-w-[130px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="">All Assignees</option>
-              <option value="unassigned">⚠ Unassigned</option>
-              {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
+            <MultiSelectFilter
+              label="Status"
+              options={[
+                ...Object.entries(STATUSES).map(([key, { label, color }]) => ({ id: key, name: label, color })),
+                { id: 'at_risk', name: '⚠ At Risk', color: '#f97316' }
+              ]}
+              selected={filterStatus}
+              onChange={setFilterStatus}
+              allLabel="All Statuses"
+            />
 
-            {/* Clear Filters */}
-            {(filterInitiative || filterStatus || filterAssignee || filterArea) && (
+            <MultiSelectFilter
+              label="Assignee"
+              options={[
+                { id: 'unassigned', name: '⚠ Unassigned', color: '#f59e0b' },
+                ...teamMembers.map(m => ({ id: m.id, name: m.name, color: m.color }))
+              ]}
+              selected={filterAssignee}
+              onChange={setFilterAssignee}
+              allLabel="All Assignees"
+            />
+
+            {hasActiveFilters && (
               <button 
-                onClick={() => { setFilterInitiative(null); setFilterStatus(null); setFilterAssignee(null); setFilterArea(null); }}
+                onClick={clearAllFilters}
                 className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
                 title="Clear all filters"
               >
@@ -894,35 +941,65 @@ export default function PalazzoTimeline() {
           </div>
         </div>
 
-        {/* Active Filters Chips */}
-        {(filterInitiative || filterStatus || filterAssignee || filterArea) && (
-          <div className="flex items-center gap-2 mt-3">
-            <span className="text-xs text-slate-500">Filters:</span>
-            {filterInitiative && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 rounded-full text-xs">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: initiatives.find(i => i.id === filterInitiative)?.color }}></span>
-                {initiatives.find(i => i.id === filterInitiative)?.name}
-                <button onClick={() => setFilterInitiative(null)} className="ml-1 text-slate-400 hover:text-white">×</button>
-              </span>
-            )}
-            {filterStatus && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" 
-                style={{ backgroundColor: filterStatus === 'at_risk' ? '#f9731630' : STATUSES[filterStatus]?.bgColor, color: filterStatus === 'at_risk' ? '#fb923c' : STATUSES[filterStatus]?.color }}>
-                {filterStatus === 'at_risk' ? '⚠ At Risk' : STATUSES[filterStatus]?.label}
-                <button onClick={() => setFilterStatus(null)} className="ml-1 hover:opacity-70">×</button>
-              </span>
-            )}
-            {filterAssignee && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 rounded-full text-xs text-slate-300">
-                {filterAssignee === 'unassigned' ? '⚠ Unassigned' : teamMembers.find(m => m.id === filterAssignee)?.name}
-                <button onClick={() => setFilterAssignee(null)} className="ml-1 text-slate-400 hover:text-white">×</button>
-              </span>
-            )}
-            {filterArea && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 rounded-full text-xs">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: areas.find(a => a.id === filterArea)?.color }}></span>
-                {areas.find(a => a.id === filterArea)?.name}
-                <button onClick={() => setFilterArea(null)} className="ml-1 text-slate-400 hover:text-white">×</button>
+        {/* Active Filters Chips - UPDATED for multi-select */}
+        {hasActiveFilters && (
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <span className="text-xs text-slate-500">Active filters:</span>
+            
+            {/* Initiative chips */}
+            {filterInitiative.map(id => {
+              const init = initiatives.find(i => i.id === id);
+              return init && (
+                <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 rounded-full text-xs">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: init.color }}></span>
+                  {init.name}
+                  <button onClick={() => setFilterInitiative(prev => prev.filter(i => i !== id))} className="ml-1 text-slate-400 hover:text-white">×</button>
+                </span>
+              );
+            })}
+            
+            {/* Area chips */}
+            {filterArea.map(id => {
+              const area = areas.find(a => a.id === id);
+              return area && (
+                <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 rounded-full text-xs">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: area.color }}></span>
+                  {area.name}
+                  <button onClick={() => setFilterArea(prev => prev.filter(a => a !== id))} className="ml-1 text-slate-400 hover:text-white">×</button>
+                </span>
+              );
+            })}
+            
+            {/* Status chips */}
+            {filterStatus.map(id => {
+              const isAtRisk = id === 'at_risk';
+              const status = STATUSES[id];
+              return (
+                <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" 
+                  style={{ backgroundColor: isAtRisk ? '#f9731630' : status?.bgColor, color: isAtRisk ? '#fb923c' : status?.color }}>
+                  {isAtRisk ? '⚠ At Risk' : status?.label}
+                  <button onClick={() => setFilterStatus(prev => prev.filter(s => s !== id))} className="ml-1 hover:opacity-70">×</button>
+                </span>
+              );
+            })}
+            
+            {/* Assignee chips */}
+            {filterAssignee.map(id => {
+              const isUnassigned = id === 'unassigned';
+              const member = teamMembers.find(m => m.id === id);
+              return (
+                <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 rounded-full text-xs text-slate-300">
+                  {isUnassigned ? '⚠ Unassigned' : member?.name}
+                  <button onClick={() => setFilterAssignee(prev => prev.filter(a => a !== id))} className="ml-1 text-slate-400 hover:text-white">×</button>
+                </span>
+              );
+            })}
+            
+            {/* Milestone chip (single-select) */}
+            {filterMilestone && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-900/30 border border-yellow-600/30 rounded-full text-xs text-yellow-400">
+                🎯 {milestones.find(m => m.id === filterMilestone)?.title}
+                <button onClick={() => setFilterMilestone(null)} className="ml-1 hover:opacity-70">×</button>
               </span>
             )}
           </div>
@@ -955,7 +1032,7 @@ export default function PalazzoTimeline() {
         />
       )}
 
-      {/* Prioritization Matrix View */}
+      {/* Prioritization Matrix View - UPDATED with onOpenAIScoring and array filters */}
       {viewMode === 'prioritize' && (
         <PrioritizationMatrix
           opportunities={opportunities}
@@ -966,6 +1043,8 @@ export default function PalazzoTimeline() {
             setOpportunities(prev => prev.map(o => o.id === opp.id ? opp : o));
             saveOpportunity(opp);
           }}
+          onSelectOpportunity={setSelectedOpportunity}
+          onOpenAIScoring={() => setAiScoringOpen(true)}
           getInitiativeColor={getInitiativeColor}
           getAreaName={getAreaName}
           filterInitiative={filterInitiative}
@@ -999,13 +1078,20 @@ export default function PalazzoTimeline() {
             <tbody>
               {areas.map(area => (
                 <tr key={area.id}>
+                  {/* Area row click handler - UPDATED for multi-select toggle */}
                   <td className="sticky left-0 z-10 bg-slate-900 border-r border-b border-slate-800 p-2 font-medium text-sm cursor-pointer hover:bg-slate-800"
                     style={{ color: area.color }}
-                    onClick={() => setFilterArea(filterArea === area.id ? null : area.id)}>
+                    onClick={() => {
+                      if (filterArea.includes(area.id)) {
+                        setFilterArea(prev => prev.filter(a => a !== area.id));
+                      } else {
+                        setFilterArea(prev => [...prev, area.id]);
+                      }
+                    }}>
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: area.color }}></span>
                       {area.name}
-                      {filterArea === area.id && <span className="text-xs">✓</span>}
+                      {filterArea.includes(area.id) && <span className="text-xs">✓</span>}
                     </div>
                   </td>
                   {months.map(month => {
@@ -1056,18 +1142,25 @@ export default function PalazzoTimeline() {
                                   <span className="font-medium text-slate-200 leading-tight flex-1">{opp.title}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                  <StatusBadge status={opp.status} onStatusChange={(newStatus) => quickStatusChange(opp.id, newStatus)} size="xs" />
-                                  {linkedMilestone && <span className="text-yellow-500 text-[9px] flex items-center gap-0.5">→ {linkedMilestone.title}</span>}
+                                  <StatusBadge status={opp.status} size="xs" />
+                                  {linkedMilestone && (
+                                    <span className="text-yellow-500 text-[9px] flex items-center gap-0.5">→ {linkedMilestone.title}</span>
+                                  )}
                                 </div>
+                                {/* Team Assignments */}
                                 <div className="mt-1 flex items-center justify-between">
                                   <AssignmentBadges assignments={assignments[opp.id] || []} onAddClick={() => openAssignModal(opp)} maxVisible={2} size="xs" />
-                                  {opp.issues.length > 0 && <span className="text-slate-500 text-[9px]">{opp.issues.length} issues</span>}
+                                  {opp.issues && opp.issues.length > 0 && (
+                                    <span className="text-slate-500 text-[9px]">{opp.issues.length} issues</span>
+                                  )}
                                 </div>
                               </div>
                             );
                           })}
                           
-                          {cellMilestones.length === 0 && cellOpps.length === 0 && <div className="text-slate-700 text-center py-2 text-xs">—</div>}
+                          {cellMilestones.length === 0 && cellOpps.length === 0 && (
+                            <div className="text-slate-700 text-center py-2 text-xs">—</div>
+                          )}
                         </div>
                       </td>
                     );
@@ -1089,7 +1182,9 @@ export default function PalazzoTimeline() {
           <span style={{ color: STATUSES.done.color }}>{opportunities.filter(o => o.status === 'done').length} done</span>
           <span style={{ color: STATUSES.blocked.color }}>{opportunities.filter(o => o.status === 'blocked').length} blocked</span>
         </div>
-        <div className="border-l border-slate-700 pl-4"><span className="text-orange-500">{opportunities.filter(o => o.atRisk).length} at risk</span></div>
+        <div className="border-l border-slate-700 pl-4">
+          <span className="text-orange-500">{opportunities.filter(o => o.atRisk).length} at risk</span>
+        </div>
         <div><span className="text-slate-400 font-medium">{undoStack.length}</span> undo steps</div>
       </div>
 
@@ -1134,12 +1229,17 @@ export default function PalazzoTimeline() {
                   <div className="text-slate-300">{getMonthName(selectedOpportunity.month)}</div>
                 </div>
                 <div>
-                  <div className="text-slate-500 text-xs uppercase tracking-wide mb-1">Team</div>
-                  <AssignmentBadges assignments={assignments[selectedOpportunity.id] || []} onAddClick={() => openAssignModal(selectedOpportunity)} size="sm" />
+                  <div className="text-slate-500 text-xs uppercase tracking-wide mb-1">Milestone</div>
+                  <div className="text-slate-300">
+                    {selectedOpportunity.milestoneId 
+                      ? `🎯 ${milestones.find(m => m.id === selectedOpportunity.milestoneId)?.title}`
+                      : '—'
+                    }
+                  </div>
                 </div>
               </div>
 
-              {selectedOpportunity.issues.length > 0 && (
+              {selectedOpportunity.issues && selectedOpportunity.issues.length > 0 && (
                 <div>
                   <div className="text-slate-500 text-xs uppercase tracking-wide mb-2">Linear Issues</div>
                   <div className="flex flex-wrap gap-1">
@@ -1320,6 +1420,22 @@ export default function PalazzoTimeline() {
         milestones={milestones}
         teamMembers={teamMembers}
         assignments={assignments}
+      />
+
+      {/* AI Scoring Modal */}
+      <AIScoringModal
+        isOpen={aiScoringOpen}
+        onClose={() => setAiScoringOpen(false)}
+        opportunities={opportunities}
+        milestones={milestones}
+        assignments={assignments}
+        onUpdateOpportunity={(opp) => {
+          saveToUndo();
+          setOpportunities(prev => prev.map(o => o.id === opp.id ? opp : o));
+          saveOpportunity(opp);
+        }}
+        getInitiativeColor={getInitiativeColor}
+        getAreaName={getAreaName}
       />
     </div>
   );

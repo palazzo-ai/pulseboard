@@ -128,6 +128,7 @@ export default function PrioritizationMatrix({
   assignments,
   onUpdateOpportunity,
   onSelectOpportunity,
+  onOpenAIScoring, // NEW: callback to open AI scoring modal
   getInitiativeColor,
   getAreaName,
   filterInitiative,
@@ -275,6 +276,11 @@ export default function PrioritizationMatrix({
     avoid: filteredOpportunities.filter(o => (o.impactScore ?? 50) < 50 && (o.effortScore ?? 50) >= 50).length,
   };
 
+  const unscoredCount = opportunities.filter(o => 
+    o.impactScore === undefined || o.impactScore === null ||
+    o.effortScore === undefined || o.effortScore === null
+  ).length;
+
   return (
     <div className="bg-slate-900 rounded-xl border border-slate-700 overflow-hidden">
       {/* Header */}
@@ -285,26 +291,47 @@ export default function PrioritizationMatrix({
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Drag cards to any position • {filteredOpportunities.length} items
+            {unscoredCount > 0 && (
+              <span className="text-amber-400 ml-2">({unscoredCount} unscored)</span>
+            )}
           </p>
         </div>
         
-        {/* Quadrant Summary */}
-        <div className="flex gap-4 text-xs">
-          <div className="text-center">
-            <div className="text-lg font-bold text-emerald-400">{quadrantCounts.quickWins}</div>
-            <div className="text-slate-500">🚀 Quick Wins</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-blue-400">{quadrantCounts.majorProjects}</div>
-            <div className="text-slate-500">🎯 Major</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-slate-400">{quadrantCounts.fillIns}</div>
-            <div className="text-slate-500">📝 Fill-Ins</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-red-400">{quadrantCounts.avoid}</div>
-            <div className="text-slate-500">⚠️ Avoid</div>
+        <div className="flex items-center gap-4">
+          {/* AI Assist Button */}
+          {onOpenAIScoring && (
+            <button
+              onClick={onOpenAIScoring}
+              className="px-3 py-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-medium rounded-lg transition-all flex items-center gap-1.5"
+            >
+              <span>🤖</span>
+              AI Assist
+              {unscoredCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-[10px]">
+                  {unscoredCount}
+                </span>
+              )}
+            </button>
+          )}
+          
+          {/* Quadrant Summary */}
+          <div className="flex gap-4 text-xs">
+            <div className="text-center">
+              <div className="text-lg font-bold text-emerald-400">{quadrantCounts.quickWins}</div>
+              <div className="text-slate-500">🚀 Quick Wins</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-blue-400">{quadrantCounts.majorProjects}</div>
+              <div className="text-slate-500">🎯 Major</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-slate-400">{quadrantCounts.fillIns}</div>
+              <div className="text-slate-500">📝 Fill-Ins</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-red-400">{quadrantCounts.avoid}</div>
+              <div className="text-slate-500">⚠️ Avoid</div>
+            </div>
           </div>
         </div>
       </div>
