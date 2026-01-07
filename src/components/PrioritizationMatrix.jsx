@@ -1,11 +1,27 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { getAreaColor } from '../utils/helpers';
 
 const STATUSES = {
   not_started: { label: 'Not Started', color: '#6b7280', bgColor: '#6b728020' },
   in_progress: { label: 'In Progress', color: '#3b82f6', bgColor: '#3b82f620' },
   done: { label: 'Done', color: '#22c55e', bgColor: '#22c55e20' },
   blocked: { label: 'Blocked', color: '#ef4444', bgColor: '#ef444420' }
+};
+
+// Local areas definition to avoid circular import issues
+const AREAS = [
+  { id: 'visualizer', name: 'Visualizer', color: '#3fb950' },
+  { id: 'vinci', name: 'Vinci', color: '#38bdf8' },
+  { id: 'spaces', name: 'Spaces', color: '#a371f7' },
+  { id: 'showcase', name: 'Showcase', color: '#f85149' },
+  { id: 'studio', name: 'Studio', color: '#f778ba' },
+  { id: 'platform', name: 'Platform', color: '#d29922' },
+  { id: 'admin', name: 'Admin', color: '#8b949e' }
+];
+
+// Local helper to get area color
+const getAreaColorLocal = (areaId) => {
+  const area = AREAS.find(a => a.id === areaId);
+  return area?.color || '#8b949e';
 };
 
 // Card dimensions
@@ -491,7 +507,7 @@ export default function PrioritizationMatrix({
           id: `milestone-${milestone.id}`,
           type: 'milestone',
           label: milestone.title,
-          color: getAreaColor(milestone.area),
+          color: getAreaColorLocal(milestone.area),
           opportunities: milestoneOpps,
           totalImpact: milestoneOpps.reduce((sum, o) => sum + (o.impactScore ?? 50), 0) / milestoneOpps.length,
           totalEffort: milestoneOpps.reduce((sum, o) => sum + (o.effortScore ?? 50), 0) / milestoneOpps.length,
@@ -549,13 +565,6 @@ export default function PrioritizationMatrix({
   }, [filteredOpportunities, milestones, enableClustering]);
 
   // Helper function to get area color
-  const getAreaColor = (areaId) => {
-    const colors = {
-      visualizer: '#3fb950', vinci: '#38bdf8', spaces: '#a371f7',
-      showcase: '#f85149', studio: '#f778ba', platform: '#d29922', admin: '#8b949e'
-    };
-    return colors[areaId] || '#8b949e';
-  };
 
   // Convert scores to canvas position
   const getPosition = useCallback((opp) => {
