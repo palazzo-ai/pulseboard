@@ -1,410 +1,734 @@
 import React, { useState, useEffect } from 'react';
-import { areas, initiatives, months } from '../data/initialData';
-import { getAreaName, getAreaColor, getInitiativeName, getMonthName } from '../utils/helpers';
 
-// Confidence badge component
-const ConfidenceBadge = ({ level }) => {
-  const styles = {
-    high: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    medium: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    low: 'bg-slate-500/20 text-slate-400 border-slate-500/30'
-  };
-  
-  return (
-    <span className={`px-2 py-0.5 text-[10px] font-medium rounded border ${styles[level] || styles.low}`}>
-      {level?.toUpperCase()} CONF.
-    </span>
-  );
+// Status definitions matching App.jsx
+const STATUSES = {
+  not_started: { label: 'Not Started', color: '#6b7280', bgColor: '#6b728020' },
+  in_progress: { label: 'In Progress', color: '#3b82f6', bgColor: '#3b82f620' },
+  done: { label: 'Done', color: '#22c55e', bgColor: '#22c55e20' },
+  blocked: { label: 'Blocked', color: '#ef4444', bgColor: '#ef444420' }
 };
 
-// Section header component
-const SectionHeader = ({ icon, title, count, color = 'slate' }) => {
-  const colors = {
-    emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
-    amber: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
-    blue: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
-    purple: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
-    slate: 'text-slate-400 bg-slate-500/10 border-slate-500/30'
+// Area and initiative data
+const AREAS = [
+  { id: 'visualizer', name: 'Visualizer', color: '#3fb950' },
+  { id: 'vinci', name: 'Vinci', color: '#38bdf8' },
+  { id: 'spaces', name: 'Spaces', color: '#a371f7' },
+  { id: 'showcase', name: 'Showcase', color: '#f85149' },
+  { id: 'studio', name: 'Studio', color: '#f778ba' },
+  { id: 'platform', name: 'Platform', color: '#d29922' },
+  { id: 'admin', name: 'Admin', color: '#8b949e' }
+];
+
+const INITIATIVES = [
+  { id: 'launch', name: 'Launch Partner Commitments', color: '#f85149' },
+  { id: 'selfserve', name: 'Self-Serve Scale', color: '#58a6ff' },
+  { id: 'embed', name: 'Embed Everywhere', color: '#a371f7' },
+  { id: 'ai', name: 'AI Model Excellence', color: '#3fb950' },
+  { id: 'commerce', name: 'Commerce Enablement', color: '#d29922' },
+  { id: 'enterprise', name: 'Enterprise Content Scale', color: '#f778ba' }
+];
+
+const MONTHS = [
+  { id: 'dec25', name: "Dec '25" },
+  { id: 'jan26', name: "Jan '26" },
+  { id: 'feb26', name: "Feb '26" },
+  { id: 'mar26', name: "Mar '26" },
+  { id: 'apr26', name: "Apr '26" },
+  { id: 'may26', name: "May '26" },
+  { id: 'jun26', name: "Jun '26" },
+  { id: 'jul26', name: "Jul '26" },
+  { id: 'aug26', name: "Aug '26" },
+  { id: 'sep26', name: "Sep '26" },
+  { id: 'oct26', name: "Oct '26" },
+  { id: 'nov26', name: "Nov '26" },
+  { id: 'dec26', name: "Dec '26" }
+];
+
+// Section Header Component
+const SectionHeader = ({ icon, title, count, color }) => {
+  const colorClasses = {
+    emerald: 'text-emerald-400 bg-emerald-900/30',
+    amber: 'text-amber-400 bg-amber-900/30',
+    blue: 'text-blue-400 bg-blue-900/30',
+    red: 'text-red-400 bg-red-900/30',
+    purple: 'text-purple-400 bg-purple-900/30'
   };
-  
+
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${colors[color]}`}>
-      <span>{icon}</span>
-      <span className="font-medium">{title}</span>
-      {count !== undefined && (
-        <span className="ml-auto text-xs opacity-70">({count})</span>
-      )}
+    <div className="flex items-center gap-2">
+      <span className="text-lg">{icon}</span>
+      <span className={`font-semibold ${colorClasses[color]?.split(' ')[0] || 'text-slate-300'}`}>
+        {title}
+      </span>
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses[color] || 'text-slate-400 bg-slate-800'}`}>
+        {count}
+      </span>
     </div>
   );
 };
 
-// New opportunity card component
-const NewOpportunityCard = ({ 
-  recommendation, 
-  onCreateOpportunity, 
-  onLinkToExisting, 
-  onIgnore,
-  existingOpportunities 
-}) => {
-  const [showLinkDropdown, setShowLinkDropdown] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [editData, setEditData] = useState({
-    title: recommendation.title,
-    area: recommendation.area,
-    initiative: recommendation.initiative,
-    month: recommendation.suggestedMonth,
-    description: recommendation.description
-  });
+// Summary Stat Card
+const StatCard = ({ icon, label, value, color }) => {
+  const colorClasses = {
+    blue: 'bg-blue-900/30 border-blue-700/50 text-blue-400',
+    emerald: 'bg-emerald-900/30 border-emerald-700/50 text-emerald-400',
+    amber: 'bg-amber-900/30 border-amber-700/50 text-amber-400',
+    red: 'bg-red-900/30 border-red-700/50 text-red-400'
+  };
+
+  return (
+    <div className={`p-3 rounded-lg border ${colorClasses[color] || 'bg-slate-800 border-slate-700'}`}>
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-sm">{icon}</span>
+        <span className="text-xs text-slate-400">{label}</span>
+      </div>
+      <div className="text-2xl font-bold">{value}</div>
+    </div>
+  );
+};
+
+// New Opportunity Card (for suggested new opportunities from analysis)
+const NewOpportunityCard = ({ recommendation, onCreateOpportunity, onLinkToExisting, onIgnore, existingOpportunities }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [linkMode, setLinkMode] = useState(false);
+  const [selectedOpp, setSelectedOpp] = useState(null);
+
+  const confidenceColors = {
+    high: 'bg-emerald-900/30 text-emerald-400 border-emerald-600/50',
+    medium: 'bg-amber-900/30 text-amber-400 border-amber-600/50',
+    low: 'bg-slate-800 text-slate-400 border-slate-600'
+  };
 
   const handleCreate = () => {
     onCreateOpportunity({
-      ...recommendation,
-      ...editData
+      title: recommendation.title,
+      description: recommendation.description,
+      area: recommendation.area,
+      initiative: recommendation.initiative,
+      month: recommendation.suggestedMonth,
+      issues: recommendation.issues.map(i => i.identifier),
+      status: 'not_started',
+      atRisk: false,
+      atRiskReason: '',
+      milestoneId: null
     });
   };
 
-  return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          {editing ? (
-            <input
-              type="text"
-              value={editData.title}
-              onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-              className="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1 text-white text-sm"
-            />
-          ) : (
-            <h4 className="font-medium text-white">{recommendation.title}</h4>
-          )}
-        </div>
-        <ConfidenceBadge level={recommendation.confidence} />
-      </div>
-
-      {/* Issues */}
-      <div className="flex flex-wrap gap-1">
-        {recommendation.issues?.map(issue => (
-          <span 
-            key={issue.identifier}
-            className="px-2 py-0.5 bg-slate-700 text-slate-300 text-xs rounded font-mono"
-            title={issue.title}
-          >
-            {issue.identifier}
-          </span>
-        ))}
-      </div>
-
-      {/* Suggested mapping */}
-      <div className="flex flex-wrap gap-2 text-xs">
-        {editing ? (
-          <>
-            <select
-              value={editData.area}
-              onChange={(e) => setEditData({ ...editData, area: e.target.value })}
-              className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-white"
-            >
-              {areas.map(a => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-            <select
-              value={editData.initiative}
-              onChange={(e) => setEditData({ ...editData, initiative: e.target.value })}
-              className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-white"
-            >
-              {initiatives.map(i => (
-                <option key={i.id} value={i.id}>{i.name}</option>
-              ))}
-            </select>
-            <select
-              value={editData.month}
-              onChange={(e) => setEditData({ ...editData, month: e.target.value })}
-              className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-white"
-            >
-              {months.map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-          </>
-        ) : (
-          <>
-            <span 
-              className="px-2 py-0.5 rounded"
-              style={{ backgroundColor: `${getAreaColor(recommendation.area)}30`, color: getAreaColor(recommendation.area) }}
-            >
-              {getAreaName(recommendation.area)}
-            </span>
-            <span className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded">
-              {getInitiativeName(recommendation.initiative)}
-            </span>
-            <span className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded">
-              {getMonthName(recommendation.suggestedMonth)}
-            </span>
-          </>
-        )}
-      </div>
-
-      {/* Reasoning */}
-      <p className="text-xs text-slate-400">
-        💬 {recommendation.reasoning}
-      </p>
-
-      {/* Actions */}
-      <div className="flex gap-2 pt-2 border-t border-slate-700">
-        <button
-          onClick={() => setEditing(!editing)}
-          className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors"
-        >
-          {editing ? 'Done Editing' : 'Edit'}
-        </button>
-        <button
-          onClick={handleCreate}
-          className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded transition-colors"
-        >
-          ✓ Create Opportunity
-        </button>
-        <div className="relative">
-          <button
-            onClick={() => setShowLinkDropdown(!showLinkDropdown)}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors"
-          >
-            Link to Existing ▾
-          </button>
-          {showLinkDropdown && (
-            <div className="absolute bottom-full mb-1 right-0 w-64 max-h-48 overflow-y-auto bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-10">
-              {existingOpportunities.map(opp => (
-                <button
-                  key={opp.id}
-                  onClick={() => {
-                    onLinkToExisting(opp.id, recommendation.issues);
-                    setShowLinkDropdown(false);
-                  }}
-                  className="w-full px-3 py-2 text-left text-xs hover:bg-slate-700 border-b border-slate-700 last:border-0"
-                >
-                  <div className="font-medium text-white truncate">{opp.title}</div>
-                  <div className="text-slate-500">{getAreaName(opp.area)} • {getMonthName(opp.month)}</div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <button
-          onClick={() => onIgnore(recommendation)}
-          className="px-3 py-1.5 text-slate-500 hover:text-slate-300 text-xs rounded transition-colors"
-        >
-          ✗ Ignore
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Scope change card component
-const ScopeChangeCard = ({ change, onAcknowledge, onFlagAtRisk, onLinkIssues }) => {
-  return (
-    <div className="bg-slate-800 border border-amber-600/30 rounded-lg p-4 space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h4 className="font-medium text-white">{change.opportunityTitle}</h4>
-          <div className="text-xs text-amber-400 mt-1">
-            Issues: {change.currentIssueCount} → {change.currentIssueCount + change.newIssues.length} 
-            (+{change.newIssues.length})
-          </div>
-        </div>
-        <ConfidenceBadge level={change.confidence} />
-      </div>
-
-      {/* New issues */}
-      <div>
-        <div className="text-xs text-slate-500 mb-1">New issues:</div>
-        <div className="flex flex-wrap gap-1">
-          {change.newIssues?.map(issue => (
-            <span 
-              key={issue.identifier}
-              className="px-2 py-0.5 bg-amber-900/30 text-amber-300 text-xs rounded font-mono"
-              title={issue.title}
-            >
-              {issue.identifier}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <p className="text-xs text-slate-400">💬 {change.reasoning}</p>
-
-      {/* Actions */}
-      <div className="flex gap-2 pt-2 border-t border-slate-700">
-        <button
-          onClick={() => onLinkIssues(change.opportunityId, change.newIssues)}
-          className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded transition-colors"
-        >
-          Link Issues
-        </button>
-        <button
-          onClick={() => onFlagAtRisk(change.opportunityId)}
-          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded transition-colors"
-        >
-          Flag at Risk
-        </button>
-        <button
-          onClick={() => onAcknowledge(change)}
-          className="px-3 py-1.5 text-slate-500 hover:text-slate-300 text-xs rounded transition-colors"
-        >
-          Acknowledge
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Orphaned issues section
-const OrphanedIssuesSection = ({ issues, onLinkIssue, onExcludeIssue, opportunities }) => {
-  const [selectedIssues, setSelectedIssues] = useState(new Set());
-  const [linkTarget, setLinkTarget] = useState({});
-
-  const toggleSelect = (identifier) => {
-    const newSet = new Set(selectedIssues);
-    if (newSet.has(identifier)) {
-      newSet.delete(identifier);
-    } else {
-      newSet.add(identifier);
+  const handleLinkToExisting = () => {
+    if (selectedOpp) {
+      onLinkToExisting(selectedOpp, recommendation.issues.map(i => i.identifier));
+      setLinkMode(false);
+      setSelectedOpp(null);
     }
-    setSelectedIssues(newSet);
-  };
-
-  const excludeSelected = () => {
-    selectedIssues.forEach(id => {
-      const issue = issues.find(i => i.identifier === id);
-      if (issue) onExcludeIssue(issue, 'not_roadmap');
-    });
-    setSelectedIssues(new Set());
   };
 
   return (
-    <div className="space-y-2">
-      {issues.map(issue => (
-        <div key={issue.identifier} className="flex items-center gap-3 p-2 bg-slate-800/50 rounded-lg">
-          <input
-            type="checkbox"
-            checked={selectedIssues.has(issue.identifier)}
-            onChange={() => toggleSelect(issue.identifier)}
-            className="w-4 h-4 rounded border-slate-600"
-          />
+    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
+      <div 
+        className="p-3 cursor-pointer hover:bg-slate-800 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-slate-400">{issue.identifier}</span>
-              <span className="text-sm text-white truncate">{issue.title}</span>
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${confidenceColors[recommendation.confidence]}`}>
+                {recommendation.confidence.toUpperCase()}
+              </span>
+              <span className="text-xs text-slate-500">
+                {AREAS.find(a => a.id === recommendation.area)?.name} • {MONTHS.find(m => m.id === recommendation.suggestedMonth)?.name}
+              </span>
             </div>
-            <div className="text-xs text-slate-500">
-              {issue.team} • Suggested: {getAreaName(issue.suggestedArea)}
+            <h4 className="font-medium text-white truncate">{recommendation.title}</h4>
+            <p className="text-xs text-slate-400 mt-1 line-clamp-2">{recommendation.description}</p>
+          </div>
+          <svg className={`w-5 h-5 text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="px-3 pb-3 border-t border-slate-700 pt-3 space-y-3">
+          <div>
+            <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">Related Issues ({recommendation.issues.length})</div>
+            <div className="flex flex-wrap gap-1">
+              {recommendation.issues.map(issue => (
+                <span key={issue.identifier} className="px-2 py-1 bg-slate-900 text-slate-300 text-xs rounded font-mono">
+                  {issue.identifier}
+                </span>
+              ))}
             </div>
           </div>
-          <select
-            value={linkTarget[issue.identifier] || ''}
-            onChange={(e) => setLinkTarget({ ...linkTarget, [issue.identifier]: e.target.value })}
-            className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-xs text-white max-w-[180px]"
-          >
-            <option value="">Link to...</option>
-            {opportunities.map(opp => (
-              <option key={opp.id} value={opp.id}>{opp.title}</option>
-            ))}
-          </select>
-          {linkTarget[issue.identifier] && (
-            <button
-              onClick={() => {
-                onLinkIssue(parseInt(linkTarget[issue.identifier]), issue);
-                setLinkTarget({ ...linkTarget, [issue.identifier]: '' });
-              }}
-              className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded"
-            >
-              Link
-            </button>
+
+          <div className="text-xs text-slate-400 italic">{recommendation.reasoning}</div>
+
+          {linkMode ? (
+            <div className="space-y-2">
+              <select
+                value={selectedOpp || ''}
+                onChange={(e) => setSelectedOpp(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select an opportunity...</option>
+                {existingOpportunities.map(opp => (
+                  <option key={opp.id} value={opp.id}>{opp.title}</option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleLinkToExisting}
+                  disabled={!selectedOpp}
+                  className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  Link Issues
+                </button>
+                <button
+                  onClick={() => { setLinkMode(false); setSelectedOpp(null); }}
+                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={handleCreate}
+                className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Create Opportunity
+              </button>
+              <button
+                onClick={() => setLinkMode(true)}
+                className="px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600/50 text-blue-400 text-xs font-medium rounded-lg transition-colors border border-blue-600/50"
+              >
+                Link to Existing
+              </button>
+              <button
+                onClick={() => onIgnore(recommendation.title)}
+                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-400 text-xs font-medium rounded-lg transition-colors"
+              >
+                Ignore
+              </button>
+            </div>
           )}
         </div>
-      ))}
-      
-      {selectedIssues.size > 0 && (
-        <button
-          onClick={excludeSelected}
-          className="w-full px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition-colors"
-        >
-          Exclude {selectedIssues.size} selected as non-roadmap work
-        </button>
       )}
     </div>
   );
 };
 
-// Milestone health card
+// Scope Change Card
+const ScopeChangeCard = ({ change, onAcknowledge, onFlagAtRisk, onLinkIssues }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="bg-slate-800/50 border border-amber-700/30 rounded-lg overflow-hidden">
+      <div 
+        className="p-3 cursor-pointer hover:bg-slate-800 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-900/30 text-amber-400 border border-amber-600/50">
+                +{change.newIssues?.length || 0} NEW ISSUES
+              </span>
+            </div>
+            <h4 className="font-medium text-white truncate">{change.opportunityTitle}</h4>
+            <p className="text-xs text-slate-400 mt-1">{change.reasoning}</p>
+          </div>
+          <svg className={`w-5 h-5 text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="px-3 pb-3 border-t border-slate-700 pt-3 space-y-3">
+          <div>
+            <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">New Issues to Link</div>
+            <div className="flex flex-wrap gap-1">
+              {(change.newIssues || []).map(issue => (
+                <span key={issue.identifier} className="px-2 py-1 bg-amber-900/30 text-amber-300 text-xs rounded font-mono border border-amber-600/30">
+                  {issue.identifier}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => onLinkIssues(change.opportunityId, (change.newIssues || []).map(i => i.identifier))}
+              className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors"
+            >
+              Link Issues
+            </button>
+            <button
+              onClick={() => onFlagAtRisk(change.opportunityId, 'Scope expanded with new issues')}
+              className="px-3 py-1.5 bg-orange-600/30 hover:bg-orange-600/50 text-orange-400 text-xs font-medium rounded-lg transition-colors border border-orange-600/50"
+            >
+              Flag At Risk
+            </button>
+            <button
+              onClick={() => onAcknowledge(change.opportunityId)}
+              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-400 text-xs font-medium rounded-lg transition-colors"
+            >
+              Acknowledge
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// =====================================
+// ORPHANED ISSUE CARD - NEW COMPONENT
+// =====================================
+// This component allows converting orphaned Linear issues into new opportunities
+const OrphanedIssueCard = ({ 
+  issue, 
+  onCreateOpportunity, 
+  onLinkToExisting, 
+  onExclude, 
+  existingOpportunities,
+  milestones 
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const [mode, setMode] = useState(null); // null | 'create' | 'link'
+  const [selectedOpp, setSelectedOpp] = useState(null);
+  const [excludeReason, setExcludeReason] = useState('');
+  
+  // Form state for creating new opportunity
+  const [newOppForm, setNewOppForm] = useState({
+    title: issue.title || '',
+    description: issue.reasoning || '',
+    area: issue.suggestedArea || 'platform',
+    initiative: 'selfserve',
+    month: 'jan26',
+    milestoneId: null
+  });
+
+  const areaInfo = AREAS.find(a => a.id === issue.suggestedArea);
+
+  const handleCreateOpportunity = () => {
+    onCreateOpportunity({
+      ...newOppForm,
+      issues: [issue.identifier],
+      status: 'not_started',
+      atRisk: false,
+      atRiskReason: ''
+    });
+    setMode(null);
+  };
+
+  const handleLinkToExisting = () => {
+    if (selectedOpp) {
+      onLinkToExisting(selectedOpp, [issue.identifier]);
+      setMode(null);
+      setSelectedOpp(null);
+    }
+  };
+
+  const handleExclude = () => {
+    onExclude(issue, excludeReason || 'Not relevant to roadmap');
+    setMode(null);
+  };
+
+  return (
+    <div className="bg-slate-800/50 border border-blue-700/30 rounded-lg overflow-hidden">
+      {/* Header - Always visible */}
+      <div 
+        className="p-3 cursor-pointer hover:bg-slate-800 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-900 text-slate-300 border border-slate-600">
+                {issue.identifier}
+              </span>
+              {areaInfo && (
+                <span 
+                  className="px-2 py-0.5 rounded text-[10px] font-medium"
+                  style={{ 
+                    backgroundColor: `${areaInfo.color}20`,
+                    color: areaInfo.color,
+                    borderColor: `${areaInfo.color}50`,
+                    borderWidth: '1px'
+                  }}
+                >
+                  {areaInfo.name}
+                </span>
+              )}
+              {issue.team && (
+                <span className="text-[10px] text-slate-500">{issue.team}</span>
+              )}
+            </div>
+            <h4 className="font-medium text-white text-sm">{issue.title}</h4>
+            {issue.reasoning && (
+              <p className="text-xs text-slate-400 mt-1 line-clamp-1">{issue.reasoning}</p>
+            )}
+          </div>
+          <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Expanded Content */}
+      {expanded && (
+        <div className="px-3 pb-3 border-t border-slate-700 pt-3 space-y-3">
+          {/* Reasoning */}
+          {issue.reasoning && (
+            <div className="text-xs text-slate-400 italic bg-slate-900/50 p-2 rounded">
+              {issue.reasoning}
+            </div>
+          )}
+
+          {/* Mode: Create New Opportunity */}
+          {mode === 'create' && (
+            <div className="space-y-3 bg-emerald-900/10 border border-emerald-700/30 rounded-lg p-3">
+              <div className="text-xs text-emerald-400 font-medium uppercase tracking-wide flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Create New Opportunity
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-slate-500 uppercase tracking-wide mb-1">Title</label>
+                <input
+                  type="text"
+                  value={newOppForm.title}
+                  onChange={(e) => setNewOppForm({ ...newOppForm, title: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Opportunity title..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-slate-500 uppercase tracking-wide mb-1">Description</label>
+                <textarea
+                  value={newOppForm.description}
+                  onChange={(e) => setNewOppForm({ ...newOppForm, description: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 h-16 resize-none"
+                  placeholder="Brief description..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] text-slate-500 uppercase tracking-wide mb-1">Area</label>
+                  <select
+                    value={newOppForm.area}
+                    onChange={(e) => setNewOppForm({ ...newOppForm, area: e.target.value })}
+                    className="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {AREAS.map(area => (
+                      <option key={area.id} value={area.id}>{area.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-500 uppercase tracking-wide mb-1">Month</label>
+                  <select
+                    value={newOppForm.month}
+                    onChange={(e) => setNewOppForm({ ...newOppForm, month: e.target.value })}
+                    className="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {MONTHS.map(month => (
+                      <option key={month.id} value={month.id}>{month.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] text-slate-500 uppercase tracking-wide mb-1">Initiative</label>
+                  <select
+                    value={newOppForm.initiative}
+                    onChange={(e) => setNewOppForm({ ...newOppForm, initiative: e.target.value })}
+                    className="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {INITIATIVES.map(init => (
+                      <option key={init.id} value={init.id}>{init.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-500 uppercase tracking-wide mb-1">Milestone (Optional)</label>
+                  <select
+                    value={newOppForm.milestoneId || ''}
+                    onChange={(e) => setNewOppForm({ ...newOppForm, milestoneId: e.target.value || null })}
+                    className="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">No milestone</option>
+                    {(milestones || []).map(m => (
+                      <option key={m.id} value={m.id}>🎯 {m.title}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCreateOpportunity}
+                  disabled={!newOppForm.title.trim()}
+                  className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  Create Opportunity
+                </button>
+                <button
+                  onClick={() => setMode(null)}
+                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Mode: Link to Existing */}
+          {mode === 'link' && (
+            <div className="space-y-3 bg-blue-900/10 border border-blue-700/30 rounded-lg p-3">
+              <div className="text-xs text-blue-400 font-medium uppercase tracking-wide flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                Link to Existing Opportunity
+              </div>
+
+              <select
+                value={selectedOpp || ''}
+                onChange={(e) => setSelectedOpp(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select an opportunity...</option>
+                {existingOpportunities.map(opp => (
+                  <option key={opp.id} value={opp.id}>
+                    [{AREAS.find(a => a.id === opp.area)?.name}] {opp.title}
+                  </option>
+                ))}
+              </select>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleLinkToExisting}
+                  disabled={!selectedOpp}
+                  className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  Link Issue
+                </button>
+                <button
+                  onClick={() => { setMode(null); setSelectedOpp(null); }}
+                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Mode: Exclude */}
+          {mode === 'exclude' && (
+            <div className="space-y-3 bg-slate-900/50 border border-slate-600 rounded-lg p-3">
+              <div className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                Exclude from Analysis
+              </div>
+
+              <input
+                type="text"
+                value={excludeReason}
+                onChange={(e) => setExcludeReason(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-slate-500"
+                placeholder="Reason (optional)..."
+              />
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleExclude}
+                  className="flex-1 px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  Exclude Issue
+                </button>
+                <button
+                  onClick={() => { setMode(null); setExcludeReason(''); }}
+                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Default Action Buttons */}
+          {mode === null && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setMode('create')}
+                className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Create Opportunity
+              </button>
+              <button
+                onClick={() => setMode('link')}
+                className="px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600/50 text-blue-400 text-xs font-medium rounded-lg transition-colors border border-blue-600/50"
+              >
+                Link to Existing
+              </button>
+              <button
+                onClick={() => setMode('exclude')}
+                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-400 text-xs font-medium rounded-lg transition-colors"
+                title="Exclude from future syncs"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Milestone Health Card
 const MilestoneHealthCard = ({ health, onLinkIssue, opportunities }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [linkingIssue, setLinkingIssue] = useState(null);
+  const [selectedOpp, setSelectedOpp] = useState(null);
+
   const statusColors = {
-    healthy: 'border-emerald-500/30 bg-emerald-500/10',
-    at_risk: 'border-amber-500/30 bg-amber-500/10',
-    critical: 'border-red-500/30 bg-red-500/10'
+    healthy: 'text-emerald-400 bg-emerald-900/30',
+    at_risk: 'text-amber-400 bg-amber-900/30',
+    critical: 'text-red-400 bg-red-900/30'
   };
 
   const statusIcons = {
     healthy: '✓',
     at_risk: '⚠',
-    critical: '✗'
+    critical: '✕'
   };
 
-  const feedingOpps = opportunities.filter(o => o.milestoneId === health.milestoneId);
+  const handleLinkIssue = () => {
+    if (selectedOpp && linkingIssue) {
+      onLinkIssue(selectedOpp, linkingIssue);
+      setLinkingIssue(null);
+      setSelectedOpp(null);
+    }
+  };
 
   return (
-    <div className={`border rounded-lg p-4 ${statusColors[health.status]}`}>
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-lg">{statusIcons[health.status]}</span>
-        <h4 className="font-medium text-white">{health.milestoneTitle}</h4>
-        <span className={`ml-auto text-xs px-2 py-0.5 rounded ${
-          health.status === 'healthy' ? 'bg-emerald-500/20 text-emerald-400' :
-          health.status === 'at_risk' ? 'bg-amber-500/20 text-amber-400' :
-          'bg-red-500/20 text-red-400'
-        }`}>
-          {health.status.replace('_', ' ').toUpperCase()}
-        </span>
+    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
+      <div 
+        className="p-3 cursor-pointer hover:bg-slate-800 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${statusColors[health.status]}`}>
+                {statusIcons[health.status]}
+              </span>
+              <h4 className="font-medium text-white">🎯 {health.milestoneTitle}</h4>
+            </div>
+            {health.concerns?.length > 0 && (
+              <p className="text-xs text-slate-400 mt-1">{health.concerns[0]}</p>
+            )}
+          </div>
+          {health.unlinkedIssues?.length > 0 && (
+            <span className="px-2 py-0.5 bg-blue-900/30 text-blue-400 text-xs rounded-full">
+              {health.unlinkedIssues.length} unlinked
+            </span>
+          )}
+        </div>
       </div>
 
-      {health.concerns?.length > 0 && (
-        <ul className="text-xs text-slate-400 mb-3 space-y-1">
-          {health.concerns.map((concern, idx) => (
-            <li key={idx}>• {concern}</li>
-          ))}
-        </ul>
-      )}
+      {expanded && (
+        <div className="px-3 pb-3 border-t border-slate-700 pt-3 space-y-3">
+          {health.concerns?.length > 0 && (
+            <div>
+              <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">Concerns</div>
+              <ul className="text-xs text-slate-400 space-y-1">
+                {health.concerns.map((concern, i) => (
+                  <li key={i} className="flex items-start gap-1">
+                    <span className="text-amber-500">•</span>
+                    {concern}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-      {health.unlinkedIssues?.length > 0 && (
-        <div>
-          <div className="text-xs text-slate-500 mb-1">Issues that may need linking:</div>
-          <div className="space-y-1">
-            {health.unlinkedIssues.map(issue => (
-              <div key={issue.identifier} className="flex items-center gap-2 text-xs">
-                <span className="font-mono text-slate-400">{issue.identifier}</span>
-                <span className="text-slate-300 truncate flex-1">{issue.title}</span>
-                <select
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      onLinkIssue(parseInt(e.target.value), issue);
-                      e.target.value = '';
-                    }
-                  }}
-                  className="bg-slate-700 border border-slate-600 rounded px-1 py-0.5 text-xs"
-                >
-                  <option value="">Link →</option>
-                  {feedingOpps.map(opp => (
-                    <option key={opp.id} value={opp.id}>{opp.title}</option>
-                  ))}
-                </select>
+          {health.unlinkedIssues?.length > 0 && (
+            <div>
+              <div className="text-xs text-slate-500 uppercase tracking-wide mb-2">Issues to Link</div>
+              <div className="space-y-1">
+                {health.unlinkedIssues.map(issue => (
+                  <div key={issue.identifier} className="flex items-center justify-between gap-2 p-2 bg-slate-900 rounded">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs font-mono text-slate-400">{issue.identifier}</span>
+                      <span className="text-xs text-slate-300 truncate">{issue.title}</span>
+                    </div>
+                    {linkingIssue === issue ? (
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={selectedOpp || ''}
+                          onChange={(e) => setSelectedOpp(Number(e.target.value))}
+                          className="px-2 py-1 bg-slate-800 border border-slate-600 rounded text-xs text-white"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="">Select...</option>
+                          {opportunities.map(opp => (
+                            <option key={opp.id} value={opp.id}>{opp.title}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleLinkIssue(); }}
+                          disabled={!selectedOpp}
+                          className="px-2 py-1 bg-blue-600 text-white text-xs rounded disabled:opacity-50"
+                        >
+                          Link
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setLinkingIssue(null); }}
+                          className="px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setLinkingIssue(issue); }}
+                        className="px-2 py-1 bg-blue-600/30 hover:bg-blue-600/50 text-blue-400 text-xs rounded transition-colors"
+                      >
+                        Link
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 };
 
-// Main modal component
+// =====================================
+// MAIN LINEAR SYNC MODAL COMPONENT
+// =====================================
 export default function LinearSyncModal({
   isOpen,
   onClose,
@@ -423,20 +747,18 @@ export default function LinearSyncModal({
     }
     return '';
   });
-  const [keyInput, setKeyInput] = useState(linearApiKey);
+  const [keyInput, setKeyInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   
-  // Debug: track when analysis changes
-  useEffect(() => {
-    console.log('Analysis state changed:', analysis);
-    console.log('Analysis is truthy:', !!analysis);
-  }, [analysis]);
-  
   // Track dismissed items
   const [dismissedNewOpps, setDismissedNewOpps] = useState(new Set());
   const [dismissedScopeChanges, setDismissedScopeChanges] = useState(new Set());
+
+  useEffect(() => {
+    setKeyInput(linearApiKey);
+  }, [linearApiKey]);
 
   const saveApiKey = () => {
     setLinearApiKey(keyInput);
@@ -445,7 +767,7 @@ export default function LinearSyncModal({
     }
   };
 
-  const runSync = async () => {
+  const handleSync = async () => {
     if (!linearApiKey) {
       setError('Please enter your Linear API key');
       return;
@@ -456,137 +778,113 @@ export default function LinearSyncModal({
     setAnalysis(null);
 
     try {
-      // Get excluded issues from localStorage
-      const excludedIssues = JSON.parse(localStorage.getItem('pulseboard_excluded_issues') || '[]');
-
       const response = await fetch('/api/sync-linear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          linearApiKey,
-          lastSyncAt,
           opportunities,
           milestones,
-          excludedIssues,
-          areas,
-          initiatives
+          linearApiKey
         })
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || errorData.error || `Sync failed with status ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Sync failed');
       }
 
       const data = await response.json();
-      console.log('Sync response:', data);
-      console.log('Response has newOpportunities:', !!data?.newOpportunities);
-      console.log('Response has orphanedIssues:', !!data?.orphanedIssues);
-      
-      // Check if we got valid data
-      if (!data) {
-        throw new Error('Empty response from server');
-      }
-      
       setAnalysis(data);
-      console.log('Analysis state set to:', data);
       
-      // Save sync timestamp
       if (onSyncComplete) {
-        onSyncComplete(data.syncTimestamp);
+        onSyncComplete(new Date().toISOString());
       }
     } catch (err) {
       console.error('Sync error:', err);
-      console.error('Error details:', err.message, err.stack);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateOpportunity = (recommendation) => {
-    const newOpp = {
-      id: Date.now(),
-      title: recommendation.title,
-      description: recommendation.description || '',
-      area: recommendation.area,
-      initiative: recommendation.initiative,
-      month: recommendation.suggestedMonth,
-      issues: recommendation.issues?.map(i => i.identifier) || [],
-      status: 'not_started',
-      atRisk: false,
-      milestoneId: null
-    };
-    
-    onCreateOpportunity(newOpp);
-    setDismissedNewOpps(prev => new Set([...prev, recommendation.title]));
+  // Handlers for actions
+  const handleCreateOpportunity = (opp) => {
+    onCreateOpportunity(opp);
+    // Remove from newOpportunities in analysis
+    if (analysis) {
+      setAnalysis({
+        ...analysis,
+        newOpportunities: analysis.newOpportunities?.filter(n => n.title !== opp.title) || []
+      });
+    }
   };
 
   const handleLinkToExisting = (opportunityId, issues) => {
-    const issueIdentifiers = issues.map(i => i.identifier);
-    onLinkIssues(opportunityId, issueIdentifiers);
-    // Mark as handled by dismissing
-    setDismissedNewOpps(prev => new Set([...prev, issues.map(i => i.identifier).join(',')]));
+    onLinkIssues(opportunityId, issues);
   };
 
-  const handleIgnoreNewOpp = (recommendation) => {
-    // Add issues to exclusion list
-    const excluded = JSON.parse(localStorage.getItem('pulseboard_excluded_issues') || '[]');
-    recommendation.issues?.forEach(issue => {
-      if (!excluded.includes(issue.identifier)) {
-        excluded.push(issue.identifier);
-      }
-    });
-    localStorage.setItem('pulseboard_excluded_issues', JSON.stringify(excluded));
-    
-    setDismissedNewOpps(prev => new Set([...prev, recommendation.title]));
+  const handleIgnoreNewOpp = (title) => {
+    setDismissedNewOpps(prev => new Set([...prev, title]));
   };
 
-  const handleLinkScopeChangeIssues = (opportunityId, newIssues) => {
-    const issueIdentifiers = newIssues.map(i => i.identifier);
-    onLinkIssues(opportunityId, issueIdentifiers);
-    setDismissedScopeChanges(prev => new Set([...prev, opportunityId]));
+  const handleAcknowledgeScopeChange = (oppId) => {
+    setDismissedScopeChanges(prev => new Set([...prev, oppId]));
   };
 
-  const handleFlagAtRisk = (opportunityId) => {
-    const opp = opportunities.find(o => o.id === opportunityId);
+  const handleFlagAtRisk = (oppId, reason) => {
+    const opp = opportunities.find(o => o.id === oppId);
     if (opp) {
-      onUpdateOpportunity({
-        ...opp,
-        atRisk: true,
-        atRiskReason: 'Scope increase detected from Linear sync'
-      });
+      onUpdateOpportunity({ ...opp, atRisk: true, atRiskReason: reason });
     }
-    setDismissedScopeChanges(prev => new Set([...prev, opportunityId]));
+    setDismissedScopeChanges(prev => new Set([...prev, oppId]));
   };
 
-  const handleAcknowledgeScopeChange = (change) => {
-    setDismissedScopeChanges(prev => new Set([...prev, change.opportunityId]));
+  const handleLinkScopeChangeIssues = (oppId, issues) => {
+    onLinkIssues(oppId, issues);
+    setDismissedScopeChanges(prev => new Set([...prev, oppId]));
   };
 
-  const handleLinkOrphanedIssue = (opportunityId, issue) => {
-    onLinkIssues(opportunityId, [issue.identifier]);
-    // Remove from analysis
+  // Handler for creating opportunity from orphaned issue
+  const handleCreateFromOrphan = (opp) => {
+    onCreateOpportunity(opp);
+    // Remove issue from orphanedIssues in analysis
     if (analysis) {
+      const issueId = opp.issues?.[0];
       setAnalysis({
         ...analysis,
-        orphanedIssues: analysis.orphanedIssues.filter(i => i.identifier !== issue.identifier)
+        orphanedIssues: analysis.orphanedIssues?.filter(i => i.identifier !== issueId) || []
       });
     }
   };
 
-  const handleExcludeIssue = (issue, reason) => {
+  // Handler for linking orphaned issue to existing opportunity
+  const handleLinkOrphanToExisting = (opportunityId, issues) => {
+    onLinkIssues(opportunityId, issues);
+    // Remove issue from orphanedIssues in analysis
+    if (analysis && issues.length > 0) {
+      setAnalysis({
+        ...analysis,
+        orphanedIssues: analysis.orphanedIssues?.filter(i => !issues.includes(i.identifier)) || []
+      });
+    }
+  };
+
+  // Handler for excluding orphaned issue
+  const handleExcludeOrphan = (issue, reason) => {
+    // Save to localStorage
     const excluded = JSON.parse(localStorage.getItem('pulseboard_excluded_issues') || '[]');
-    if (!excluded.includes(issue.identifier)) {
-      excluded.push(issue.identifier);
-      localStorage.setItem('pulseboard_excluded_issues', JSON.stringify(excluded));
+    if (!excluded.find(e => e.identifier === issue.identifier)) {
+      localStorage.setItem('pulseboard_excluded_issues', JSON.stringify([
+        ...excluded, 
+        { identifier: issue.identifier, reason, excludedAt: new Date().toISOString() }
+      ]));
     }
     
     // Remove from analysis
     if (analysis) {
       setAnalysis({
         ...analysis,
-        orphanedIssues: analysis.orphanedIssues.filter(i => i.identifier !== issue.identifier)
+        orphanedIssues: analysis.orphanedIssues?.filter(i => i.identifier !== issue.identifier) || []
       });
     }
     
@@ -601,10 +899,10 @@ export default function LinearSyncModal({
     if (analysis) {
       setAnalysis({
         ...analysis,
-        milestoneHealth: analysis.milestoneHealth.map(h => ({
+        milestoneHealth: analysis.milestoneHealth?.map(h => ({
           ...h,
           unlinkedIssues: h.unlinkedIssues?.filter(i => i.identifier !== issue.identifier) || []
-        }))
+        })) || []
       });
     }
   };
@@ -633,13 +931,16 @@ export default function LinearSyncModal({
               <h2 className="text-lg font-semibold text-white">Linear Sync</h2>
               <p className="text-xs text-slate-400">
                 {lastSyncAt 
-                  ? `Last sync: ${new Date(lastSyncAt).toLocaleString()}`
-                  : 'First sync - analyzing last 3 weeks'
+                  ? `Last synced ${new Date(lastSyncAt).toLocaleString()}`
+                  : 'Analyze Linear issues to find roadmap opportunities'
                 }
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+          <button 
+            onClick={onClose}
+            className="text-slate-400 hover:text-white transition-colors"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -648,7 +949,7 @@ export default function LinearSyncModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* API Key */}
+          {/* API Key Input */}
           <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
             <label className="block text-xs text-slate-400 uppercase tracking-wide mb-2">
               Linear API Key
@@ -659,7 +960,7 @@ export default function LinearSyncModal({
                 value={keyInput}
                 onChange={e => setKeyInput(e.target.value)}
                 placeholder="lin_api_..."
-                className="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <button
                 onClick={saveApiKey}
@@ -675,21 +976,21 @@ export default function LinearSyncModal({
 
           {/* Sync Button */}
           <button
-            onClick={runSync}
+            onClick={handleSync}
             disabled={loading || !linearApiKey}
             className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                🤖 Claude is analyzing...
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Analyzing with Claude...
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Run AI Analysis
+                Analyze Linear Issues
               </>
             )}
           </button>
@@ -703,25 +1004,33 @@ export default function LinearSyncModal({
 
           {/* Analysis Results */}
           {analysis && (
-            <div className="space-y-6">
-              {/* Summary */}
+            <div className="space-y-4">
+              {/* Summary Stats */}
               <div className="grid grid-cols-4 gap-3">
-                <div className="bg-slate-800 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-white">{analysis.analyzedCount}</div>
-                  <div className="text-xs text-slate-400">Issues Analyzed</div>
-                </div>
-                <div className="bg-emerald-900/30 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-emerald-400">{visibleNewOpps.length}</div>
-                  <div className="text-xs text-slate-400">New Opportunities</div>
-                </div>
-                <div className="bg-amber-900/30 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-amber-400">{visibleScopeChanges.length}</div>
-                  <div className="text-xs text-slate-400">Scope Changes</div>
-                </div>
-                <div className="bg-blue-900/30 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-blue-400">{analysis.orphanedIssues?.length || 0}</div>
-                  <div className="text-xs text-slate-400">Orphaned Issues</div>
-                </div>
+                <StatCard 
+                  icon="📊" 
+                  label="Issues Analyzed" 
+                  value={analysis.summary?.totalIssuesAnalyzed || 0} 
+                  color="blue" 
+                />
+                <StatCard 
+                  icon="🆕" 
+                  label="New Opportunities" 
+                  value={analysis.summary?.newOpportunitiesFound || 0} 
+                  color="emerald" 
+                />
+                <StatCard 
+                  icon="📈" 
+                  label="Scope Changes" 
+                  value={analysis.summary?.scopeChangesDetected || 0} 
+                  color="amber" 
+                />
+                <StatCard 
+                  icon="🔗" 
+                  label="Orphaned Issues" 
+                  value={analysis.orphanedIssues?.length || 0} 
+                  color="blue" 
+                />
               </div>
 
               {/* New Opportunities */}
@@ -767,7 +1076,7 @@ export default function LinearSyncModal({
                 </div>
               )}
 
-              {/* Orphaned Issues */}
+              {/* Orphaned Issues - ENHANCED WITH CONVERSION */}
               {analysis.orphanedIssues?.length > 0 && (
                 <div className="space-y-3">
                   <SectionHeader 
@@ -776,12 +1085,20 @@ export default function LinearSyncModal({
                     count={analysis.orphanedIssues.length}
                     color="blue"
                   />
-                  <OrphanedIssuesSection
-                    issues={analysis.orphanedIssues}
-                    onLinkIssue={handleLinkOrphanedIssue}
-                    onExcludeIssue={handleExcludeIssue}
-                    opportunities={opportunities}
-                  />
+                  <p className="text-xs text-slate-400 -mt-1 mb-2">
+                    These Linear issues aren't linked to any roadmap opportunity. Create new opportunities or link them to existing ones.
+                  </p>
+                  {analysis.orphanedIssues.map((issue, idx) => (
+                    <OrphanedIssueCard
+                      key={issue.identifier || idx}
+                      issue={issue}
+                      onCreateOpportunity={handleCreateFromOrphan}
+                      onLinkToExisting={handleLinkOrphanToExisting}
+                      onExclude={handleExcludeOrphan}
+                      existingOpportunities={opportunities}
+                      milestones={milestones}
+                    />
+                  ))}
                 </div>
               )}
 
@@ -791,56 +1108,46 @@ export default function LinearSyncModal({
                   <SectionHeader 
                     icon="🎯" 
                     title="Milestone Health" 
-                    count={analysis.milestoneHealth.filter(h => h.status !== 'healthy').length + ' at risk'}
+                    count={analysis.milestoneHealth.length}
                     color="purple"
                   />
-                  <div className="grid gap-3">
-                    {analysis.milestoneHealth.map((health, idx) => (
-                      <MilestoneHealthCard
-                        key={idx}
-                        health={health}
-                        onLinkIssue={handleLinkMilestoneIssue}
-                        opportunities={opportunities}
-                      />
-                    ))}
-                  </div>
+                  {analysis.milestoneHealth.map((health, idx) => (
+                    <MilestoneHealthCard
+                      key={health.milestoneId || idx}
+                      health={health}
+                      onLinkIssue={handleLinkMilestoneIssue}
+                      opportunities={opportunities}
+                    />
+                  ))}
                 </div>
               )}
 
-              {/* All Clear */}
+              {/* Empty State - All Clear */}
               {visibleNewOpps.length === 0 && 
                visibleScopeChanges.length === 0 && 
-               (analysis.orphanedIssues?.length || 0) === 0 && (
+               !analysis.orphanedIssues?.length &&
+               !analysis.milestoneHealth?.length && (
                 <div className="text-center py-8 text-slate-500">
-                  <svg className="w-12 h-12 mx-auto mb-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-12 h-12 mx-auto mb-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="text-emerald-400 font-medium">All Clear!</p>
-                  <p className="text-sm mt-1">Your roadmap is in sync with Linear</p>
+                  <p className="font-medium text-emerald-400">All synced!</p>
+                  <p className="text-xs mt-1">Your roadmap is aligned with Linear issues</p>
                 </div>
               )}
             </div>
           )}
 
-          {/* Empty state */}
+          {/* Empty State - Before Sync */}
           {!loading && !analysis && !error && linearApiKey && (
-            <div className="text-center py-8 text-slate-500 border-2 border-dashed border-indigo-500/30 rounded-lg bg-indigo-950/20">
-              <div className="text-2xl mb-2">🔍</div>
-              <p className="text-indigo-300 font-medium">Ready to Analyze</p>
-              <p className="text-xs mt-1 text-slate-400">Click the button above to discover roadmap updates</p>
-              <p className="text-[10px] mt-3 text-indigo-500/50">LinearSyncModal v2</p>
+            <div className="text-center py-8 text-slate-500">
+              <svg className="w-12 h-12 mx-auto mb-3 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p>Click "Analyze Linear Issues" to sync your roadmap</p>
+              <p className="text-xs mt-1">Claude will analyze your Linear issues and suggest updates</p>
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-800 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors"
-          >
-            Done
-          </button>
         </div>
       </div>
     </div>
