@@ -1,8 +1,8 @@
 // src/data/initialData.js
-// Static configuration data for Pulseboard
-// Re-exports data from helpers.js for backward compatibility
+// Static configuration data and seed data for Pulseboard
+// Re-exports from helpers.js for backward compatibility
 
-// Re-export everything from helpers that was previously here
+// Re-export everything from helpers that components need
 export { 
   STATUSES,
   areas, 

@@ -1,7 +1,6 @@
 // src/utils/helpers.js
 // Pulseboard helper functions - combined with dynamic months & dependency support
-
-import { areas, initiatives } from '../data/initialData';
+// NOTE: areas and initiatives are defined here to avoid circular imports
 
 // ========== STATUSES ==========
 export const STATUSES = {
@@ -10,6 +9,27 @@ export const STATUSES = {
   done: { label: 'Done', color: '#22c55e', bgColor: '#22c55e20' },
   blocked: { label: 'Blocked', color: '#ef4444', bgColor: '#ef444420' }
 };
+
+// ========== AREAS ==========
+export const areas = [
+  { id: 'visualizer', name: 'Visualizer', color: '#3fb950' },
+  { id: 'vinci', name: 'Vinci', color: '#38bdf8' },
+  { id: 'spaces', name: 'Spaces', color: '#a371f7' },
+  { id: 'showcase', name: 'Showcase', color: '#f85149' },
+  { id: 'studio', name: 'Studio', color: '#f778ba' },
+  { id: 'platform', name: 'Platform', color: '#d29922' },
+  { id: 'admin', name: 'Admin', color: '#8b949e' }
+];
+
+// ========== INITIATIVES ==========
+export const initiatives = [
+  { id: 'launch', name: 'Launch Partner Commitments', color: '#f85149' },
+  { id: 'selfserve', name: 'Self-Serve Scale', color: '#58a6ff' },
+  { id: 'embed', name: 'Embed Everywhere', color: '#a371f7' },
+  { id: 'ai', name: 'AI Model Excellence', color: '#3fb950' },
+  { id: 'commerce', name: 'Commerce Enablement', color: '#d29922' },
+  { id: 'enterprise', name: 'Enterprise Content Scale', color: '#f778ba' }
+];
 
 // ========== DYNAMIC MONTHS ==========
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -103,6 +123,7 @@ export const parseMonthId = (monthId) => {
   const monthIndex = MONTH_ABBREV.indexOf(monthAbbrev);
   if (monthIndex === -1) return null;
   
+  // Assume 2000s for two-digit years
   const year = 2000 + parseInt(yearShort, 10);
   if (isNaN(year)) return null;
   
@@ -180,14 +201,14 @@ export const getInitiativeName = (initiativeId) => {
 
 export const getMonthName = (monthId) => {
   const month = months.find(m => m.id === monthId);
-  return month?.name || monthId || 'Unknown';
+  return month?.name || monthId;
 };
 
 export const getQuarters = () => [...new Set(months.map(m => m.quarter))];
 
 export const getMonthsForQuarter = (quarter) => months.filter(m => m.quarter === quarter);
 
-// ========== OPPORTUNITY HELPERS ==========
+// ========== DATA CONVERSION ==========
 
 // Ensure opportunity has all required fields (for backward compatibility)
 export const ensureStatusFields = (opp) => ({
@@ -244,8 +265,7 @@ export const opportunityToDb = (opp) => ({
   updated_at: new Date().toISOString()
 });
 
-// ========== MILESTONE HELPERS ==========
-
+// Milestone conversions
 export const dbToMilestone = (row) => ({
   id: row.id,
   title: row.title,
@@ -267,9 +287,6 @@ export const milestoneToDb = (m) => ({
 
 /**
  * Add a blocking relationship between two opportunities
- * @param {Object} blocker - The opportunity that blocks another
- * @param {Object} blocked - The opportunity being blocked
- * @returns {{ blocker: Object, blocked: Object }} Updated opportunities
  */
 export const addDependency = (blocker, blocked) => {
   const updatedBlocker = {
@@ -364,13 +381,11 @@ export const computeClusters = (opportunities, milestones) => {
     visited.add(opp.id);
     group.push(opp);
     
-    // Follow blocks
     (opp.blocks || []).forEach(id => {
       const blocked = unassigned.find(o => o.id === id);
       if (blocked && !assigned.has(id)) findConnected(blocked, group);
     });
     
-    // Follow blockedBy
     (opp.blockedBy || []).forEach(id => {
       const blocker = unassigned.find(o => o.id === id);
       if (blocker && !assigned.has(id)) findConnected(blocker, group);
@@ -400,14 +415,13 @@ export const computeClusters = (opportunities, milestones) => {
     }
   });
 
-  // Standalone opportunities (not in any cluster)
   const standalone = opportunities.filter(o => !assigned.has(o.id));
 
   return { clusters, standalone };
 };
 
 /**
- * Get the center position for a cluster (average of member positions)
+ * Get the center position for a cluster
  */
 export const getClusterCenter = (cluster, getPosition) => {
   const positions = cluster.opportunities.map(o => getPosition(o));
