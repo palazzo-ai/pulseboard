@@ -13,7 +13,7 @@ import {
   TeamMemberBadge, AssignmentBadges, AssignTeamMemberModal,
   TeamManagementPanel, CapacityDashboard, TimelineLanes, StatusBadge,
   AIAdvisorPanel, PrioritizationMatrix, LinearSyncModal,
-  DependencyEditor
+  DependencyEditor, MultiSelectFilter, AIScoringModal
 } from './components';
 
 export default function PalazzoTimeline() {
