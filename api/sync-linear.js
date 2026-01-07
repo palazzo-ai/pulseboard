@@ -14,15 +14,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { 
-    linearApiKey, 
-    lastSyncAt,  // ISO timestamp or null for first sync
-    opportunities = [], 
-    milestones = [],
-    excludedIssues = [],  // Issue identifiers to ignore
-    areas = [],  // Area definitions for context
-    initiatives = []  // Initiative definitions for context
-  } = req.body || {};
+  const { opportunities, milestones, linearApiKey, excludedIssues = [] } = req.body;
 
   if (!linearApiKey) {
     return res.status(400).json({ error: "Linear API key is required" });
@@ -32,26 +24,19 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Opportunities array is required" });
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ 
-      error: "Server configuration error", 
-      message: "ANTHROPIC_API_KEY environment variable is not set" 
-    });
-  }
-
   try {
     // Fetch issues from Linear
     const linearResponse = await fetch("https://api.linear.app/graphql", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": linearApiKey,
+        Authorization: linearApiKey,
         "apollo-require-preflight": "true",
       },
       body: JSON.stringify({
         query: `
           query {
-            issues(first: 250, orderBy: updatedAt) {
+            issues(first: 250, filter: { state: { type: { nin: ["canceled"] } } }) {
               nodes {
                 id
                 identifier
@@ -61,42 +46,30 @@ export default async function handler(req, res) {
                   name
                   type
                 }
+                dueDate
                 priority
                 estimate
-                dueDate
-                createdAt
-                updatedAt
                 project {
-                  id
                   name
+                  id
                 }
                 team {
-                  key
                   name
+                  key
                 }
                 labels {
                   nodes {
                     name
                   }
                 }
-                parent {
-                  identifier
-                }
+                createdAt
+                updatedAt
               }
             }
           }
-        `
+        `,
       }),
     });
-
-    if (!linearResponse.ok) {
-      const errorText = await linearResponse.text();
-      return res.status(400).json({
-        error: "Linear API request failed",
-        status: linearResponse.status,
-        details: errorText,
-      });
-    }
 
     const linearData = await linearResponse.json();
 
@@ -110,180 +83,189 @@ export default async function handler(req, res) {
 
     const issues = linearData.data?.issues?.nodes || [];
 
-    // Filter out excluded issues
-    const filteredIssues = issues.filter(
-      issue => !excludedIssues.includes(issue.identifier)
-    );
-
-    if (filteredIssues.length === 0) {
-      return res.json({ 
-        recommendations: [], 
-        analyzedCount: 0,
-        message: "No new issues found since last sync",
-        syncTimestamp: new Date().toISOString()
+    if (issues.length === 0) {
+      return res.json({
+        analysis: {
+          statusUpdates: [],
+          newOpportunities: [],
+          scopeChanges: [],
+          orphanedIssues: [],
+          milestoneHealth: [],
+        },
+        issuesAnalyzed: 0,
+        timestamp: new Date().toISOString(),
       });
     }
 
-    // Build context for Claude
-    const anthropic = new Anthropic();
+    // Filter out excluded issues
+    const excludedIds = new Set(excludedIssues.map(e => e.identifier || e));
+    const activeIssues = issues.filter(i => !excludedIds.has(i.identifier));
 
-    // Get all currently linked issues across opportunities
-    const linkedIssues = new Set();
-    (opportunities || []).forEach(opp => {
-      (opp.issues || []).forEach(issue => linkedIssues.add(issue));
+    // Build a map of all issues currently linked to opportunities
+    const linkedIssueIds = new Set();
+    opportunities.forEach((opp) => {
+      (opp.issues || []).forEach((issueId) => linkedIssueIds.add(issueId));
     });
 
-    const prompt = `You are analyzing Linear project management data to help maintain a product roadmap.
+    // Find orphaned issues (not linked to any opportunity)
+    const orphanedIssues = activeIssues.filter(
+      (issue) => !linkedIssueIds.has(issue.identifier)
+    );
 
-## CONTEXT
+    // Use Claude to analyze
+    const anthropic = new Anthropic();
 
-### Roadmap Areas (product verticals)
-${JSON.stringify(areas || [], null, 2)}
+    const prompt = `You are analyzing Linear issues against a product roadmap to provide sync recommendations.
 
-### Roadmap Initiatives (strategic themes)
-${JSON.stringify(initiatives || [], null, 2)}
+## EXISTING ROADMAP OPPORTUNITIES
+These are the current opportunities in the roadmap. Each has a title, area, initiative, status, and linked Linear issues:
+${JSON.stringify(
+  opportunities.map((o) => ({
+    id: o.id,
+    title: o.title,
+    area: o.area,
+    initiative: o.initiative,
+    status: o.status,
+    month: o.month,
+    issues: o.issues || [],
+    description: o.description || ''
+  })),
+  null,
+  2
+)}
 
-### Current Roadmap Opportunities
-${JSON.stringify((opportunities || []).map(o => ({
-  id: o.id,
-  title: o.title,
-  area: o.area,
-  initiative: o.initiative,
-  month: o.month,
-  status: o.status,
-  milestoneId: o.milestoneId,
-  linkedIssues: o.issues || [],
-  description: o.description
-})), null, 2)}
+## MILESTONES
+${JSON.stringify(milestones || [], null, 2)}
 
-### Current Milestones
-${JSON.stringify((milestones || []).map(m => ({
-  id: m.id,
-  title: m.title,
-  area: m.area,
-  month: m.month,
-  description: m.description
-})), null, 2)}
+## LINEAR ISSUES (linked to opportunities)
+${JSON.stringify(
+  activeIssues
+    .filter((i) => linkedIssueIds.has(i.identifier))
+    .map((i) => ({
+      identifier: i.identifier,
+      title: i.title,
+      state: i.state?.name,
+      stateType: i.state?.type,
+      priority: i.priority,
+      team: i.team?.name,
+      project: i.project?.name,
+      labels: i.labels?.nodes?.map((l) => l.name),
+      dueDate: i.dueDate,
+    })),
+  null,
+  2
+)}
 
-### Issues Already Linked to Opportunities
-${JSON.stringify([...linkedIssues], null, 2)}
+## ORPHANED LINEAR ISSUES (not linked to any opportunity)
+${JSON.stringify(
+  orphanedIssues.map((i) => ({
+    identifier: i.identifier,
+    title: i.title,
+    description: i.description?.substring(0, 200),
+    state: i.state?.name,
+    stateType: i.state?.type,
+    priority: i.priority,
+    team: i.team?.name,
+    project: i.project?.name,
+    labels: i.labels?.nodes?.map((l) => l.name),
+  })),
+  null,
+  2
+)}
 
-## NEW LINEAR DATA
+## ANALYSIS TASKS
 
-### Issues (${filteredIssues.length} total)
-${JSON.stringify(filteredIssues.map(i => ({
-  identifier: i.identifier,
-  title: i.title,
-  description: i.description?.substring(0, 200),
-  state: i.state?.name,
-  stateType: i.state?.type,
-  priority: i.priority,
-  estimate: i.estimate,
-  dueDate: i.dueDate,
-  team: i.team?.name,
-  teamKey: i.team?.key,
-  project: i.project?.name,
-  labels: i.labels?.nodes?.map(l => l.name) || [],
-  createdAt: i.createdAt,
-  isSubIssue: !!i.parent
-})), null, 2)}
+Analyze the data and provide recommendations in the following categories:
 
-## YOUR TASK
+### 1. STATUS UPDATES
+For opportunities with linked Linear issues, recommend status changes based on issue states:
+- If ALL linked issues are "Done" → recommend "done"
+- If ANY linked issue is "In Progress" or "In Review" → recommend "in_progress"  
+- If ANY linked issue is "Blocked" → recommend "blocked" and set atRisk: true
+- If overdue issues exist → set atRisk: true with reason
 
-Analyze the Linear data and produce recommendations in these categories:
+### 2. NEW OPPORTUNITY SUGGESTIONS
+**CRITICAL: Before suggesting ANY new opportunity, check if a similar one already exists in the EXISTING ROADMAP OPPORTUNITIES list above.**
 
-### 1. NEW OPPORTUNITIES
-Look for clusters of related issues that suggest work not captured in the roadmap:
-- Multiple issues around a common theme with no matching opportunity
-- Issues with high priority/estimate that seem strategic
+For orphaned issues that represent significant features/initiatives, suggest NEW opportunities. BUT:
+- Do NOT suggest opportunities that already exist (check titles for semantic similarity)
+- Do NOT suggest opportunities if an existing one covers the same scope (even with different wording)
+- Group related orphaned issues together into single opportunities
+- Only suggest truly new work that isn't represented in the roadmap
 
-For each, suggest:
-- A title for the new opportunity
-- Which area it belongs to (must be one of the defined areas)
-- Which initiative it aligns with (must be one of the defined initiatives)  
-- Suggested month (format: dec25, jan26, feb26, mar26, apr26, may26, jun26, jul26, aug26, sep26, oct26, nov26, dec26)
-- Which issues should be linked
-- Confidence: high/medium/low
+For each suggestion, explain why it's NOT a duplicate of existing opportunities.
 
-### 2. SCOPE CHANGES
-Find existing opportunities where:
-- New issues have been created that clearly relate to the opportunity
-- The scope appears to have grown significantly
-- Note: Only flag if there are NEW issues not already linked
+### 3. SCOPE CHANGES
+Identify orphaned issues that should be linked to EXISTING opportunities (scope expansion).
 
-### 3. ORPHANED ISSUES
-Issues that:
-- Are NOT already linked to any opportunity
-- Are NOT sub-issues (have no parent)
-- Appear to be feature work (not bugs, chores, or maintenance)
-- Don't fit into any suggested new opportunity
+### 4. ORPHANED ISSUES
+List remaining orphaned issues that don't fit existing opportunities and aren't significant enough for new ones.
+Suggest which area they might belong to.
 
-### 4. MILESTONE HEALTH
-For each milestone, assess:
-- Are there issues in Linear that should feed this milestone but aren't linked?
-- Are there concerning status patterns (blocked issues, overdue)?
+### 5. MILESTONE HEALTH
+For milestones with linked opportunities, assess delivery risk.
 
-## OUTPUT FORMAT
-
+## RESPONSE FORMAT
 Return a JSON object (no markdown, just raw JSON):
-
 {
+  "statusUpdates": [
+    {
+      "opportunityId": <number>,
+      "opportunityTitle": "<string>",
+      "currentStatus": "<string>",
+      "recommendedStatus": "not_started" | "in_progress" | "done" | "blocked",
+      "reason": "<brief explanation>",
+      "relatedIssues": ["PAL-123"],
+      "atRisk": <boolean>,
+      "atRiskReason": "<string or null>"
+    }
+  ],
   "newOpportunities": [
     {
-      "confidence": "high|medium|low",
-      "title": "Suggested opportunity title",
-      "description": "Brief description of what this covers",
-      "area": "area_id",
-      "initiative": "initiative_id", 
-      "suggestedMonth": "mon26",
-      "issues": [
-        { "identifier": "PAL-123", "title": "Issue title" }
-      ],
-      "reasoning": "Why this should be a new opportunity"
+      "suggestedTitle": "<string>",
+      "description": "<string>",
+      "suggestedArea": "<area_id>",
+      "suggestedInitiative": "<initiative_id>",
+      "suggestedMonth": "<month_id>",
+      "relatedIssues": ["PAL-123"],
+      "reasoning": "<why this is needed AND why it's not a duplicate of existing opportunities>",
+      "notDuplicateBecause": "<explicit explanation of why this doesn't match any existing opportunity>"
     }
   ],
   "scopeChanges": [
     {
-      "confidence": "high|medium|low",
-      "opportunityId": 123,
-      "opportunityTitle": "Existing opp title",
-      "currentIssueCount": 3,
-      "newIssues": [
-        { "identifier": "PAL-456", "title": "New issue title" }
-      ],
-      "reasoning": "Why this indicates scope change"
+      "opportunityId": <number>,
+      "opportunityTitle": "<string>",
+      "additionalIssues": ["PAL-456"],
+      "reasoning": "<why these issues belong to this opportunity>"
     }
   ],
   "orphanedIssues": [
     {
       "identifier": "PAL-789",
-      "title": "Issue title",
-      "team": "Team name",
-      "suggestedArea": "area_id",
-      "reasoning": "Why this is orphaned / what it might relate to"
+      "title": "<string>",
+      "team": "<string>",
+      "suggestedArea": "<area_id or null>",
+      "reasoning": "<why orphaned, what to do with it>"
     }
   ],
   "milestoneHealth": [
     {
-      "milestoneId": "m1",
-      "milestoneTitle": "Milestone name",
-      "status": "healthy|at_risk|critical",
-      "concerns": ["List of specific concerns"],
-      "unlinkedIssues": [
-        { "identifier": "PAL-999", "title": "Issue that should be linked" }
-      ]
+      "milestoneId": "<string>",
+      "milestoneTitle": "<string>",
+      "status": "on_track" | "at_risk" | "blocked",
+      "completedOpportunities": <number>,
+      "totalOpportunities": <number>,
+      "blockers": ["<issue or risk>"],
+      "recommendation": "<action to take>"
     }
-  ],
-  "summary": {
-    "totalIssuesAnalyzed": 0,
-    "newOpportunitiesFound": 0,
-    "scopeChangesDetected": 0,
-    "orphanedIssuesFound": 0,
-    "milestonesAtRisk": 0
-  }
+  ]
 }
 
-Be conservative - only suggest new opportunities when there's a clear cluster of related work. Don't suggest opportunities for individual bug fixes or small tasks.`;
+Area IDs: visualizer, vinci, spaces, showcase, studio, platform, admin
+Initiative IDs: launch, selfserve, embed, ai, commerce, enterprise
+Month IDs: dec25, jan26, feb26, mar26, apr26, may26, jun26, jul26, aug26, sep26, oct26, nov26, dec26
+Status values: not_started, in_progress, done, blocked`;
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
@@ -296,40 +278,96 @@ Be conservative - only suggest new opportunities when there's a clear cluster of
       ],
     });
 
-    const responseText = message.content[0].type === "text" ? message.content[0].text : "";
+    const responseText =
+      message.content[0].type === "text" ? message.content[0].text : "";
 
     // Parse the JSON response
-    let analysis;
+    let analysis = {
+      statusUpdates: [],
+      newOpportunities: [],
+      scopeChanges: [],
+      orphanedIssues: [],
+      milestoneHealth: [],
+    };
+
     try {
-      // Try to extract JSON from the response (handle potential markdown wrapping)
-      let jsonStr = responseText;
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        jsonStr = jsonMatch[0];
+        analysis = JSON.parse(jsonMatch[0]);
       }
-      analysis = JSON.parse(jsonStr);
     } catch (parseError) {
       console.error("Failed to parse Claude response:", parseError);
-      console.error("Raw response:", responseText);
       return res.status(500).json({
         error: "Failed to parse analysis",
-        rawResponse: responseText.substring(0, 1000),
+        rawResponse: responseText,
+      });
+    }
+
+    // Additional client-side deduplication for new opportunities
+    // Filter out suggestions that have very similar titles to existing opportunities
+    if (analysis.newOpportunities && analysis.newOpportunities.length > 0) {
+      const existingTitlesLower = opportunities.map(o => o.title.toLowerCase().trim());
+      
+      analysis.newOpportunities = analysis.newOpportunities.filter(suggestion => {
+        const suggestedLower = suggestion.suggestedTitle.toLowerCase().trim();
+        
+        // Check for exact or near-exact title matches
+        for (const existingTitle of existingTitlesLower) {
+          // Exact match
+          if (suggestedLower === existingTitle) {
+            return false;
+          }
+          
+          // One contains the other (likely duplicate)
+          if (suggestedLower.includes(existingTitle) || existingTitle.includes(suggestedLower)) {
+            return false;
+          }
+          
+          // Simple word overlap check (if >70% words match, likely duplicate)
+          const suggestedWords = new Set(suggestedLower.split(/\s+/).filter(w => w.length > 3));
+          const existingWords = new Set(existingTitle.split(/\s+/).filter(w => w.length > 3));
+          
+          if (suggestedWords.size > 0 && existingWords.size > 0) {
+            let matchCount = 0;
+            for (const word of suggestedWords) {
+              if (existingWords.has(word)) matchCount++;
+            }
+            const overlapRatio = matchCount / Math.min(suggestedWords.size, existingWords.size);
+            if (overlapRatio > 0.7) {
+              return false;
+            }
+          }
+        }
+        
+        // Also check if the related issues are already linked to an existing opportunity
+        if (suggestion.relatedIssues && suggestion.relatedIssues.length > 0) {
+          const suggestedIssueSet = new Set(suggestion.relatedIssues);
+          for (const opp of opportunities) {
+            if (opp.issues && opp.issues.length > 0) {
+              const overlap = opp.issues.filter(i => suggestedIssueSet.has(i));
+              if (overlap.length > 0) {
+                // Issues already linked to another opportunity
+                return false;
+              }
+            }
+          }
+        }
+        
+        return true;
       });
     }
 
     return res.json({
-      ...analysis,
-      analyzedCount: filteredIssues.length,
-      syncTimestamp: new Date().toISOString()
+      analysis,
+      issuesAnalyzed: activeIssues.length,
+      orphanedCount: orphanedIssues.length,
+      timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Sync error:", error);
-    console.error("Error stack:", error.stack);
     return res.status(500).json({
       error: "Internal server error",
       message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }

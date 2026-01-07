@@ -296,12 +296,15 @@ const OrphanedIssueCard = ({
   onLinkToExisting, 
   onExclude, 
   existingOpportunities,
-  milestones 
+  milestones,
+  onActionComplete // New callback to notify parent when action is finalized
 }) => {
   const [expanded, setExpanded] = useState(false);
-  const [mode, setMode] = useState(null); // null | 'create' | 'link'
+  const [mode, setMode] = useState(null); // null | 'create' | 'link' | 'linked' | 'created' | 'excluded'
   const [selectedOpp, setSelectedOpp] = useState(null);
   const [excludeReason, setExcludeReason] = useState('');
+  const [actionResult, setActionResult] = useState(null); // { type: 'linked'|'created'|'excluded', target?: string }
+  const [fadeOut, setFadeOut] = useState(false);
   
   // Form state for creating new opportunity
   const [newOppForm, setNewOppForm] = useState({
@@ -313,6 +316,20 @@ const OrphanedIssueCard = ({
     milestoneId: null
   });
 
+  // Auto-remove after action with delay for visual feedback
+  useEffect(() => {
+    if (actionResult && onActionComplete) {
+      const fadeTimer = setTimeout(() => setFadeOut(true), 2000);
+      const removeTimer = setTimeout(() => {
+        onActionComplete(issue.identifier, actionResult.type);
+      }, 2500);
+      return () => {
+        clearTimeout(fadeTimer);
+        clearTimeout(removeTimer);
+      };
+    }
+  }, [actionResult, issue.identifier, onActionComplete]);
+
   const areaInfo = AREAS.find(a => a.id === issue.suggestedArea);
 
   const handleCreateOpportunity = () => {
@@ -323,21 +340,90 @@ const OrphanedIssueCard = ({
       atRisk: false,
       atRiskReason: ''
     });
-    setMode(null);
+    setActionResult({ type: 'created', target: newOppForm.title });
+    setMode('created');
   };
 
   const handleLinkToExisting = () => {
     if (selectedOpp) {
+      const oppName = existingOpportunities.find(o => o.id === selectedOpp)?.title || 'opportunity';
       onLinkToExisting(selectedOpp, [issue.identifier]);
-      setMode(null);
+      setActionResult({ type: 'linked', target: oppName });
+      setMode('linked');
       setSelectedOpp(null);
     }
   };
 
   const handleExclude = () => {
     onExclude(issue, excludeReason || 'Not relevant to roadmap');
-    setMode(null);
+    setActionResult({ type: 'excluded' });
+    setMode('excluded');
   };
+
+  // If action was completed, show success state
+  if (actionResult) {
+    return (
+      <div className={`p-3 rounded-lg border transition-all duration-500 ${
+        fadeOut ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+      } ${
+        actionResult.type === 'linked' ? 'bg-blue-900/20 border-blue-600/50' :
+        actionResult.type === 'created' ? 'bg-emerald-900/20 border-emerald-600/50' :
+        'bg-slate-800/50 border-slate-600'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+            actionResult.type === 'linked' ? 'bg-blue-600' :
+            actionResult.type === 'created' ? 'bg-emerald-600' :
+            'bg-slate-600'
+          }`}>
+            {actionResult.type === 'linked' && (
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            )}
+            {actionResult.type === 'created' && (
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+            {actionResult.type === 'excluded' && (
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-slate-400">{issue.identifier}</span>
+              <span className={`text-xs font-medium ${
+                actionResult.type === 'linked' ? 'text-blue-400' :
+                actionResult.type === 'created' ? 'text-emerald-400' :
+                'text-slate-400'
+              }`}>
+                {actionResult.type === 'linked' && '✓ Linked'}
+                {actionResult.type === 'created' && '✓ Created'}
+                {actionResult.type === 'excluded' && '✓ Excluded'}
+              </span>
+            </div>
+            <div className="text-sm text-slate-300 truncate">
+              {actionResult.type === 'linked' && `Linked to "${actionResult.target}"`}
+              {actionResult.type === 'created' && `Created "${actionResult.target}"`}
+              {actionResult.type === 'excluded' && 'Excluded from future syncs'}
+            </div>
+          </div>
+          {!fadeOut && (
+            <button
+              onClick={() => { setActionResult(null); setMode(null); setFadeOut(false); }}
+              className="text-xs text-slate-500 hover:text-slate-300 transition-colors px-2 py-1 rounded hover:bg-slate-700"
+              title="Undo"
+            >
+              Undo
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-800/50 border border-blue-700/30 rounded-lg overflow-hidden">
@@ -767,6 +853,42 @@ export default function LinearSyncModal({
     }
   };
 
+  // Helper to check if a suggested opportunity is a duplicate of existing
+  const isDuplicateOpportunity = (suggestion) => {
+    const suggestedLower = (suggestion.suggestedTitle || suggestion.title || '').toLowerCase().trim();
+    
+    for (const opp of opportunities) {
+      const existingLower = opp.title.toLowerCase().trim();
+      
+      // Exact match
+      if (suggestedLower === existingLower) return true;
+      
+      // One contains the other
+      if (suggestedLower.includes(existingLower) || existingLower.includes(suggestedLower)) return true;
+      
+      // High word overlap
+      const suggestedWords = new Set(suggestedLower.split(/\s+/).filter(w => w.length > 3));
+      const existingWords = new Set(existingLower.split(/\s+/).filter(w => w.length > 3));
+      
+      if (suggestedWords.size > 0 && existingWords.size > 0) {
+        let matchCount = 0;
+        for (const word of suggestedWords) {
+          if (existingWords.has(word)) matchCount++;
+        }
+        const overlapRatio = matchCount / Math.min(suggestedWords.size, existingWords.size);
+        if (overlapRatio > 0.6) return true;
+      }
+      
+      // Check if related issues already linked
+      if (suggestion.relatedIssues && suggestion.relatedIssues.length > 0 && opp.issues && opp.issues.length > 0) {
+        const suggestionIssues = new Set(suggestion.relatedIssues);
+        if (opp.issues.some(i => suggestionIssues.has(i))) return true;
+      }
+    }
+    
+    return false;
+  };
+
   const handleSync = async () => {
     if (!linearApiKey) {
       setError('Please enter your Linear API key');
@@ -778,13 +900,17 @@ export default function LinearSyncModal({
     setAnalysis(null);
 
     try {
+      // Get excluded issues from localStorage
+      const excludedIssues = JSON.parse(localStorage.getItem('pulseboard_excluded_issues') || '[]');
+      
       const response = await fetch('/api/sync-linear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           opportunities,
           milestones,
-          linearApiKey
+          linearApiKey,
+          excludedIssues
         })
       });
 
@@ -794,7 +920,15 @@ export default function LinearSyncModal({
       }
 
       const data = await response.json();
-      setAnalysis(data);
+      
+      // Additional client-side filtering for duplicate new opportunity suggestions
+      if (data.analysis?.newOpportunities) {
+        data.analysis.newOpportunities = data.analysis.newOpportunities.filter(
+          suggestion => !isDuplicateOpportunity(suggestion)
+        );
+      }
+      
+      setAnalysis(data.analysis || data);
       
       if (onSyncComplete) {
         onSyncComplete(new Date().toISOString());
@@ -844,29 +978,28 @@ export default function LinearSyncModal({
     setDismissedScopeChanges(prev => new Set([...prev, oppId]));
   };
 
+  // Handler for when orphaned issue action is finalized (after fade out)
+  const handleOrphanActionComplete = (issueIdentifier, actionType) => {
+    // Remove the issue from the analysis state
+    if (analysis) {
+      setAnalysis({
+        ...analysis,
+        orphanedIssues: analysis.orphanedIssues?.filter(i => i.identifier !== issueIdentifier) || []
+      });
+    }
+  };
+
   // Handler for creating opportunity from orphaned issue
   const handleCreateFromOrphan = (opp) => {
     onCreateOpportunity(opp);
-    // Remove issue from orphanedIssues in analysis
-    if (analysis) {
-      const issueId = opp.issues?.[0];
-      setAnalysis({
-        ...analysis,
-        orphanedIssues: analysis.orphanedIssues?.filter(i => i.identifier !== issueId) || []
-      });
-    }
+    // Note: Don't remove from analysis here - let the card handle the visual feedback
+    // The card will call onActionComplete after the fade animation
   };
 
   // Handler for linking orphaned issue to existing opportunity
   const handleLinkOrphanToExisting = (opportunityId, issues) => {
     onLinkIssues(opportunityId, issues);
-    // Remove issue from orphanedIssues in analysis
-    if (analysis && issues.length > 0) {
-      setAnalysis({
-        ...analysis,
-        orphanedIssues: analysis.orphanedIssues?.filter(i => !issues.includes(i.identifier)) || []
-      });
-    }
+    // Note: Don't remove from analysis here - let the card handle the visual feedback
   };
 
   // Handler for excluding orphaned issue
@@ -880,13 +1013,7 @@ export default function LinearSyncModal({
       ]));
     }
     
-    // Remove from analysis
-    if (analysis) {
-      setAnalysis({
-        ...analysis,
-        orphanedIssues: analysis.orphanedIssues?.filter(i => i.identifier !== issue.identifier) || []
-      });
-    }
+    // Note: Don't remove from analysis here - let the card handle the visual feedback
     
     if (onExcludeIssue) {
       onExcludeIssue(issue.identifier, reason);
@@ -1095,6 +1222,7 @@ export default function LinearSyncModal({
                       onCreateOpportunity={handleCreateFromOrphan}
                       onLinkToExisting={handleLinkOrphanToExisting}
                       onExclude={handleExcludeOrphan}
+                      onActionComplete={handleOrphanActionComplete}
                       existingOpportunities={opportunities}
                       milestones={milestones}
                     />
