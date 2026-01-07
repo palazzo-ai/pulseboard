@@ -13,7 +13,7 @@ import {
   TeamMemberBadge, AssignmentBadges, AssignTeamMemberModal,
   TeamManagementPanel, CapacityDashboard, TimelineLanes, StatusBadge,
   AIAdvisorPanel, PrioritizationMatrix, LinearSyncModal,
-  MultiSelectFilter, AIScoringModal  // ADD THESE
+  DependencyEditor
 } from './components';
 
 export default function PalazzoTimeline() {
@@ -76,6 +76,8 @@ export default function PalazzoTimeline() {
 
   // AI Advisor state
   const [aiAdvisorOpen, setAiAdvisorOpen] = useState(false);
+  const [dependencyEditorOpp, setDependencyEditorOpp] = useState(null);
+
 
   // AI Scoring Modal state
   const [aiScoringOpen, setAiScoringOpen] = useState(false);
@@ -145,6 +147,48 @@ export default function PalazzoTimeline() {
       });
       setAssignments(grouped);
     } catch (err) { console.log('Failed to load assignments:', err); }
+  };
+
+  // ========== DEPENDENCY HANDLERS ==========
+  const handleUpdateDependencies = async (oppId, targetId, action) => {
+    const opp = opportunities.find(o => o.id === oppId);
+    const target = opportunities.find(o => o.id === targetId);
+    if (!opp || !target) return;
+
+    saveToUndo();
+    
+    let updatedOpp = { ...opp };
+    let updatedTarget = { ...target };
+
+    switch (action) {
+      case 'add-blocks':
+        updatedOpp.blocks = [...new Set([...(opp.blocks || []), targetId])];
+        updatedTarget.blockedBy = [...new Set([...(target.blockedBy || []), oppId])];
+        break;
+      case 'remove-blocks':
+        updatedOpp.blocks = (opp.blocks || []).filter(id => id !== targetId);
+        updatedTarget.blockedBy = (target.blockedBy || []).filter(id => id !== oppId);
+        break;
+      case 'add-blocked-by':
+        updatedOpp.blockedBy = [...new Set([...(opp.blockedBy || []), targetId])];
+        updatedTarget.blocks = [...new Set([...(target.blocks || []), oppId])];
+        break;
+      case 'remove-blocked-by':
+        updatedOpp.blockedBy = (opp.blockedBy || []).filter(id => id !== targetId);
+        updatedTarget.blocks = (target.blocks || []).filter(id => id !== oppId);
+        break;
+    }
+
+    setOpportunities(prev => prev.map(o => {
+      if (o.id === oppId) return updatedOpp;
+      if (o.id === targetId) return updatedTarget;
+      return o;
+    }));
+
+    await saveOpportunity(updatedOpp);
+    await saveOpportunity(updatedTarget);
+    
+    showNotification('Dependencies updated', 'success');
   };
 
   const seedDatabase = async () => {
@@ -1249,6 +1293,49 @@ export default function PalazzoTimeline() {
                   </div>
                 </div>
               )}
+
+              {/* Dependencies Section */}
+              <div className="border-t border-slate-700 pt-4 mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide">Dependencies</h4>
+                  <button
+                    onClick={() => setDependencyEditorOpp(selectedOpportunity)}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                  >
+                    Manage →
+                  </button>
+                </div>
+                
+                <div className="space-y-2 text-xs">
+                  {(selectedOpportunity.blockedBy?.length || 0) > 0 && (
+                    <div className="p-2 bg-orange-500/10 rounded-lg">
+                      <div className="text-orange-400 font-medium mb-1">⚠ Blocked by {selectedOpportunity.blockedBy.length} item(s)</div>
+                      <div className="text-slate-400">
+                        {selectedOpportunity.blockedBy.map(id => {
+                          const blocker = opportunities.find(o => o.id === id);
+                          return blocker ? <div key={id} className="truncate">{blocker.title}</div> : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {(selectedOpportunity.blocks?.length || 0) > 0 && (
+                    <div className="p-2 bg-indigo-500/10 rounded-lg">
+                      <div className="text-indigo-400 font-medium mb-1">→ Blocks {selectedOpportunity.blocks.length} item(s)</div>
+                      <div className="text-slate-400">
+                        {selectedOpportunity.blocks.map(id => {
+                          const blocked = opportunities.find(o => o.id === id);
+                          return blocked ? <div key={id} className="truncate">{blocked.title}</div> : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {(selectedOpportunity.blockedBy?.length || 0) === 0 && (selectedOpportunity.blocks?.length || 0) === 0 && (
+                    <div className="text-slate-500 italic">No dependencies defined</div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="p-4 border-t border-slate-800 flex justify-between">
@@ -1365,6 +1452,18 @@ export default function PalazzoTimeline() {
       {/* Assign Team Member Modal */}
       <AssignTeamMemberModal isOpen={assignModalOpen} onClose={() => { setAssignModalOpen(false); setAssignModalOpp(null); }} opportunity={assignModalOpp}
         teamMembers={teamMembers} existingAssignments={assignModalOpp ? (assignments[assignModalOpp.id] || []) : []} onSave={saveAssignments} />
+
+      {/* Dependency Editor Modal */}
+      {dependencyEditorOpp && (
+        <DependencyEditor
+          opportunity={dependencyEditorOpp}
+          opportunities={opportunities}
+          onUpdateDependencies={handleUpdateDependencies}
+          onClose={() => setDependencyEditorOpp(null)}
+          getAreaName={getAreaName}
+          getInitiativeColor={getInitiativeColor}
+        />
+      )}
 
       {/* Data Management Modal */}
       {showDataModal && (
