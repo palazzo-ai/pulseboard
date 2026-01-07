@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { getAreaColor } from '../utils/helpers';
 
 const STATUSES = {
   not_started: { label: 'Not Started', color: '#6b7280', bgColor: '#6b728020' },
