@@ -120,6 +120,33 @@ export default async function handler(req, res) {
       (issue) => !linkedIssueIds.has(issue.identifier)
     );
 
+    // Pre-group orphaned issues by cycle
+    const cycleGroups = {};
+    orphanedIssues.forEach((issue) => {
+      if (issue.cycle?.id) {
+        if (!cycleGroups[issue.cycle.id]) {
+          cycleGroups[issue.cycle.id] = {
+            cycleId: issue.cycle.id,
+            cycleName: issue.cycle.name,
+            startsAt: issue.cycle.startsAt,
+            endsAt: issue.cycle.endsAt,
+            issues: [],
+          };
+        }
+        cycleGroups[issue.cycle.id].issues.push({
+          identifier: issue.identifier,
+          title: issue.title,
+          state: issue.state?.name,
+          priority: issue.priority,
+          team: issue.team?.name,
+          labels: issue.labels?.nodes?.map((l) => l.name),
+        });
+      }
+    });
+    const cyclesWithMultipleIssues = Object.values(cycleGroups).filter(
+      (c) => c.issues.length >= 2
+    );
+
     // Use Claude to analyze
     const anthropic = new Anthropic();
 
@@ -187,6 +214,10 @@ ${JSON.stringify(
   2
 )}
 
+## ORPHANED ISSUES GROUPED BY CYCLE
+The following orphaned issues are pre-grouped by their Linear cycle. Each group represents a potential roadmap opportunity:
+${JSON.stringify(cyclesWithMultipleIssues, null, 2)}
+
 ## ANALYSIS TASKS
 
 Analyze the data and provide recommendations in the following categories:
@@ -220,11 +251,11 @@ Suggest which area they might belong to.
 For milestones with linked opportunities, assess delivery risk.
 
 ### 6. CYCLE-BASED OPPORTUNITIES
-Group orphaned issues by their Linear cycle. For each cycle that has 2 or more orphaned issues, suggest an opportunity that represents that cycle's body of work:
-- Use the cycle name and its issues to infer a coherent opportunity title and description
-- Only suggest cycle-based opportunities for cycles NOT already well-covered by existing roadmap opportunities
-- Include ALL orphaned issues from that cycle in the relatedIssues array
+**REQUIRED**: Using the ORPHANED ISSUES GROUPED BY CYCLE section above, you MUST produce a cycleOpportunities entry for EVERY cycle group listed there. For each cycle group:
+- Suggest a coherent opportunity title and description based on the cycle name and its issues
+- Include ALL issue identifiers from that cycle in the relatedIssues array
 - Suggest appropriate area, initiative, and month based on the issues' content and cycle timing
+- Do NOT skip any cycle group — every group must appear in cycleOpportunities
 
 ## RESPONSE FORMAT
 Return a JSON object (no markdown, just raw JSON):
