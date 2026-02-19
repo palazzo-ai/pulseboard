@@ -46,8 +46,14 @@ export default async function handler(req, res) {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error("Error saving issue dates:", error);
-      return res.status(500).json({ error: "Failed to save dates", message: error.message });
+      console.error("Error saving issue dates:", JSON.stringify(error, null, 2));
+      return res.status(500).json({
+        error: "Failed to save dates",
+        message: error.message || error.details || error.hint || JSON.stringify(error),
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
     }
   }
 

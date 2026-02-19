@@ -288,7 +288,8 @@ export default function GanttView({
       });
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.message || errData.error || 'Failed to save dates');
+        const detail = errData.message || errData.details || errData.hint || errData.error || 'Unknown error';
+        throw new Error(`${errData.code || response.status}: ${detail}`);
       }
 
       // Update local state immediately
