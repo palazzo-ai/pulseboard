@@ -221,6 +221,140 @@ const NewOpportunityCard = ({ recommendation, onCreateOpportunity, onLinkToExist
   );
 };
 
+// Cycle-Based Opportunity Card
+const CycleOpportunityCard = ({ cycle, onCreateOpportunity, onLinkToExisting, onIgnore, existingOpportunities }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [linkMode, setLinkMode] = useState(false);
+  const [selectedOpp, setSelectedOpp] = useState(null);
+
+  const handleCreate = () => {
+    onCreateOpportunity({
+      title: cycle.suggestedTitle,
+      description: cycle.description,
+      area: cycle.suggestedArea,
+      initiative: cycle.suggestedInitiative,
+      month: cycle.suggestedMonth,
+      issues: cycle.relatedIssues || [],
+      status: 'not_started',
+      atRisk: false,
+      atRiskReason: '',
+      milestoneId: null
+    });
+  };
+
+  const handleLinkToExisting = () => {
+    if (selectedOpp) {
+      onLinkToExisting(selectedOpp, cycle.relatedIssues || []);
+      setLinkMode(false);
+      setSelectedOpp(null);
+    }
+  };
+
+  return (
+    <div className="bg-slate-800/50 border border-cyan-700/30 rounded-lg overflow-hidden">
+      <div
+        className="p-3 cursor-pointer hover:bg-slate-800 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-cyan-900/30 text-cyan-400 border border-cyan-600/50">
+                {cycle.cycleName}
+              </span>
+              <span className="text-xs text-slate-500">
+                {(cycle.relatedIssues || []).length} issues
+              </span>
+            </div>
+            <h4 className="font-medium text-white truncate">{cycle.suggestedTitle}</h4>
+            <p className="text-xs text-slate-400 mt-1 line-clamp-2">{cycle.description}</p>
+          </div>
+          <svg className={`w-5 h-5 text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="px-3 pb-3 border-t border-slate-700 pt-3 space-y-3">
+          <div>
+            <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">Issues in Cycle ({(cycle.relatedIssues || []).length})</div>
+            <div className="flex flex-wrap gap-1">
+              {(cycle.relatedIssues || []).map(issue => (
+                <a key={issue} href={`https://linear.app/palazzo-ai/issue/${issue}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-slate-900 text-indigo-400 hover:text-indigo-300 hover:bg-slate-700 text-xs rounded font-mono transition-colors cursor-pointer">
+                  {issue}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span>{AREAS.find(a => a.id === cycle.suggestedArea)?.name}</span>
+            <span>•</span>
+            <span>{MONTHS.find(m => m.id === cycle.suggestedMonth)?.name}</span>
+          </div>
+
+          <div className="text-xs text-slate-400 italic">{cycle.reasoning}</div>
+
+          {linkMode ? (
+            <div className="space-y-2">
+              <select
+                value={selectedOpp || ''}
+                onChange={(e) => setSelectedOpp(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select an opportunity...</option>
+                {existingOpportunities.map(opp => (
+                  <option key={opp.id} value={opp.id}>{opp.title}</option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleLinkToExisting}
+                  disabled={!selectedOpp}
+                  className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  Link Issues
+                </button>
+                <button
+                  onClick={() => { setLinkMode(false); setSelectedOpp(null); }}
+                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={handleCreate}
+                className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Create Opportunity
+              </button>
+              <button
+                onClick={() => setLinkMode(true)}
+                className="px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600/50 text-blue-400 text-xs font-medium rounded-lg transition-colors border border-blue-600/50"
+              >
+                Link to Existing
+              </button>
+              <button
+                onClick={() => onIgnore(cycle.cycleName)}
+                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-400 text-xs font-medium rounded-lg transition-colors"
+              >
+                Ignore
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Scope Change Card
 const ScopeChangeCard = ({ change, onAcknowledge, onFlagAtRisk, onLinkIssues }) => {
   const [expanded, setExpanded] = useState(false);
@@ -841,6 +975,7 @@ export default function LinearSyncModal({
   // Track dismissed items
   const [dismissedNewOpps, setDismissedNewOpps] = useState(new Set());
   const [dismissedScopeChanges, setDismissedScopeChanges] = useState(new Set());
+  const [dismissedCycleOpps, setDismissedCycleOpps] = useState(new Set());
 
   useEffect(() => {
     setKeyInput(linearApiKey);
@@ -961,6 +1096,20 @@ export default function LinearSyncModal({
     setDismissedNewOpps(prev => new Set([...prev, title]));
   };
 
+  const handleIgnoreCycleOpp = (cycleName) => {
+    setDismissedCycleOpps(prev => new Set([...prev, cycleName]));
+  };
+
+  const handleCreateCycleOpportunity = (opp) => {
+    onCreateOpportunity(opp);
+    if (analysis) {
+      setAnalysis({
+        ...analysis,
+        cycleOpportunities: analysis.cycleOpportunities?.filter(c => c.suggestedTitle !== opp.title) || []
+      });
+    }
+  };
+
   const handleAcknowledgeScopeChange = (oppId) => {
     setDismissedScopeChanges(prev => new Set([...prev, oppId]));
   };
@@ -1037,6 +1186,7 @@ export default function LinearSyncModal({
   // Filter out dismissed items
   const visibleNewOpps = analysis?.newOpportunities?.filter(r => !dismissedNewOpps.has(r.title)) || [];
   const visibleScopeChanges = analysis?.scopeChanges?.filter(c => !dismissedScopeChanges.has(c.opportunityId)) || [];
+  const visibleCycleOpps = analysis?.cycleOpportunities?.filter(c => !dismissedCycleOpps.has(c.cycleName)) || [];
 
   if (!isOpen) return null;
 
@@ -1182,6 +1332,31 @@ export default function LinearSyncModal({
                 </div>
               )}
 
+              {/* Cycle-Based Opportunities */}
+              {visibleCycleOpps.length > 0 && (
+                <div className="space-y-3">
+                  <SectionHeader
+                    icon="🔄"
+                    title="Cycle-Based Opportunities"
+                    count={visibleCycleOpps.length}
+                    color="blue"
+                  />
+                  <p className="text-xs text-slate-400 -mt-1 mb-2">
+                    Opportunities suggested from groupings of issues within Linear cycles.
+                  </p>
+                  {visibleCycleOpps.map((cycle, idx) => (
+                    <CycleOpportunityCard
+                      key={cycle.cycleId || idx}
+                      cycle={cycle}
+                      onCreateOpportunity={handleCreateCycleOpportunity}
+                      onLinkToExisting={handleLinkToExisting}
+                      onIgnore={handleIgnoreCycleOpp}
+                      existingOpportunities={opportunities}
+                    />
+                  ))}
+                </div>
+              )}
+
               {/* Scope Changes */}
               {visibleScopeChanges.length > 0 && (
                 <div className="space-y-3">
@@ -1251,8 +1426,9 @@ export default function LinearSyncModal({
               )}
 
               {/* Empty State - All Clear */}
-              {visibleNewOpps.length === 0 && 
-               visibleScopeChanges.length === 0 && 
+              {visibleNewOpps.length === 0 &&
+               visibleCycleOpps.length === 0 &&
+               visibleScopeChanges.length === 0 &&
                !analysis.orphanedIssues?.length &&
                !analysis.milestoneHealth?.length && (
                 <div className="text-center py-8 text-slate-500">

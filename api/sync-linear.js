@@ -57,6 +57,13 @@ export default async function handler(req, res) {
                   name
                   key
                 }
+                cycle {
+                  id
+                  name
+                  number
+                  startsAt
+                  endsAt
+                }
                 labels {
                   nodes {
                     name
@@ -91,6 +98,7 @@ export default async function handler(req, res) {
           scopeChanges: [],
           orphanedIssues: [],
           milestoneHealth: [],
+          cycleOpportunities: [],
         },
         issuesAnalyzed: 0,
         timestamp: new Date().toISOString(),
@@ -151,6 +159,8 @@ ${JSON.stringify(
       project: i.project?.name,
       labels: i.labels?.nodes?.map((l) => l.name),
       dueDate: i.dueDate,
+      cycle: i.cycle?.name,
+      cycleId: i.cycle?.id,
     })),
   null,
   2
@@ -168,6 +178,10 @@ ${JSON.stringify(
     team: i.team?.name,
     project: i.project?.name,
     labels: i.labels?.nodes?.map((l) => l.name),
+    cycle: i.cycle?.name,
+    cycleId: i.cycle?.id,
+    cycleStartsAt: i.cycle?.startsAt,
+    cycleEndsAt: i.cycle?.endsAt,
   })),
   null,
   2
@@ -204,6 +218,13 @@ Suggest which area they might belong to.
 
 ### 5. MILESTONE HEALTH
 For milestones with linked opportunities, assess delivery risk.
+
+### 6. CYCLE-BASED OPPORTUNITIES
+Group orphaned issues by their Linear cycle. For each cycle that has 2 or more orphaned issues, suggest an opportunity that represents that cycle's body of work:
+- Use the cycle name and its issues to infer a coherent opportunity title and description
+- Only suggest cycle-based opportunities for cycles NOT already well-covered by existing roadmap opportunities
+- Include ALL orphaned issues from that cycle in the relatedIssues array
+- Suggest appropriate area, initiative, and month based on the issues' content and cycle timing
 
 ## RESPONSE FORMAT
 Return a JSON object (no markdown, just raw JSON):
@@ -258,6 +279,19 @@ Return a JSON object (no markdown, just raw JSON):
       "totalOpportunities": <number>,
       "blockers": ["<issue or risk>"],
       "recommendation": "<action to take>"
+    }
+  ],
+  "cycleOpportunities": [
+    {
+      "cycleName": "<string>",
+      "cycleId": "<string>",
+      "suggestedTitle": "<string>",
+      "description": "<string>",
+      "suggestedArea": "<area_id>",
+      "suggestedInitiative": "<initiative_id>",
+      "suggestedMonth": "<month_id>",
+      "relatedIssues": ["PAL-123"],
+      "reasoning": "<why this cycle warrants an opportunity>"
     }
   ]
 }
