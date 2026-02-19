@@ -15,6 +15,7 @@ import {
   AIAdvisorPanel, PrioritizationMatrix, LinearSyncModal,
   DependencyEditor, MultiSelectFilter, AIScoringModal
 } from './components';
+import GanttView from './components/GanttView';
 
 export default function PalazzoTimeline() {
   // Core data state
@@ -912,6 +913,7 @@ export default function PalazzoTimeline() {
               { key: 'all', label: 'Timeline', icon: '📅' },
               { key: 'milestones', label: 'Milestones', icon: '🎯' },
               { key: 'opportunities', label: 'Opportunities', icon: '💡' },
+              { key: 'gantt', label: 'Gantt', icon: '📊' },
               { key: 'prioritize', label: 'Prioritize', icon: '⚖️' },
               { key: 'capacity', label: 'Capacity', icon: '📊' },
               { key: 'timeline', label: 'Team View', icon: '👥' }
@@ -1050,6 +1052,21 @@ export default function PalazzoTimeline() {
         )}
       </div>
 
+      {/* Gantt View */}
+      {viewMode === 'gantt' && (
+        <div style={{ height: 'calc(100vh - 180px)' }}>
+          <GanttView
+            opportunities={opportunities}
+            milestones={milestones}
+            areas={areas}
+            teamMembers={teamMembers}
+            assignments={assignments}
+            onSaveOpportunity={saveOpportunity}
+            showNotification={showNotification}
+          />
+        </div>
+      )}
+
       {/* Capacity Dashboard View */}
       {viewMode === 'capacity' && (
         <CapacityDashboard
@@ -1098,7 +1115,7 @@ export default function PalazzoTimeline() {
       )}
 
       {/* Main Timeline Grid */}
-      {viewMode !== 'capacity' && viewMode !== 'timeline' && viewMode !== 'prioritize' && (
+      {viewMode !== 'capacity' && viewMode !== 'timeline' && viewMode !== 'prioritize' && viewMode !== 'gantt' && (
         <div className="overflow-x-auto border border-slate-800 rounded-lg bg-slate-900">
           <table className="w-full min-w-[1400px] border-collapse">
             <thead>
