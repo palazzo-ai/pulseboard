@@ -240,7 +240,10 @@ export const dbToOpportunity = (row) => ({
   effortScore: row.effort_score ?? 50,
   // Dependency fields
   blocks: row.blocks || [],
-  blockedBy: row.blocked_by || []
+  blockedBy: row.blocked_by || [],
+  // Gantt date fields
+  startDate: row.start_date || null,
+  endDate: row.end_date || null
 });
 
 // Convert app format to DB row
@@ -262,6 +265,9 @@ export const opportunityToDb = (opp) => ({
   // Dependency fields
   blocks: opp.blocks || [],
   blocked_by: opp.blockedBy || [],
+  // Gantt date fields
+  start_date: opp.startDate || null,
+  end_date: opp.endDate || null,
   updated_at: new Date().toISOString()
 });
 
