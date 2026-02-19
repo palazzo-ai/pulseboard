@@ -1288,7 +1288,7 @@ export default function PalazzoTimeline() {
                   <div className="text-slate-500 text-xs uppercase tracking-wide mb-2">Linear Issues</div>
                   <div className="flex flex-wrap gap-1">
                     {selectedOpportunity.issues.map(issue => (
-                      <span key={issue} className="px-2 py-1 bg-slate-800 text-slate-300 text-xs rounded font-mono">{issue}</span>
+                      <a key={issue} href={`https://linear.app/palazzo-ai/issue/${issue}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-slate-800 text-indigo-400 hover:text-indigo-300 hover:bg-slate-700 text-xs rounded font-mono transition-colors cursor-pointer">{issue}</a>
                     ))}
                   </div>
                 </div>
