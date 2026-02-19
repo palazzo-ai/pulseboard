@@ -286,7 +286,10 @@ export default function GanttView({
           },
         }),
       });
-      if (!response.ok) throw new Error('Failed to save dates');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || errData.error || 'Failed to save dates');
+      }
 
       // Update local state immediately
       setLinearIssues(prev => {
@@ -313,7 +316,7 @@ export default function GanttView({
       showNotification?.(`Dates saved for ${item.identifier}`, 'success');
     } catch (error) {
       console.error('Error saving date override:', error);
-      showNotification?.('Failed to save dates', 'warning');
+      showNotification?.(`Failed to save dates: ${error.message}`, 'warning');
     }
   }, [showNotification]);
 
