@@ -64,13 +64,19 @@ function InlineDateEditor({ item, onSave, onCancel }) {
 
 // ============ GANTT BAR (SVG) ============
 function GanttBar({ item, timelineStart, dayWidth, rowY, barHeight, isSubtask, barColor, onDragEnd, onSelect, isSelected, focusOpacity = 1 }) {
-  const startDate = parseDate(item.startDate);
-  const endDate = parseDate(item.endDate);
+  const [dragOverride, setDragOverride] = useState(null);
+
+  const activeStart = dragOverride?.startDate ?? item.startDate;
+  const activeEnd = dragOverride?.endDate ?? item.endDate;
+
+  const startDate = parseDate(activeStart);
+  const endDate = parseDate(activeEnd);
   if (!startDate || !endDate) return null;
 
   const startOffset = daysBetween(timelineStart, startDate) * dayWidth;
   const width = Math.max(daysBetween(startDate, endDate) * dayWidth, 20);
   const statusColor = STATUS_CONFIG[item.status]?.color || "#64748B";
+  const isDragging = dragOverride !== null;
 
   const progress = item.progress != null ? item.progress / 100
     : item.status === "done" ? 1 : item.status === "in_progress" ? 0.5 : 0;
@@ -99,9 +105,11 @@ function GanttBar({ item, timelineStart, dayWidth, rowY, barHeight, isSubtask, b
         const ne = addDays(parseDate(ref.endDate), daysDelta);
         if (ne > parseDate(ref.startDate)) { lastStart = ref.startDate; lastEnd = formatDate(ne); }
       }
+      setDragOverride({ startDate: lastStart, endDate: lastEnd });
     };
 
     const handleMouseUp = () => {
+      setDragOverride(null);
       if (lastStart !== item.startDate || lastEnd !== item.endDate) {
         onDragEnd(item, lastStart, lastEnd);
       }
@@ -117,10 +125,10 @@ function GanttBar({ item, timelineStart, dayWidth, rowY, barHeight, isSubtask, b
   const isPulseboardDate = item.dateSource?.start === "pulseboard" || item.dateSource?.end === "pulseboard";
 
   return (
-    <g style={{ cursor: "pointer", opacity: focusOpacity }}>
+    <g style={{ cursor: isDragging ? "grabbing" : "pointer", opacity: isDragging ? 0.85 : focusOpacity }}>
       {/* Background bar */}
       <rect x={startOffset} y={rowY} width={width} height={barHeight} rx={barHeight / 2}
-        fill={barColor} opacity={isSubtask ? 0.25 : 0.2}
+        fill={barColor} opacity={isDragging ? 0.35 : isSubtask ? 0.25 : 0.2}
         stroke={isSelected ? "#334155" : isPulseboardDate ? "#2563EB" : "transparent"}
         strokeWidth={isSelected ? 1.5 : isPulseboardDate ? 1 : 0}
         strokeOpacity={isSelected ? 0.6 : 0.3}
@@ -352,10 +360,8 @@ export default function GanttView({
 
   // Handle drag-end on bars (also saves to Supabase)
   const handleBarDragEnd = useCallback((item, newStart, newEnd) => {
-    if (viewMode === "issues" && item.identifier) {
-      saveDateOverride(item, newStart, newEnd);
-    }
-  }, [viewMode, saveDateOverride]);
+    saveDateOverride(item, newStart, newEnd);
+  }, [saveDateOverride]);
 
   // ===== BUILD ROWS =====
   const SWIMLANE_HEIGHT = 32;
