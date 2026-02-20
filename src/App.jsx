@@ -1111,23 +1111,23 @@ export default function PalazzoTimeline() {
                             return (
                               <div key={opp.id} draggable onDragStart={(e) => handleDragStart(e, opp, 'opportunity')} onDragEnd={handleDragEnd}
                                 onClick={() => setSelectedOpportunity(opp)}
-                                className={`p-1.5 rounded text-[11px] cursor-grab active:cursor-grabbing transition-all hover:translate-x-0.5 hover:shadow-lg ${draggedItem?.id === opp.id && dragType === 'opportunity' ? 'opacity-50' : ''} ${opp.atRisk ? 'ring-1 ring-orange-500' : ''}`}
-                                style={{ backgroundColor: `${getInitiativeColor(opp.initiative)}15`, borderLeft: `3px solid ${getInitiativeColor(opp.initiative)}` }}>
+                                className={`p-1.5 rounded-lg text-[11px] cursor-grab active:cursor-grabbing transition-all hover:-translate-y-px hover:shadow-md border border-[#EAECF0] bg-[#F8FAFC] hover:bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] ${draggedItem?.id === opp.id && dragType === 'opportunity' ? 'opacity-50' : ''} ${opp.atRisk ? 'ring-1 ring-orange-500' : ''}`}
+                                style={{ borderLeft: `3px solid ${getInitiativeColor(opp.initiative)}` }}>
                                 <div className="flex items-center gap-1">
                                   {opp.atRisk && <span className="text-orange-500" title={opp.atRiskReason || 'At Risk'}>⚠</span>}
-                                  <span className="font-medium text-slate-200 leading-tight flex-1">{opp.title}</span>
+                                  <span className="font-medium text-[#1E293B] leading-tight flex-1">{opp.title}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-0.5">
                                   <StatusBadge status={opp.status} size="xs" onStatusChange={(newStatus) => quickStatusChange(opp.id, newStatus)} />
                                   {linkedMilestone && (
-                                    <span className="text-yellow-500 text-[9px] flex items-center gap-0.5">→ {linkedMilestone.title}</span>
+                                    <span className="text-[#B45309] text-[9px] font-medium flex items-center gap-0.5"><span className="text-[7px]">◆</span> {linkedMilestone.title}</span>
                                   )}
                                 </div>
                                 {/* Team Assignments */}
                                 <div className="mt-1 flex items-center justify-between">
                                   <AssignmentBadges assignments={assignments[opp.id] || []} onAddClick={() => openAssignModal(opp)} maxVisible={2} size="xs" />
                                   {opp.issues && opp.issues.length > 0 && (
-                                    <span className="text-slate-500 text-[9px]">{opp.issues.length} issues</span>
+                                    <span className="text-[#94A3B8] text-[9px] font-mono tabular-nums">{opp.issues.length} {opp.issues.length === 1 ? 'issue' : 'issues'}</span>
                                   )}
                                 </div>
                               </div>
@@ -1317,7 +1317,7 @@ export default function PalazzoTimeline() {
                       onClick={() => { setSelectedMilestone(null); setSelectedOpportunity(opp); }}>
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getInitiativeColor(opp.initiative) }}></span>
-                        <span className="text-slate-200">{opp.title}</span>
+                        <span className="text-[#1E293B]">{opp.title}</span>
                         <span className="text-slate-500 ml-auto">{getMonthName(opp.month)}</span>
                       </div>
                     </div>
