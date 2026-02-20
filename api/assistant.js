@@ -35,6 +35,27 @@ CONTEXT:
 
 Be concise and action-oriented. When proposing changes, be specific about what you'll change and why. Reference opportunities and milestones by name. For bulk operations, summarize what you'll do before doing it.
 
+LINEAR WRITE OPERATIONS:
+- You can create, update, and manage Linear issues through tools
+- ALL Linear write operations require user confirmation — never claim you've already made changes. Always say "I'll propose..." or "Here's what I'd create..."
+- The user's Linear workspace uses team key "PAL"
+- When creating issues from opportunities, use the opportunity title as the issue title and the description as a starting point. Add relevant context about the milestone and dependencies.
+- When the user asks to "create issues for [milestone]", find all linked opportunities and propose issues for each one that doesn't already have linked issues
+- After issues are created and confirmed, they are automatically linked back to the Pulseboard opportunity
+- Issue identifiers follow the pattern PAL-XXXX
+- For sub-issues, break work down into concrete implementation tasks (design, implement, test, etc.)
+- For comments, include relevant context like milestone deadlines, dependencies, and priority reasoning
+
+PROACTIVE LINEAR SUGGESTIONS:
+- When you complete a roadmap action, suggest the natural Linear follow-up if one exists. Don't just wait for the user to ask.
+- After planning a milestone (plan_milestone): suggest creating Linear issues for opportunities that don't have linked issues yet
+- After assigning dates (set_opportunity_dates or bulk_assign_dates): suggest pushing due dates to Linear for opportunities with linked issues
+- After updating status (update_opportunity_status): suggest updating the linked Linear issues to match
+- After creating an opportunity (create_opportunity): suggest creating a corresponding Linear issue
+- After analyzing dependencies (analyze_dependencies): if blocked items have Linear issues, suggest adding comments explaining the dependency
+- Keep suggestions brief and natural — one sentence, not a sales pitch. For example: "These 3 opportunities don't have Linear issues yet — want me to create them?" or "Should I update PAL-1174 to In Progress in Linear too?"
+- If the user declines, don't suggest again for the same action in the same conversation
+
 PLAN_MILESTONE TOOL:
 When you call plan_milestone and receive the context data back, you MUST analyze it and then call set_opportunity_dates with the proposed dates. Your analysis should:
 1. Derive the milestone target date (from targetDate, or last day of the milestone's month)
@@ -321,6 +342,132 @@ When you call plan_milestone and receive the context data back, you MUST analyze
         required: ["milestoneId"],
       },
     },
+    // ===== LINEAR WRITE TOOLS =====
+    {
+      name: "linear_create_issue",
+      description: "Create new Linear issues. Use when the user wants to create engineering tasks from roadmap opportunities. Returns proposed issue details for user confirmation before creating. Always include the team — Palazzo's team key is 'PAL'.",
+      input_schema: {
+        type: "object",
+        properties: {
+          issues: {
+            type: "array",
+            description: "One or more issues to create",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Issue title" },
+                description: { type: "string", description: "Issue description in markdown" },
+                teamKey: { type: "string", description: "Team key, e.g. 'PAL'" },
+                projectName: { type: "string", description: "Project name to add the issue to" },
+                assigneeName: { type: "string", description: "Assignee display name" },
+                priority: { type: "number", description: "0=none, 1=urgent, 2=high, 3=medium, 4=low" },
+                labelNames: { type: "array", items: { type: "string" }, description: "Label names to apply" },
+                dueDate: { type: "string", description: "Due date YYYY-MM-DD" },
+                parentIssueIdentifier: { type: "string", description: "Parent issue identifier (e.g. 'PAL-123') to create as sub-issue" },
+                opportunityId: { type: "number", description: "Pulseboard opportunity ID to link back to after creation" },
+              },
+              required: ["title", "teamKey"],
+            },
+          },
+        },
+        required: ["issues"],
+      },
+    },
+    {
+      name: "linear_update_issue",
+      description: "Update one or more existing Linear issues. Use when the user wants to change status, assignee, priority, dates, or other fields. Returns proposed changes for user confirmation.",
+      input_schema: {
+        type: "object",
+        properties: {
+          updates: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                issueIdentifier: { type: "string", description: "Issue identifier like 'PAL-123'" },
+                title: { type: "string" },
+                description: { type: "string" },
+                stateName: { type: "string", description: "Desired state name (e.g. 'In Progress', 'Done', 'Todo')" },
+                assigneeName: { type: "string" },
+                priority: { type: "number", description: "0=none, 1=urgent, 2=high, 3=medium, 4=low" },
+                dueDate: { type: "string", description: "Due date YYYY-MM-DD" },
+                projectName: { type: "string" },
+              },
+              required: ["issueIdentifier"],
+            },
+          },
+        },
+        required: ["updates"],
+      },
+    },
+    {
+      name: "linear_create_sub_issues",
+      description: "Create sub-issues under an existing parent Linear issue. Use for breaking down a large issue into smaller tasks. Returns proposed sub-issues for user confirmation.",
+      input_schema: {
+        type: "object",
+        properties: {
+          parentIssueIdentifier: { type: "string", description: "Parent issue identifier (e.g. 'PAL-123')" },
+          subIssues: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                description: { type: "string" },
+                assigneeName: { type: "string" },
+                priority: { type: "number" },
+                dueDate: { type: "string" },
+              },
+              required: ["title"],
+            },
+          },
+        },
+        required: ["parentIssueIdentifier", "subIssues"],
+      },
+    },
+    {
+      name: "linear_add_comment",
+      description: "Add a comment to one or more Linear issues. Use for status updates, notes, or linking context. Returns proposed comments for user confirmation.",
+      input_schema: {
+        type: "object",
+        properties: {
+          comments: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                issueIdentifier: { type: "string", description: "Issue identifier like 'PAL-123'" },
+                body: { type: "string", description: "Comment body in markdown" },
+              },
+              required: ["issueIdentifier", "body"],
+            },
+          },
+        },
+        required: ["comments"],
+      },
+    },
+    {
+      name: "linear_move_issue",
+      description: "Move issues between projects and/or teams in Linear. Returns proposed moves for user confirmation.",
+      input_schema: {
+        type: "object",
+        properties: {
+          moves: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                issueIdentifier: { type: "string", description: "Issue identifier like 'PAL-123'" },
+                projectName: { type: "string", description: "Target project name" },
+                teamKey: { type: "string", description: "Target team key" },
+              },
+              required: ["issueIdentifier"],
+            },
+          },
+        },
+        required: ["moves"],
+      },
+    },
   ];
 
   // Process a tool call and return result
@@ -391,6 +538,69 @@ When you call plan_milestone and receive the context data back, you MUST analyze
       case "sync_linear":
         // sync_linear is handled inline below (needs async fetch)
         return { type: "pending_sync", action: "sync_linear" };
+
+      // ===== LINEAR WRITE TOOL HANDLERS =====
+      // All return proposals for user confirmation — no mutations execute here
+      case "linear_create_issue":
+        return {
+          type: "linear_write",
+          action: "linear_create_issue",
+          data: {
+            issues: (input.issues || []).map((issue, i) => ({
+              ...issue,
+              index: i,
+            })),
+          },
+        };
+
+      case "linear_update_issue":
+        return {
+          type: "linear_write",
+          action: "linear_update_issue",
+          data: {
+            updates: (input.updates || []).map((u, i) => ({
+              ...u,
+              index: i,
+            })),
+          },
+        };
+
+      case "linear_create_sub_issues":
+        return {
+          type: "linear_write",
+          action: "linear_create_sub_issues",
+          data: {
+            parentIssueIdentifier: input.parentIssueIdentifier,
+            subIssues: (input.subIssues || []).map((s, i) => ({
+              ...s,
+              index: i,
+            })),
+          },
+        };
+
+      case "linear_add_comment":
+        return {
+          type: "linear_write",
+          action: "linear_add_comment",
+          data: {
+            comments: (input.comments || []).map((c, i) => ({
+              ...c,
+              index: i,
+            })),
+          },
+        };
+
+      case "linear_move_issue":
+        return {
+          type: "linear_write",
+          action: "linear_move_issue",
+          data: {
+            moves: (input.moves || []).map((m, i) => ({
+              ...m,
+              index: i,
+            })),
+          },
+        };
 
       case "plan_milestone": {
         // Gather context for Claude to build the plan

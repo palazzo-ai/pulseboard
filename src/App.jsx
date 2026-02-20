@@ -1372,7 +1372,13 @@ export default function PalazzoTimeline() {
           updates.forEach(update => {
             const opp = opportunities.find(o => o.id === update.id);
             if (opp) {
-              const updated = { ...opp, ...update };
+              // Handle addIssue: append to issues array instead of overwriting
+              const fields = { ...update };
+              if (fields.addIssue) {
+                fields.issues = [...new Set([...(opp.issues || []), fields.addIssue])];
+                delete fields.addIssue;
+              }
+              const updated = { ...opp, ...fields };
               setOpportunities(prev => prev.map(o => o.id === update.id ? updated : o));
               saveOpportunity(updated);
             }

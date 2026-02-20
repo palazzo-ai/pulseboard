@@ -327,6 +327,350 @@ function MilestonePlanCard({ plan, onApplyDates, onCreateOpportunity, onFocusMil
   );
 }
 
+// ============ LINEAR WRITE CONFIRMATION CARD ============
+// Unified card for all Linear write operations with per-item confirm/skip/retry
+
+const PRIORITY_LABELS = { 0: 'None', 1: 'Urgent', 2: 'High', 3: 'Medium', 4: 'Low' };
+
+function LinearWriteCard({ toolCall, onUpdateOpportunities }) {
+  const { name, result } = toolCall;
+  const action = result?.action || name;
+  const data = result?.data || toolCall.input;
+
+  // Per-item states: 'pending' | 'executing' | 'done' | 'failed' | 'skipped'
+  const [itemStates, setItemStates] = useState({});
+  // Per-item results (identifier for created, error for failed)
+  const [itemResults, setItemResults] = useState({});
+  const [allDone, setAllDone] = useState(false);
+
+  const getLinearApiKey = () => {
+    if (typeof window !== 'undefined') return localStorage.getItem('pulseboard_linear_key') || '';
+    return '';
+  };
+
+  const setState = (idx, state, result) => {
+    setItemStates(prev => ({ ...prev, [idx]: state }));
+    if (result !== undefined) setItemResults(prev => ({ ...prev, [idx]: result }));
+  };
+
+  // Execute a single Linear write operation
+  const executeItem = async (item, idx) => {
+    setState(idx, 'executing');
+    const linearApiKey = getLinearApiKey();
+    if (!linearApiKey) {
+      setState(idx, 'failed', 'No Linear API key found. Set it in the AI assistant first.');
+      return;
+    }
+
+    try {
+      let operation, variables;
+
+      if (action === 'linear_create_issue') {
+        operation = 'createIssue';
+        variables = {
+          input: {
+            title: item.title,
+            description: item.description,
+            teamKey: item.teamKey || 'PAL',
+            projectName: item.projectName,
+            assigneeName: item.assigneeName,
+            priority: item.priority,
+            dueDate: item.dueDate,
+            parentIssueIdentifier: item.parentIssueIdentifier,
+          },
+        };
+      } else if (action === 'linear_update_issue') {
+        operation = 'updateIssue';
+        variables = {
+          issueIdentifier: item.issueIdentifier,
+          teamKey: 'PAL',
+          title: item.title,
+          description: item.description,
+          stateName: item.stateName,
+          assigneeName: item.assigneeName,
+          priority: item.priority,
+          dueDate: item.dueDate,
+          projectName: item.projectName,
+        };
+        // Remove undefined fields
+        Object.keys(variables).forEach(k => variables[k] === undefined && delete variables[k]);
+      } else if (action === 'linear_create_sub_issues') {
+        operation = 'createIssue';
+        variables = {
+          input: {
+            title: item.title,
+            description: item.description,
+            teamKey: 'PAL',
+            parentIssueIdentifier: data.parentIssueIdentifier,
+            assigneeName: item.assigneeName,
+            priority: item.priority,
+            dueDate: item.dueDate,
+          },
+        };
+      } else if (action === 'linear_add_comment') {
+        operation = 'createComment';
+        variables = {
+          issueIdentifier: item.issueIdentifier,
+          body: item.body,
+        };
+      } else if (action === 'linear_move_issue') {
+        operation = 'updateIssue';
+        variables = {
+          issueIdentifier: item.issueIdentifier,
+          teamKey: item.teamKey || 'PAL',
+          projectName: item.projectName,
+        };
+        Object.keys(variables).forEach(k => variables[k] === undefined && delete variables[k]);
+      }
+
+      const response = await fetch('/api/linear-write', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ linearApiKey, operation, variables }),
+      });
+
+      const resData = await response.json();
+      if (!resData.success) throw new Error(resData.error || 'Unknown error');
+
+      // Extract identifier for created issues
+      let resultInfo = 'Done';
+      if (action === 'linear_create_issue' || action === 'linear_create_sub_issues') {
+        const created = resData.data?.issueCreate?.issue;
+        if (created) {
+          resultInfo = created.identifier;
+          // Link back to Pulseboard opportunity
+          if (item.opportunityId && onUpdateOpportunities) {
+            onUpdateOpportunities([{
+              id: item.opportunityId,
+              addIssue: created.identifier,
+            }]);
+          }
+        }
+      } else if (action === 'linear_update_issue' || action === 'linear_move_issue') {
+        const updated = resData.data?.issueUpdate?.issue;
+        resultInfo = updated?.identifier || 'Updated';
+      } else if (action === 'linear_add_comment') {
+        resultInfo = 'Comment added';
+      }
+
+      setState(idx, 'done', resultInfo);
+    } catch (err) {
+      setState(idx, 'failed', err.message);
+    }
+  };
+
+  // Confirm all pending items
+  const confirmAll = async () => {
+    const items = getItems();
+    for (let i = 0; i < items.length; i++) {
+      if (!itemStates[i] || itemStates[i] === 'pending') {
+        await executeItem(items[i], i);
+      }
+    }
+    setAllDone(true);
+  };
+
+  // Cancel all — mark remaining pending as skipped
+  const cancelAll = () => {
+    const items = getItems();
+    items.forEach((_, i) => {
+      if (!itemStates[i] || itemStates[i] === 'pending') setState(i, 'skipped');
+    });
+    setAllDone(true);
+  };
+
+  // Get items array based on action type
+  const getItems = () => {
+    if (action === 'linear_create_issue') return data.issues || [];
+    if (action === 'linear_update_issue') return data.updates || [];
+    if (action === 'linear_create_sub_issues') return data.subIssues || [];
+    if (action === 'linear_add_comment') return data.comments || [];
+    if (action === 'linear_move_issue') return data.moves || [];
+    return [];
+  };
+
+  // Card title and icon based on action
+  const getCardHeader = () => {
+    const items = getItems();
+    const count = items.length;
+    switch (action) {
+      case 'linear_create_issue':
+        return { icon: '&#128221;', title: `Create Linear Issues (${count})`, color: 'text-blue-400' };
+      case 'linear_update_issue':
+        return { icon: '&#9998;', title: `Update Linear Issues (${count})`, color: 'text-amber-400' };
+      case 'linear_create_sub_issues':
+        return { icon: '&#128256;', title: `Create Sub-Issues under ${data.parentIssueIdentifier} (${count})`, color: 'text-violet-400' };
+      case 'linear_add_comment':
+        return { icon: '&#128172;', title: `Add Comments (${count})`, color: 'text-cyan-400' };
+      case 'linear_move_issue':
+        return { icon: '&#8618;', title: `Move Issues (${count})`, color: 'text-violet-400' };
+      default:
+        return { icon: '&#9881;', title: `Linear Action (${count})`, color: 'text-slate-400' };
+    }
+  };
+
+  const items = getItems();
+  const header = getCardHeader();
+  const hasPending = items.some((_, i) => !itemStates[i] || itemStates[i] === 'pending');
+
+  // Render a single item row
+  const renderItem = (item, idx) => {
+    const state = itemStates[idx] || 'pending';
+    const result = itemResults[idx];
+
+    return (
+      <div key={idx} className={`px-3 py-2 border-b border-slate-800 text-xs ${
+        state === 'skipped' ? 'opacity-40' : state === 'done' ? 'bg-emerald-950/10' : ''
+      }`}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            {/* Title */}
+            <div className={`font-medium ${state === 'skipped' ? 'line-through text-slate-500' : 'text-slate-200'}`}>
+              {action === 'linear_add_comment' ? item.issueIdentifier : item.title || item.issueIdentifier}
+            </div>
+
+            {/* Details based on action type */}
+            {action === 'linear_create_issue' && (
+              <div className="text-[10px] text-slate-500 mt-0.5 flex flex-wrap gap-x-2">
+                <span>Team: {item.teamKey || 'PAL'}</span>
+                {item.projectName && <span>Project: {item.projectName}</span>}
+                {item.priority != null && <span>Priority: {PRIORITY_LABELS[item.priority] || item.priority}</span>}
+                {item.dueDate && <span>Due: {item.dueDate}</span>}
+                {item.assigneeName && <span>Assignee: {item.assigneeName}</span>}
+                {item.opportunityId && <span className="text-indigo-400">Links to opp #{item.opportunityId}</span>}
+              </div>
+            )}
+
+            {action === 'linear_update_issue' && (
+              <div className="text-[10px] text-slate-500 mt-0.5 flex flex-wrap gap-x-2">
+                {item.stateName && <span>Status &rarr; {item.stateName}</span>}
+                {item.priority != null && <span>Priority &rarr; {PRIORITY_LABELS[item.priority]}</span>}
+                {item.assigneeName && <span>Assignee &rarr; {item.assigneeName}</span>}
+                {item.dueDate && <span>Due &rarr; {item.dueDate}</span>}
+                {item.projectName && <span>Project &rarr; {item.projectName}</span>}
+              </div>
+            )}
+
+            {action === 'linear_create_sub_issues' && item.description && (
+              <div className="text-[10px] text-slate-500 mt-0.5 truncate">{item.description}</div>
+            )}
+
+            {action === 'linear_add_comment' && (
+              <div className="text-[10px] text-slate-400 mt-0.5 whitespace-pre-wrap max-h-12 overflow-hidden">
+                {item.body?.length > 120 ? item.body.slice(0, 120) + '...' : item.body}
+              </div>
+            )}
+
+            {action === 'linear_move_issue' && (
+              <div className="text-[10px] text-slate-500 mt-0.5 flex flex-wrap gap-x-2">
+                {item.projectName && <span>Project &rarr; {item.projectName}</span>}
+                {item.teamKey && <span>Team &rarr; {item.teamKey}</span>}
+              </div>
+            )}
+          </div>
+
+          {/* State indicator + buttons */}
+          <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+            {state === 'pending' && (
+              <>
+                <button onClick={() => executeItem(item, idx)}
+                  className="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-medium rounded transition-colors">
+                  Confirm
+                </button>
+                <button onClick={() => setState(idx, 'skipped')}
+                  className="px-2 py-0.5 bg-slate-700 hover:bg-slate-600 text-slate-400 text-[10px] rounded transition-colors">
+                  Skip
+                </button>
+              </>
+            )}
+            {state === 'executing' && (
+              <div className="flex items-center gap-1 text-[10px] text-blue-400">
+                <div className="w-3 h-3 border border-slate-600 border-t-blue-400 rounded-full animate-spin" />
+                <span>Running...</span>
+              </div>
+            )}
+            {state === 'done' && (
+              <div className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium">
+                <span>&#10003;</span>
+                {result && result !== 'Done' && (
+                  action === 'linear_create_issue' || action === 'linear_create_sub_issues'
+                    ? <a href={`https://linear.app/palazzo-ai/issue/${result}`} target="_blank" rel="noopener noreferrer"
+                        className="text-emerald-400 hover:text-emerald-300 underline">{result}</a>
+                    : <span>{result}</span>
+                )}
+              </div>
+            )}
+            {state === 'failed' && (
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-red-400 max-w-[120px] truncate" title={result}>&#10007; {result}</span>
+                <button onClick={() => executeItem(item, idx)}
+                  className="px-1.5 py-0.5 bg-red-900/50 hover:bg-red-900 text-red-400 text-[10px] rounded transition-colors">
+                  Retry
+                </button>
+              </div>
+            )}
+            {state === 'skipped' && (
+              <span className="text-[10px] text-slate-600">Skipped</span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
+      {/* Header */}
+      <div className="px-3 py-2 border-b border-slate-700/50 flex items-center gap-2">
+        <span className={`text-sm ${header.color}`} dangerouslySetInnerHTML={{ __html: header.icon }} />
+        <span className="text-xs font-semibold text-white">{header.title}</span>
+      </div>
+
+      {/* Items */}
+      <div className="max-h-64 overflow-y-auto">
+        {items.map((item, idx) => renderItem(item, idx))}
+      </div>
+
+      {/* Footer: Confirm All / Cancel */}
+      {hasPending && (
+        <div className="px-3 py-2 flex gap-2 border-t border-slate-700/50">
+          <button onClick={confirmAll}
+            className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded transition-colors">
+            Confirm All
+          </button>
+          <button onClick={cancelAll}
+            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors">
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* All done summary */}
+      {!hasPending && allDone && (
+        <div className="px-3 py-2 border-t border-slate-700/50">
+          <div className="text-xs text-slate-400 flex gap-3">
+            {Object.values(itemStates).filter(s => s === 'done').length > 0 && (
+              <span className="text-emerald-400">
+                {Object.values(itemStates).filter(s => s === 'done').length} completed
+              </span>
+            )}
+            {Object.values(itemStates).filter(s => s === 'skipped').length > 0 && (
+              <span className="text-slate-500">
+                {Object.values(itemStates).filter(s => s === 'skipped').length} skipped
+              </span>
+            )}
+            {Object.values(itemStates).filter(s => s === 'failed').length > 0 && (
+              <span className="text-red-400">
+                {Object.values(itemStates).filter(s => s === 'failed').length} failed
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ============ TOOL CALL RENDERER ============
 function ToolCallCard({ toolCall, onUpdateOpportunities, onCreateOpportunity, onFocusMilestone }) {
   const [applied, setApplied] = useState(false);
@@ -397,6 +741,16 @@ function ToolCallCard({ toolCall, onUpdateOpportunities, onCreateOpportunity, on
           onUpdateOpportunities(mapped);
           setApplied(true);
         }}
+      />
+    );
+  }
+
+  // Linear write operations — confirmation cards
+  if (result?.type === 'linear_write') {
+    return (
+      <LinearWriteCard
+        toolCall={toolCall}
+        onUpdateOpportunities={onUpdateOpportunities}
       />
     );
   }
@@ -533,7 +887,7 @@ export default function AIAssistantPanel({
     { icon: '&#128202;', label: 'Summary', prompt: 'Give me an executive summary of the roadmap for this quarter.', desc: 'Stakeholder-ready reports' },
     { icon: '&#9889;', label: 'Sync Linear', prompt: 'Sync with Linear and show me status recommendations.', desc: 'Pull latest issue statuses' },
     { icon: '&#128279;', label: 'Dependencies', prompt: "Analyze the dependency graph and identify the critical path.", desc: 'Critical path & bottlenecks' },
-    { icon: '&#9888;', label: 'Risks', prompt: 'What opportunities are blocked or at risk?', desc: 'Find blockers & risks' },
+    { icon: '&#128221;', label: 'Linear Write', prompt: 'Create Linear issues for opportunities that don\'t have them yet.', desc: 'Create/update Linear issues' },
   ];
 
   return (
@@ -629,7 +983,7 @@ export default function AIAssistantPanel({
                 )}
 
                 {/* Tool call cards */}
-                {msg.toolCalls?.filter(tc => tc.result?.type === 'mutation').map((tc, j) => (
+                {msg.toolCalls?.filter(tc => tc.result?.type === 'mutation' || tc.result?.type === 'linear_write').map((tc, j) => (
                   <div key={j} className="mt-2">
                     <ToolCallCard
                       toolCall={tc}
