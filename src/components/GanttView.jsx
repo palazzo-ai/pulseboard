@@ -274,6 +274,15 @@ export default function GanttView({
   // ===== SAVE DATE OVERRIDE =====
   const saveDateOverride = useCallback(async (item, startDate, endDate) => {
     try {
+      // Opportunities: save via onSaveOpportunity (updates opportunities table)
+      if (!item.identifier && item.id && onSaveOpportunity) {
+        await onSaveOpportunity({ ...item, startDate, endDate });
+        setEditingDateFor(null);
+        showNotification?.(`Dates saved for ${item.title}`, 'success');
+        return;
+      }
+
+      // Linear issues: save to issue_dates table
       const response = await fetch('/api/issue-dates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -288,7 +297,7 @@ export default function GanttView({
       });
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        const detail = errData.debug ? JSON.stringify(errData.debug) : (errData.message || errData.details || errData.hint || errData.error || 'Unknown error');
+        const detail = errData.message || errData.details || errData.error || 'Unknown error';
         throw new Error(`${errData.code || response.status}: ${detail}`);
       }
 
@@ -319,7 +328,7 @@ export default function GanttView({
       console.error('Error saving date override:', error);
       showNotification?.(`Failed to save dates: ${error.message}`, 'warning');
     }
-  }, [showNotification]);
+  }, [showNotification, onSaveOpportunity]);
 
   // Handle drag-end on bars (also saves to Supabase)
   const handleBarDragEnd = useCallback((item, newStart, newEnd) => {
