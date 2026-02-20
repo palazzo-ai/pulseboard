@@ -171,7 +171,7 @@ function DependencyArrow({ fromX, fromY, toX, toY, isCritical, isLinked, hasFocu
   const stroke = isCritical ? '#F59E0B' : '#4a7dff';
   const width = isCritical ? 2 : 1.5;
   const dash = isCritical ? 'none' : '4 3';
-  const opacity = hasFocus ? (isCritical ? 0.8 : isLinked ? 0.3 : 0.08) : 0.5;
+  const opacity = isCritical ? 0.8 : 0.5;
   return (
     <g>
       <path d={path} fill="none" stroke={stroke} strokeWidth={width} strokeDasharray={dash} opacity={opacity} />
@@ -732,14 +732,8 @@ export default function GanttView({
             {currentRows.rows.map((row) => {
               const item = row.item;
 
-              // Focus opacity for left panel rows
-              const leftFocusOpacity = focusData
-                ? (row.type === "milestone" ? (focusMilestoneId === item.id ? 1 : 0.2)
-                   : row.type === "swimlane-header" ? 1
-                   : focusData.criticalIds.has(item.id) ? 1
-                   : focusData.linkedIds.has(item.id) ? 0.5
-                   : 0.2)
-                : 1;
+              // Focus mode: no dimming, just highlight critical path
+              const leftFocusOpacity = 1;
 
               // Milestone row
               if (row.type === "milestone") {
@@ -946,7 +940,7 @@ export default function GanttView({
               const size = 10;
               const isSelected = selectedItem?.id === item.id;
               const isFocused = focusMilestoneId === item.id;
-              const msOpacity = focusData && !isFocused ? 0.2 : 1;
+              const msOpacity = 1;
               return (
                 <g key={`ms-${item.id}`} style={{ cursor: "pointer", opacity: msOpacity }}
                   onClick={() => {
@@ -987,17 +981,11 @@ export default function GanttView({
               const item = row.item;
               if (!item.startDate || !item.endDate) return null;
               const isParent = row.type === "opportunity" || row.type === "parent";
-              // Focus mode: critical path in amber, linked at 40%, unrelated at 15%
+              // Focus mode: critical path in amber, everything else normal
               let barColor = getBarColor(row);
               let focusOpacity = 1;
-              if (focusData) {
-                if (focusData.criticalIds.has(item.id)) {
-                  barColor = '#F59E0B'; // amber for critical path
-                } else if (focusData.linkedIds.has(item.id)) {
-                  focusOpacity = 0.4;
-                } else {
-                  focusOpacity = 0.15;
-                }
+              if (focusData && focusData.criticalIds.has(item.id)) {
+                barColor = '#F59E0B'; // amber for critical path
               }
               return (
                 <GanttBar key={`bar-${item.id}`} item={item} timelineStart={timelineStart} dayWidth={dayWidth}
