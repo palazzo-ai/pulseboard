@@ -288,7 +288,7 @@ export default function GanttView({
       });
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        const detail = errData.message || errData.details || errData.hint || errData.error || 'Unknown error';
+        const detail = errData.debug ? JSON.stringify(errData.debug) : (errData.message || errData.details || errData.hint || errData.error || 'Unknown error');
         throw new Error(`${errData.code || response.status}: ${detail}`);
       }
 

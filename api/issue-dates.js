@@ -20,7 +20,10 @@ export default async function handler(req, res) {
     const items = Array.isArray(dates) ? dates : [dates];
 
     if (!items.length || !items[0]?.issueIdentifier) {
-      return res.status(400).json({ error: "issueIdentifier is required" });
+      return res.status(400).json({
+        error: "issueIdentifier is required",
+        debug: { bodyType: typeof req.body, hasBody: !!req.body, dates: req.body?.dates, firstItem: items[0] },
+      });
     }
 
     try {
