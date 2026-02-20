@@ -41,6 +41,7 @@ export default function PalazzoTimeline() {
   
   // View and UI state
   const [viewMode, setViewMode] = useState('all');
+  const [timelineFilter, setTimelineFilter] = useState('all');
   const [selectedSprint, setSelectedSprint] = useState('dec25');
   const [timelineRange, setTimelineRange] = useState({ start: 0, end: 6 });
   const [draggedItem, setDraggedItem] = useState(null);
@@ -823,8 +824,6 @@ export default function PalazzoTimeline() {
           <div className="flex">
             {[
               { key: 'all', label: 'Timeline' },
-              { key: 'milestones', label: 'Milestones' },
-              { key: 'opportunities', label: 'Opportunities' },
               { key: 'gantt', label: 'Gantt' },
               { key: 'prioritize', label: 'Prioritize' },
               { key: 'capacity', label: 'Capacity' },
@@ -832,7 +831,7 @@ export default function PalazzoTimeline() {
             ].map(mode => (
               <button
                 key={mode.key}
-                onClick={() => setViewMode(mode.key)}
+                onClick={() => { setViewMode(mode.key); if (mode.key !== 'all') setTimelineFilter('all'); }}
                 className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                   viewMode === mode.key
                     ? 'text-slate-900 border-indigo-500'
@@ -844,8 +843,29 @@ export default function PalazzoTimeline() {
             ))}
           </div>
 
-          {/* Row 2 Right: Multi-Select Filters */}
+          {/* Row 2 Right: Timeline Filter + Multi-Select Filters */}
           <div className="flex items-center gap-2 pb-2">
+            {viewMode === 'all' && (
+              <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+                {[
+                  { key: 'all', label: 'All' },
+                  { key: 'milestones', label: 'Milestones' },
+                  { key: 'opportunities', label: 'Opportunities' }
+                ].map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setTimelineFilter(opt.key)}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                      timelineFilter === opt.key
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
             <MultiSelectFilter
               label="Initiative"
               options={initiatives}
@@ -1029,7 +1049,7 @@ export default function PalazzoTimeline() {
       )}
 
       {/* Main Timeline Grid */}
-      {viewMode !== 'capacity' && viewMode !== 'timeline' && viewMode !== 'prioritize' && viewMode !== 'gantt' && (
+      {viewMode === 'all' && (
         <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white">
           <table className="w-full min-w-[1400px] border-collapse">
             <thead>
@@ -1084,7 +1104,7 @@ export default function PalazzoTimeline() {
                         onDoubleClick={() => startCreateOpportunity(area.id, month.id)}>
                         <div className="flex flex-col gap-1.5">
                           {/* Milestones */}
-                          {(viewMode === 'all' || viewMode === 'milestones') && cellMilestones.map(m => {
+                          {(timelineFilter === 'all' || timelineFilter === 'milestones') && cellMilestones.map(m => {
                             const progress = getMilestoneProgress(m.id);
                             const progressPct = progress.total > 0 ? (progress.done / progress.total) * 100 : 0;
                             return (
@@ -1106,7 +1126,7 @@ export default function PalazzoTimeline() {
                           })}
                           
                           {/* Opportunities */}
-                          {(viewMode === 'all' || viewMode === 'opportunities') && cellOpps.map(opp => {
+                          {(timelineFilter === 'all' || timelineFilter === 'opportunities') && cellOpps.map(opp => {
                             const linkedMilestone = opp.milestoneId ? milestones.find(m => m.id === opp.milestoneId) : null;
                             return (
                               <div key={opp.id} draggable onDragStart={(e) => handleDragStart(e, opp, 'opportunity')} onDragEnd={handleDragEnd}
