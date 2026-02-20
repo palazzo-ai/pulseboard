@@ -12,10 +12,11 @@ import {
 import {
   TeamMemberBadge, AssignmentBadges, AssignTeamMemberModal,
   TeamManagementPanel, CapacityDashboard, TimelineLanes, StatusBadge,
-  AIAdvisorPanel, PrioritizationMatrix, LinearSyncModal,
+  PrioritizationMatrix,
   DependencyEditor, MultiSelectFilter, AIScoringModal
 } from './components';
 import GanttView from './components/GanttView';
+import AIAssistantPanel from './components/AIAssistantPanel';
 
 export default function PalazzoTimeline() {
   // Core data state
@@ -57,26 +58,8 @@ export default function PalazzoTimeline() {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assignModalOpp, setAssignModalOpp] = useState(null);
   
-  // Linear sync state
-  const [syncModalOpen, setSyncModalOpen] = useState(false);
-  const [lastSyncAt, setLastSyncAt] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('pulseboard_last_sync') || null;
-    }
-    return null;
-  });
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [syncRecommendations, setSyncRecommendations] = useState([]);
-  const [syncError, setSyncError] = useState(null);
-  const [linearApiKey, setLinearApiKey] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('pulseboard_linear_key') || '';
-    }
-    return '';
-  });
-
-  // AI Advisor state
-  const [aiAdvisorOpen, setAiAdvisorOpen] = useState(false);
+  // AI Assistant state
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [dependencyEditorOpp, setDependencyEditorOpp] = useState(null);
 
 
@@ -542,73 +525,6 @@ export default function PalazzoTimeline() {
   };
 
   // ========== LINEAR SYNC ==========
-  const handleLinearSync = async () => {
-    if (!linearApiKey) { setSyncError('Please enter your Linear API key'); return; }
-    setSyncLoading(true);
-    setSyncError(null);
-    setSyncRecommendations([]);
-    
-    try {
-      const response = await fetch('/api/sync-linear', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          opportunities: opportunities.filter(o => o.issues && o.issues.length > 0),
-          linearApiKey
-        })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Sync failed');
-      }
-      
-      const data = await response.json();
-      setSyncRecommendations(data.recommendations || []);
-      if (data.recommendations?.length === 0) {
-        showNotification('All opportunities are in sync with Linear!', 'success');
-      }
-    } catch (error) {
-      console.error('Sync error:', error);
-      setSyncError(error.message);
-    } finally {
-      setSyncLoading(false);
-    }
-  };
-
-  const applyRecommendation = (rec) => {
-    saveToUndo();
-    const updatedOpp = opportunities.find(o => o.id === rec.opportunityId);
-    if (!updatedOpp) return;
-    const newOpp = { ...updatedOpp, status: rec.recommendedStatus, atRisk: rec.recommendAtRisk, atRiskReason: rec.atRiskReason || '' };
-    setOpportunities(prev => prev.map(o => o.id === rec.opportunityId ? newOpp : o));
-    saveOpportunity(newOpp);
-    setSyncRecommendations(prev => prev.filter(r => r.opportunityId !== rec.opportunityId));
-    showNotification(`Updated "${rec.opportunityTitle}"`, 'success');
-  };
-
-  const applyAllRecommendations = () => {
-    saveToUndo();
-    const updates = syncRecommendations.map(rec => {
-      const opp = opportunities.find(o => o.id === rec.opportunityId);
-      if (!opp) return null;
-      return { ...opp, status: rec.recommendedStatus, atRisk: rec.recommendAtRisk, atRiskReason: rec.atRiskReason || '' };
-    }).filter(Boolean);
-    setOpportunities(prev => prev.map(opp => updates.find(u => u.id === opp.id) || opp));
-    updates.forEach(opp => saveOpportunity(opp));
-    setSyncRecommendations([]);
-    setSyncModalOpen(false);
-    showNotification(`Applied ${updates.length} updates from Linear`, 'success');
-  };
-
-  const dismissRecommendation = (rec) => {
-    setSyncRecommendations(prev => prev.filter(r => r.opportunityId !== rec.opportunityId));
-  };
-
-  const saveLinearApiKey = (key) => {
-    setLinearApiKey(key);
-    if (typeof window !== 'undefined') localStorage.setItem('pulseboard_linear_key', key);
-  };
 
   // ========== OVERALLOCATION WARNING ==========
   const getOverallocatedMembers = () => {
@@ -862,14 +778,9 @@ export default function PalazzoTimeline() {
           
           <div className="flex items-center gap-2">
             {/* Primary Actions */}
-            <button onClick={() => setAiAdvisorOpen(true)} className="p-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg transition-colors shadow-lg shadow-purple-500/20" title="AI Advisor">
+            <button onClick={() => setAssistantOpen(true)} className="p-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-lg transition-colors shadow-lg shadow-violet-500/20" title="AI Assistant">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-            </button>
-            <button onClick={() => setSyncModalOpen(true)} className="p-2 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-lg transition-colors" title="Linear Sync">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
             </button>
             <button onClick={() => setTeamPanelOpen(true)} className="p-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg transition-colors" title="Team Management">
@@ -1426,41 +1337,31 @@ export default function PalazzoTimeline() {
       {editingOpportunity && <OpportunityForm opportunity={editingOpportunity} onSave={handleSaveOpportunity} onCancel={() => { setEditingOpportunity(null); setIsCreatingOpp(false); }} isNew={isCreatingOpp} />}
       {editingMilestone && <MilestoneForm milestone={editingMilestone} onSave={handleSaveMilestone} onCancel={() => { setEditingMilestone(null); setIsCreatingMilestone(false); }} isNew={isCreatingMilestone} />}
 
-      {/* Linear Sync Modal */}
-      <LinearSyncModal
-        isOpen={syncModalOpen}
-        onClose={() => setSyncModalOpen(false)}
+      {/* AI Assistant Panel */}
+      <AIAssistantPanel
+        isOpen={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
         opportunities={opportunities}
         milestones={milestones}
+        onUpdateOpportunities={(updates) => {
+          saveToUndo();
+          updates.forEach(update => {
+            const opp = opportunities.find(o => o.id === update.id);
+            if (opp) {
+              const updated = { ...opp, ...update };
+              setOpportunities(prev => prev.map(o => o.id === update.id ? updated : o));
+              saveOpportunity(updated);
+            }
+          });
+        }}
         onCreateOpportunity={(opp) => {
-          const newOpp = { ...opp, id: Date.now() };
+          saveToUndo();
+          const newOpp = { ...opp, id: Date.now(), status: opp.status || 'not_started' };
           setOpportunities(prev => [...prev, newOpp]);
           saveOpportunity(newOpp);
           showNotification(`Created "${opp.title}"`, 'success');
         }}
-        onUpdateOpportunity={(opp) => {
-          setOpportunities(prev => prev.map(o => o.id === opp.id ? opp : o));
-          saveOpportunity(opp);
-          showNotification(`Updated "${opp.title}"`, 'success');
-        }}
-        onLinkIssues={(oppId, issues) => {
-          setOpportunities(prev => prev.map(o => 
-            o.id === oppId ? { ...o, issues: [...new Set([...(o.issues || []), ...issues])] } : o
-          ));
-          const opp = opportunities.find(o => o.id === oppId);
-          if (opp) saveOpportunity({ ...opp, issues: [...new Set([...(opp.issues || []), ...issues])] });
-        }}
-        onExcludeIssue={(issueId) => {
-          const excluded = JSON.parse(localStorage.getItem('pulseboard_excluded_issues') || '[]');
-          if (!excluded.includes(issueId)) {
-            localStorage.setItem('pulseboard_excluded_issues', JSON.stringify([...excluded, issueId]));
-          }
-        }}
-        lastSyncAt={lastSyncAt}
-        onSyncComplete={(timestamp) => {
-          setLastSyncAt(timestamp);
-          localStorage.setItem('pulseboard_last_sync', timestamp);
-        }}
+        showNotification={showNotification}
       />
 
       {/* Team Management Panel */}
@@ -1528,15 +1429,6 @@ export default function PalazzoTimeline() {
         </div>
       )}
 
-      {/* AI Advisor Panel */}
-      <AIAdvisorPanel
-        isOpen={aiAdvisorOpen}
-        onClose={() => setAiAdvisorOpen(false)}
-        opportunities={opportunities}
-        milestones={milestones}
-        teamMembers={teamMembers}
-        assignments={assignments}
-      />
 
       {/* AI Scoring Modal */}
       <AIScoringModal
