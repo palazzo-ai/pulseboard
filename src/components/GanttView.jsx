@@ -63,7 +63,7 @@ function InlineDateEditor({ item, onSave, onCancel }) {
 }
 
 // ============ GANTT BAR (SVG) ============
-function GanttBar({ item, timelineStart, dayWidth, rowY, barHeight, isSubtask, barColor, onDragEnd, onSelect, isSelected }) {
+function GanttBar({ item, timelineStart, dayWidth, rowY, barHeight, isSubtask, barColor, onDragEnd, onSelect, isSelected, focusOpacity = 1 }) {
   const startDate = parseDate(item.startDate);
   const endDate = parseDate(item.endDate);
   if (!startDate || !endDate) return null;
@@ -117,7 +117,7 @@ function GanttBar({ item, timelineStart, dayWidth, rowY, barHeight, isSubtask, b
   const isPulseboardDate = item.dateSource?.start === "pulseboard" || item.dateSource?.end === "pulseboard";
 
   return (
-    <g style={{ cursor: "pointer" }}>
+    <g style={{ cursor: "pointer", opacity: focusOpacity }}>
       {/* Background bar */}
       <rect x={startOffset} y={rowY} width={width} height={barHeight} rx={barHeight / 2}
         fill={barColor} opacity={isSubtask ? 0.25 : 0.2}
@@ -164,13 +164,18 @@ function GanttBar({ item, timelineStart, dayWidth, rowY, barHeight, isSubtask, b
 }
 
 // ============ DEPENDENCY ARROW ============
-function DependencyArrow({ fromX, fromY, toX, toY }) {
+function DependencyArrow({ fromX, fromY, toX, toY, isCritical, isLinked, hasFocus }) {
   const midX = (fromX + toX) / 2;
   const path = `M ${fromX} ${fromY} C ${midX} ${fromY}, ${midX} ${toY}, ${toX} ${toY}`;
+  // Focus mode styling
+  const stroke = isCritical ? '#F59E0B' : '#4a7dff';
+  const width = isCritical ? 2 : 1.5;
+  const dash = isCritical ? 'none' : '4 3';
+  const opacity = hasFocus ? (isCritical ? 0.8 : isLinked ? 0.3 : 0.08) : 0.5;
   return (
     <g>
-      <path d={path} fill="none" stroke="#4a7dff" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.5" />
-      <polygon points={`${toX},${toY} ${toX - 6},${toY - 3} ${toX - 6},${toY + 3}`} fill="#4a7dff" opacity="0.6" />
+      <path d={path} fill="none" stroke={stroke} strokeWidth={width} strokeDasharray={dash} opacity={opacity} />
+      <polygon points={`${toX},${toY} ${toX - 6},${toY - 3} ${toX - 6},${toY + 3}`} fill={stroke} opacity={opacity + 0.1} />
     </g>
   );
 }
@@ -184,6 +189,9 @@ export default function GanttView({
   assignments = {},
   onSaveOpportunity,
   showNotification,
+  focusMilestoneId = null,
+  onClearFocus,
+  onFocusMilestone,
 }) {
   const [viewMode, setViewMode] = useState("opportunities");
   const [expandedRows, setExpandedRows] = useState(new Set());
@@ -508,6 +516,71 @@ export default function GanttView({
     if (scrollRef.current) scrollRef.current.scrollLeft = Math.max(0, todayOffset - 300);
   }, [todayOffset]);
 
+  // Focus mode: compute which items are related to the focused milestone
+  const focusData = useMemo(() => {
+    if (!focusMilestoneId || viewMode !== "opportunities") return null;
+
+    const ms = milestones.find(m => m.id === focusMilestoneId);
+    if (!ms) return null;
+
+    // Direct linked opportunities
+    const linkedIds = new Set(opportunities.filter(o => o.milestoneId === focusMilestoneId).map(o => o.id));
+
+    // Follow blockedBy chains to find all prerequisites
+    let changed = true;
+    while (changed) {
+      changed = false;
+      opportunities.forEach(o => {
+        if (linkedIds.has(o.id)) {
+          (o.blockedBy || []).forEach(depId => {
+            if (!linkedIds.has(depId)) { linkedIds.add(depId); changed = true; }
+          });
+        }
+      });
+    }
+
+    // Compute critical path (longest sequential chain)
+    // Simple: follow dependency chains from items with no dependsOn to final items
+    const linked = opportunities.filter(o => linkedIds.has(o.id));
+    const criticalIds = new Set();
+
+    // Find items with no blockedBy (start of chains)
+    const roots = linked.filter(o => !(o.blockedBy || []).some(id => linkedIds.has(id)));
+    // Find the longest chain via DFS
+    const chainLength = (id, visited = new Set()) => {
+      if (visited.has(id)) return 0;
+      visited.add(id);
+      const opp = linked.find(o => o.id === id);
+      if (!opp) return 0;
+      const blockers = (opp.blocks || []).filter(bid => linkedIds.has(bid));
+      if (blockers.length === 0) return 1;
+      return 1 + Math.max(...blockers.map(bid => chainLength(bid, new Set(visited))));
+    };
+
+    let longestChain = [];
+    const traceChain = (id, chain = []) => {
+      const opp = linked.find(o => o.id === id);
+      if (!opp) return;
+      const newChain = [...chain, id];
+      const blockers = (opp.blocks || []).filter(bid => linkedIds.has(bid));
+      if (blockers.length === 0) {
+        if (newChain.length > longestChain.length) longestChain = newChain;
+        return;
+      }
+      blockers.forEach(bid => traceChain(bid, newChain));
+    };
+    roots.forEach(r => traceChain(r.id));
+    longestChain.forEach(id => criticalIds.add(id));
+
+    // Buffer: milestone target date vs last item end date
+    const msDate = ms.targetDate ? parseDate(ms.targetDate) : parseMonthId(ms.month);
+    const endDates = linked.filter(o => o.endDate).map(o => parseDate(o.endDate)).filter(Boolean);
+    const lastEnd = endDates.length > 0 ? new Date(Math.max(...endDates)) : null;
+    const bufferDays = msDate && lastEnd ? daysBetween(lastEnd, msDate) : null;
+
+    return { milestone: ms, linkedIds, criticalIds, bufferDays, lastEnd, msDate };
+  }, [focusMilestoneId, milestones, opportunities, viewMode]);
+
   // Dependency arrows
   const dependencyArrows = useMemo(() => {
     if (!showDependencies || viewMode !== "opportunities") return [];
@@ -519,16 +592,21 @@ export default function GanttView({
         const fromRow = oppRows.rows.find(r => r.item.id === opp.id);
         const toRow = oppRows.rows.find(r => r.item.id === targetId);
         if (!fromRow || !toRow) return;
+        // In focus mode, classify arrows
+        const isCriticalArrow = focusData && focusData.criticalIds.has(opp.id) && focusData.criticalIds.has(targetId);
+        const isLinkedArrow = focusData && focusData.linkedIds.has(opp.id) && focusData.linkedIds.has(targetId);
         arrows.push({
           fromX: daysBetween(timelineStart, parseDate(opp.endDate)) * dayWidth,
           fromY: fromRow.y + BAR_HEIGHT / 2,
           toX: daysBetween(timelineStart, parseDate(target.startDate)) * dayWidth,
           toY: toRow.y + BAR_HEIGHT / 2,
+          isCritical: isCriticalArrow,
+          isLinked: isLinkedArrow,
         });
       });
     });
     return arrows;
-  }, [opportunities, oppRows, showDependencies, viewMode, dayWidth, timelineStart]);
+  }, [opportunities, oppRows, showDependencies, viewMode, dayWidth, timelineStart, focusData]);
 
   const getBarColor = (row) => {
     if (row.color) return row.color;
@@ -597,6 +675,22 @@ export default function GanttView({
         </div>
 
         <div className="flex items-center gap-3">
+          {focusData && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-[#F59E0B15] border border-[#F59E0B40] rounded-lg animate-pulse-slow">
+              <span className="text-amber-400 text-xs">◆</span>
+              <span className="text-amber-300 text-[11px] font-medium">Focus: {focusData.milestone.title}</span>
+              {focusData.bufferDays != null && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                  focusData.bufferDays > 7 ? 'bg-emerald-500/20 text-emerald-400' :
+                  focusData.bufferDays > 0 ? 'bg-amber-500/20 text-amber-400' :
+                  'bg-red-500/20 text-red-400'
+                }`}>
+                  {focusData.bufferDays > 0 ? `${focusData.bufferDays}d buffer` : `${Math.abs(focusData.bufferDays)}d over`}
+                </span>
+              )}
+              <button onClick={onClearFocus} className="text-amber-400/60 hover:text-white text-xs ml-1 transition-colors">✕</button>
+            </div>
+          )}
           {viewMode === "issues" && (
             <button onClick={fetchLinearIssues} disabled={linearLoading}
               className="px-2.5 py-1 text-[11px] rounded border border-[#1e2433] text-[#6b7a94] hover:text-white hover:border-[#4a7dff] transition-all disabled:opacity-50">
@@ -638,6 +732,15 @@ export default function GanttView({
             {currentRows.rows.map((row) => {
               const item = row.item;
 
+              // Focus opacity for left panel rows
+              const leftFocusOpacity = focusData
+                ? (row.type === "milestone" ? (focusMilestoneId === item.id ? 1 : 0.2)
+                   : row.type === "swimlane-header" ? 1
+                   : focusData.criticalIds.has(item.id) ? 1
+                   : focusData.linkedIds.has(item.id) ? 0.5
+                   : 0.2)
+                : 1;
+
               // Milestone row
               if (row.type === "milestone") {
                 const areaInfo = areas.find(a => a.id === item.area);
@@ -647,11 +750,15 @@ export default function GanttView({
                     className={`flex items-center gap-2 px-3 border-b border-[#151a26] hover:bg-[#111520] cursor-pointer transition-colors ${
                       selectedItem?.id === item.id ? "bg-[#131825]" : ""
                     }`}
-                    style={{ height: row.height + ROW_GAP, paddingLeft: 8 }}
-                    onClick={() => setSelectedItem(item)}
+                    style={{ height: row.height + ROW_GAP, paddingLeft: 8, opacity: leftFocusOpacity }}
+                    onClick={() => {
+                      setSelectedItem(item);
+                      if (onFocusMilestone) onFocusMilestone(item.id);
+                    }}
                   >
-                    <span className="text-yellow-400 text-xs flex-shrink-0" style={{ transform: "rotate(45deg)", display: "inline-block", width: 10, height: 10, lineHeight: "10px", textAlign: "center" }}>◆</span>
-                    <span className="truncate flex-1 text-xs text-yellow-300 font-medium">{item.title}</span>
+                    <span className={`text-xs flex-shrink-0 ${focusMilestoneId === item.id ? 'text-amber-300' : 'text-yellow-400'}`} style={{ transform: "rotate(45deg)", display: "inline-block", width: 10, height: 10, lineHeight: "10px", textAlign: "center" }}>◆</span>
+                    <span className={`truncate flex-1 text-xs font-medium ${focusMilestoneId === item.id ? 'text-amber-200' : 'text-yellow-300'}`}>{item.title}</span>
+                    {focusMilestoneId === item.id && <span className="text-[8px] text-amber-400/60 uppercase tracking-wider flex-shrink-0">focused</span>}
                     <span className="text-[9px] text-[#4a5568] flex-shrink-0">{monthName}</span>
                   </div>
                 );
@@ -689,13 +796,15 @@ export default function GanttView({
               const hasDates = item.startDate && item.endDate;
               const isEditing = editingDateFor === item.id;
 
+              const isCriticalPath = focusData && focusData.criticalIds.has(item.id);
+
               return (
                 <div key={`row-${item.id}`} className="relative">
                   <div
                     className={`flex items-center gap-2 px-3 border-b border-[#151a26] hover:bg-[#111520] cursor-pointer transition-colors ${
                       selectedItem?.id === item.id ? "bg-[#131825]" : ""
-                    }`}
-                    style={{ height: row.height + ROW_GAP, paddingLeft: isParent ? (row.laneId ? 24 : 8) : 28 }}
+                    } ${isCriticalPath ? "bg-[#F59E0B08]" : ""}`}
+                    style={{ height: row.height + ROW_GAP, paddingLeft: isParent ? (row.laneId ? 24 : 8) : 28, opacity: leftFocusOpacity }}
                     onClick={() => setSelectedItem(item)}
                   >
                     {isParent && hasChildren && (
@@ -706,7 +815,11 @@ export default function GanttView({
                     )}
                     {isParent && !hasChildren && <span className="w-4 flex-shrink-0" />}
 
-                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getBarColor(row) }} />
+                    {isCriticalPath ? (
+                      <span className="w-2 h-2 rounded-full flex-shrink-0 bg-amber-400" title="Critical path" />
+                    ) : (
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getBarColor(row) }} />
+                    )}
 
                     {viewMode === "issues" && item.identifier && (
                       <span className="text-[10px] text-[#4a5568] font-mono flex-shrink-0">{item.identifier}</span>
@@ -767,7 +880,9 @@ export default function GanttView({
 
             <line x1={0} y1={HEADER_HEIGHT} x2={totalWidth} y2={HEADER_HEIGHT} stroke="#1a1f2e" strokeWidth={1} />
 
-            {currentRows.rows.map((row, i) => (
+            {currentRows.rows.map((row, i) => {
+              const isCritRow = focusData && row.type !== "swimlane-header" && row.type !== "milestone" && focusData.criticalIds.has(row.item.id);
+              return (
               <g key={`bg-${i}`}>
                 {row.type === "swimlane-header" ? (
                   <>
@@ -781,12 +896,14 @@ export default function GanttView({
                 ) : (
                   <>
                     <rect x={0} y={row.y} width={totalWidth} height={row.height}
-                      fill={selectedItem?.id === row.item.id ? "#131825" : row.type === "milestone" ? "#12100a" : (row.type === "issue" || row.type === "child") ? "#0a0d13" : "#0c0f16"} />
+                      fill={isCritRow ? "#1a1508" : selectedItem?.id === row.item.id ? "#131825" : row.type === "milestone" ? "#12100a" : (row.type === "issue" || row.type === "child") ? "#0a0d13" : "#0c0f16"} />
+                    {isCritRow && <rect x={0} y={row.y} width={3} height={row.height} fill="#F59E0B" opacity={0.4} />}
                     <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height} stroke={row.type === "milestone" ? "#2a2210" : "#151a26"} strokeWidth={0.5} />
                   </>
                 )}
               </g>
-            ))}
+            );
+            })}
 
             {/* Today */}
             <rect x={todayOffset - 1} y={0} width={2} height={currentRows.totalHeight} fill="#4a7dff" opacity={0.3} />
@@ -794,7 +911,29 @@ export default function GanttView({
             <rect x={todayOffset - 22} y={32} width={44} height={16} rx={8} fill="#4a7dff" opacity={0.2} />
             <text x={todayOffset} y={43} textAnchor="middle" fill="#4a7dff" fontSize={9} fontWeight={600}>Today</text>
 
-            {dependencyArrows.map((a, i) => <DependencyArrow key={`dep-${i}`} {...a} />)}
+            {dependencyArrows.map((a, i) => <DependencyArrow key={`dep-${i}`} {...a} hasFocus={!!focusData} />)}
+
+            {/* Buffer zone — only in focus mode */}
+            {focusData && focusData.lastEnd && focusData.msDate && (() => {
+              const bufferStartX = daysBetween(timelineStart, focusData.lastEnd) * dayWidth;
+              const bufferEndX = daysBetween(timelineStart, focusData.msDate) * dayWidth;
+              const bufferWidth = bufferEndX - bufferStartX;
+              if (bufferWidth <= 0) return null;
+              const bufferColor = focusData.bufferDays > 7 ? '#22C55E' : focusData.bufferDays > 0 ? '#F59E0B' : '#EF4444';
+              return (
+                <g key="buffer-zone">
+                  <rect x={bufferStartX} y={HEADER_HEIGHT} width={bufferWidth} height={currentRows.totalHeight - HEADER_HEIGHT}
+                    fill={bufferColor} opacity={0.06} />
+                  <line x1={bufferStartX} y1={HEADER_HEIGHT} x2={bufferStartX} y2={currentRows.totalHeight}
+                    stroke={bufferColor} strokeWidth={1} strokeDasharray="4 4" opacity={0.3} />
+                  <rect x={bufferStartX + 4} y={HEADER_HEIGHT + 4} width={Math.min(bufferWidth - 8, 80)} height={16} rx={4}
+                    fill={bufferColor} opacity={0.15} />
+                  <text x={bufferStartX + 8} y={HEADER_HEIGHT + 15} fill={bufferColor} fontSize={9} fontWeight={500} opacity={0.7}>
+                    {focusData.bufferDays}d buffer
+                  </text>
+                </g>
+              );
+            })()}
 
             {/* Milestone diamonds */}
             {currentRows.rows.filter(r => r.type === "milestone").map((row) => {
@@ -806,19 +945,37 @@ export default function GanttView({
               const cy = row.y + row.height / 2;
               const size = 10;
               const isSelected = selectedItem?.id === item.id;
+              const isFocused = focusMilestoneId === item.id;
+              const msOpacity = focusData && !isFocused ? 0.2 : 1;
               return (
-                <g key={`ms-${item.id}`} style={{ cursor: "pointer" }} onClick={() => setSelectedItem(item)}>
+                <g key={`ms-${item.id}`} style={{ cursor: "pointer", opacity: msOpacity }}
+                  onClick={() => {
+                    setSelectedItem(item);
+                    if (onFocusMilestone) onFocusMilestone(item.id);
+                  }}>
+                  {/* Glow when focused */}
+                  {isFocused && (
+                    <>
+                      <circle cx={xPos} cy={cy} r={20} fill="#eab308" opacity={0.08}>
+                        <animate attributeName="r" values="18;24;18" dur="2s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0.08;0.15;0.08" dur="2s" repeatCount="indefinite" />
+                      </circle>
+                      <line x1={xPos} y1={HEADER_HEIGHT} x2={xPos} y2={currentRows.totalHeight}
+                        stroke="#eab308" strokeWidth={1} strokeDasharray="4 4" opacity={0.15} />
+                    </>
+                  )}
                   {/* Dashed vertical line */}
                   <line x1={xPos} y1={row.y + 2} x2={xPos} y2={row.y + row.height - 2}
                     stroke="#eab308" strokeWidth={1} strokeDasharray="2 3" opacity={0.3} />
                   {/* Diamond */}
                   <polygon
                     points={`${xPos},${cy - size} ${xPos + size},${cy} ${xPos},${cy + size} ${xPos - size},${cy}`}
-                    fill="#eab308" opacity={isSelected ? 0.9 : 0.7}
-                    stroke={isSelected ? "#fff" : "#eab308"} strokeWidth={isSelected ? 1.5 : 0.5} />
+                    fill={isFocused ? "#F59E0B" : "#eab308"} opacity={isFocused ? 1 : isSelected ? 0.9 : 0.7}
+                    stroke={isFocused ? "#fff" : isSelected ? "#fff" : "#eab308"}
+                    strokeWidth={isFocused ? 2 : isSelected ? 1.5 : 0.5} />
                   {/* Label */}
-                  <text x={xPos + size + 6} y={cy + 1} fill="#eab308" fontSize={10} fontWeight={500}
-                    dominantBaseline="middle" opacity={0.8} style={{ pointerEvents: "none" }}>
+                  <text x={xPos + size + 6} y={cy + 1} fill={isFocused ? "#F59E0B" : "#eab308"} fontSize={isFocused ? 11 : 10} fontWeight={isFocused ? 600 : 500}
+                    dominantBaseline="middle" opacity={isFocused ? 1 : 0.8} style={{ pointerEvents: "none" }}>
                     {item.title}
                   </text>
                 </g>
@@ -830,11 +987,23 @@ export default function GanttView({
               const item = row.item;
               if (!item.startDate || !item.endDate) return null;
               const isParent = row.type === "opportunity" || row.type === "parent";
+              // Focus mode: critical path in amber, linked at 40%, unrelated at 15%
+              let barColor = getBarColor(row);
+              let focusOpacity = 1;
+              if (focusData) {
+                if (focusData.criticalIds.has(item.id)) {
+                  barColor = '#F59E0B'; // amber for critical path
+                } else if (focusData.linkedIds.has(item.id)) {
+                  focusOpacity = 0.4;
+                } else {
+                  focusOpacity = 0.15;
+                }
+              }
               return (
                 <GanttBar key={`bar-${item.id}`} item={item} timelineStart={timelineStart} dayWidth={dayWidth}
                   rowY={row.y + (row.height - (isParent ? BAR_HEIGHT : SUB_BAR_HEIGHT)) / 2}
                   barHeight={isParent ? BAR_HEIGHT : SUB_BAR_HEIGHT}
-                  isSubtask={!isParent} barColor={getBarColor(row)}
+                  isSubtask={!isParent} barColor={barColor} focusOpacity={focusOpacity}
                   onDragEnd={handleBarDragEnd} onSelect={setSelectedItem} isSelected={selectedItem?.id === item.id} />
               );
             })}

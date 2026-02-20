@@ -174,8 +174,161 @@ function SummaryCard({ content }) {
   );
 }
 
+function MilestonePlanCard({ plan, onApplyDates, onCreateOpportunity, onFocusMilestone, applied }) {
+  const bufferColors = {
+    healthy: 'text-emerald-400', tight: 'text-amber-400', behind: 'text-red-400',
+  };
+  const riskColors = {
+    low: 'text-emerald-400', medium: 'text-amber-400', high: 'text-red-400',
+  };
+
+  return (
+    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
+      {/* Header */}
+      <div className="px-3 py-2 border-b border-slate-700/50">
+        <div className="flex items-center gap-2">
+          <span className="text-amber-400 text-sm">&#9670;</span>
+          <span className="text-xs font-semibold text-white flex-1">{plan.milestone.title}</span>
+          <span className="text-[10px] text-slate-500">{plan.milestone.targetDate}</span>
+        </div>
+        <div className="text-[10px] text-slate-500 mt-0.5">
+          {plan.milestone.area} &middot; {(plan.criticalPath?.length || 0) + (plan.parallelWork?.length || 0)} opportunities
+        </div>
+      </div>
+
+      {/* Critical Path */}
+      {plan.criticalPath?.length > 0 && (
+        <div className="px-3 py-2 border-b border-slate-800">
+          <div className="text-[10px] text-amber-400 uppercase tracking-widest mb-1.5 font-medium">Critical Path</div>
+          <div className="space-y-1.5">
+            {[...plan.criticalPath].reverse().map((item, i) => (
+              <div key={item.id || i} className="flex items-start gap-2 text-xs">
+                <span className="text-slate-600 text-[10px] w-4 flex-shrink-0 text-right mt-0.5">{plan.criticalPath.length - i}.</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-slate-200 truncate">{item.title}</div>
+                  <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
+                    <span>{item.startDate} &rarr; {item.endDate}</span>
+                    <span>({item.durationDays}d)</span>
+                    {item.dateSource === 'ai_estimated' && <span className="text-amber-500">est.</span>}
+                  </div>
+                  {item.dependsOn?.length > 0 && (
+                    <div className="text-[9px] text-slate-600">
+                      depends on: {item.dependsOn.map(id => {
+                        const dep = plan.criticalPath.find(c => c.id === id) || plan.parallelWork?.find(p => p.id === id);
+                        return dep?.title || `#${id}`;
+                      }).join(', ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Parallel Work */}
+      {plan.parallelWork?.length > 0 && (
+        <div className="px-3 py-2 border-b border-slate-800">
+          <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Parallel Work</div>
+          {plan.parallelWork.map((item, i) => (
+            <div key={item.id || i} className="text-xs text-slate-400 flex items-center gap-1.5 py-0.5">
+              <span>&middot;</span>
+              <span className="truncate">{item.title}</span>
+              <span className="text-slate-600 flex-shrink-0">({item.durationDays}d)</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Suggested Additions */}
+      {plan.suggestedNewOpportunities?.length > 0 && (
+        <div className="px-3 py-2 border-b border-slate-800">
+          <div className="text-[10px] text-amber-500 uppercase tracking-widest mb-1">Suggested Additions</div>
+          {plan.suggestedNewOpportunities.map((item, i) => (
+            <div key={i} className="py-1">
+              <div className="text-xs text-slate-300 flex items-center gap-1.5">
+                <span className="text-emerald-500">+</span>
+                <span className="truncate flex-1">{item.title}</span>
+                <span className="text-slate-600 flex-shrink-0">({item.estimatedDays}d)</span>
+              </div>
+              <div className="text-[9px] text-slate-600 ml-4">{item.reason}</div>
+              {!applied && (
+                <button onClick={() => onCreateOpportunity({
+                  title: item.title, description: item.description || item.reason,
+                  area: item.area, initiative: item.initiative,
+                  month: plan.milestone.month || 'feb26',
+                })}
+                  className="ml-4 mt-0.5 text-[9px] text-indigo-400 hover:text-indigo-300 transition-colors">
+                  Create this opportunity
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Analysis */}
+      {plan.analysis && (
+        <div className="px-3 py-2 border-b border-slate-800 grid grid-cols-2 gap-x-3 gap-y-1">
+          <div className="text-[10px]">
+            <span className="text-slate-500">Buffer: </span>
+            <span className={bufferColors[plan.analysis.bufferStatus] || 'text-slate-400'}>
+              {plan.analysis.bufferDays}d &middot; {plan.analysis.bufferStatus}
+            </span>
+          </div>
+          <div className="text-[10px]">
+            <span className="text-slate-500">Risk: </span>
+            <span className={riskColors[plan.analysis.riskLevel] || 'text-slate-400'}>
+              {plan.analysis.riskLevel}
+            </span>
+          </div>
+          <div className="text-[10px] text-slate-500 col-span-2">
+            {plan.analysis.totalDays}d work / {plan.analysis.availableDays}d available
+          </div>
+          {plan.analysis.risks?.length > 0 && (
+            <div className="col-span-2 mt-1">
+              {plan.analysis.risks.map((risk, i) => (
+                <div key={i} className="text-[9px] text-amber-500/70 flex items-start gap-1">
+                  <span className="flex-shrink-0 mt-0.5">&#9888;</span>
+                  <span>{risk}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="px-3 py-2 flex gap-2">
+        {!applied ? (
+          <>
+            <button onClick={() => {
+              const allItems = [...(plan.criticalPath || []), ...(plan.parallelWork || [])];
+              const dateUpdates = allItems.filter(i => i.startDate && i.endDate).map(i => ({
+                id: i.id, startDate: i.startDate, endDate: i.endDate,
+              }));
+              if (dateUpdates.length > 0) onApplyDates(dateUpdates);
+            }}
+              className="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded transition-colors">
+              Apply All Dates
+            </button>
+            {onFocusMilestone && (
+              <button onClick={() => onFocusMilestone(plan.milestone.id)}
+                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors">
+                View on Gantt
+              </button>
+            )}
+          </>
+        ) : (
+          <div className="text-xs text-emerald-400 font-medium">Dates applied &#10003;</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ============ TOOL CALL RENDERER ============
-function ToolCallCard({ toolCall, onUpdateOpportunities, onCreateOpportunity }) {
+function ToolCallCard({ toolCall, onUpdateOpportunities, onCreateOpportunity, onFocusMilestone }) {
   const [applied, setApplied] = useState(false);
   const { name, input, result } = toolCall;
 
@@ -252,6 +405,24 @@ function ToolCallCard({ toolCall, onUpdateOpportunities, onCreateOpportunity }) 
   return null;
 }
 
+// Parse milestone_plan JSON from assistant text
+function parseMilestonePlan(text) {
+  if (!text) return null;
+  const match = text.match(/```milestone_plan\s*([\s\S]*?)```/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[1].trim());
+  } catch {
+    return null;
+  }
+}
+
+// Strip the milestone_plan code block from display text
+function stripPlanBlock(text) {
+  if (!text) return text;
+  return text.replace(/```milestone_plan\s*[\s\S]*?```/g, '').trim();
+}
+
 // ============ MAIN PANEL ============
 export default function AIAssistantPanel({
   isOpen,
@@ -260,6 +431,7 @@ export default function AIAssistantPanel({
   milestones = [],
   onUpdateOpportunities,
   onCreateOpportunity,
+  onFocusMilestone,
   showNotification,
 }) {
   const [messages, setMessages] = useState([]);
@@ -425,31 +597,51 @@ export default function AIAssistantPanel({
             </div>
           )}
 
-          {messages.map((msg, i) => (
-            <div key={i}>
-              {/* Message bubble */}
-              <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[90%] px-3 py-2 rounded-lg text-xs leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-indigo-600 text-white rounded-br-sm'
-                    : 'bg-slate-800 text-slate-300 rounded-bl-sm'
-                }`}>
-                  <span className="whitespace-pre-wrap">{msg.content}</span>
-                </div>
-              </div>
+          {messages.map((msg, i) => {
+            const milestonePlan = msg.role === 'assistant' ? parseMilestonePlan(msg.content) : null;
+            const displayContent = msg.role === 'assistant' ? stripPlanBlock(msg.content) : msg.content;
 
-              {/* Tool call cards */}
-              {msg.toolCalls?.filter(tc => tc.result?.type === 'mutation').map((tc, j) => (
-                <div key={j} className="mt-2">
-                  <ToolCallCard
-                    toolCall={tc}
-                    onUpdateOpportunities={onUpdateOpportunities}
-                    onCreateOpportunity={onCreateOpportunity}
-                  />
-                </div>
-              ))}
-            </div>
-          ))}
+            return (
+              <div key={i}>
+                {/* Message bubble */}
+                {displayContent && (
+                  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[90%] px-3 py-2 rounded-lg text-xs leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-indigo-600 text-white rounded-br-sm'
+                        : 'bg-slate-800 text-slate-300 rounded-bl-sm'
+                    }`}>
+                      <span className="whitespace-pre-wrap">{displayContent}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Milestone plan card (parsed from text) */}
+                {milestonePlan && (
+                  <div className="mt-2">
+                    <MilestonePlanCard
+                      plan={milestonePlan}
+                      onApplyDates={onUpdateOpportunities}
+                      onCreateOpportunity={onCreateOpportunity}
+                      onFocusMilestone={onFocusMilestone}
+                    />
+                  </div>
+                )}
+
+                {/* Tool call cards */}
+                {msg.toolCalls?.filter(tc => tc.result?.type === 'mutation').map((tc, j) => (
+                  <div key={j} className="mt-2">
+                    <ToolCallCard
+                      toolCall={tc}
+                      onUpdateOpportunities={onUpdateOpportunities}
+                      onCreateOpportunity={onCreateOpportunity}
+                      onFocusMilestone={onFocusMilestone}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })}
 
           {/* Loading indicator */}
           {loading && (
@@ -484,6 +676,7 @@ export default function AIAssistantPanel({
               onChange={(e) => setInput(e.target.value)}
               placeholder="Type a message..."
               disabled={loading}
+              data-assistant-input="true"
               className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
             />
             <button type="submit" disabled={loading || !input.trim()}

@@ -243,7 +243,8 @@ export const dbToOpportunity = (row) => ({
   blockedBy: row.blocked_by || [],
   // Gantt date fields
   startDate: row.start_date || null,
-  endDate: row.end_date || null
+  endDate: row.end_date || null,
+  estimatedDays: row.estimated_days || null
 });
 
 // Convert app format to DB row
@@ -268,6 +269,7 @@ export const opportunityToDb = (opp) => ({
   // Gantt date fields
   start_date: opp.startDate || null,
   end_date: opp.endDate || null,
+  estimated_days: opp.estimatedDays || null,
   updated_at: new Date().toISOString()
 });
 
@@ -277,7 +279,8 @@ export const dbToMilestone = (row) => ({
   title: row.title,
   area: row.area,
   month: row.month,
-  description: row.description || ''
+  description: row.description || '',
+  targetDate: row.target_date || null
 });
 
 export const milestoneToDb = (m) => ({
@@ -286,6 +289,7 @@ export const milestoneToDb = (m) => ({
   area: m.area,
   month: m.month,
   description: m.description || '',
+  target_date: m.targetDate || null,
   updated_at: new Date().toISOString()
 });
 

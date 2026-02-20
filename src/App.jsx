@@ -61,6 +61,7 @@ export default function PalazzoTimeline() {
   // AI Assistant state
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [dependencyEditorOpp, setDependencyEditorOpp] = useState(null);
+  const [focusMilestoneId, setFocusMilestoneId] = useState(null);
 
 
   // AI Scoring Modal state
@@ -974,6 +975,9 @@ export default function PalazzoTimeline() {
             assignments={assignments}
             onSaveOpportunity={saveOpportunity}
             showNotification={showNotification}
+            focusMilestoneId={focusMilestoneId}
+            onClearFocus={() => setFocusMilestoneId(null)}
+            onFocusMilestone={(id) => setFocusMilestoneId(id)}
           />
         </div>
       )}
@@ -1327,7 +1331,27 @@ export default function PalazzoTimeline() {
 
             <div className="p-4 border-t border-slate-800 flex justify-between">
               <button onClick={() => deleteMilestone(selectedMilestone.id)} className="px-3 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 text-sm rounded-lg">Delete</button>
-              <button onClick={() => { setEditingMilestone(selectedMilestone); setIsCreatingMilestone(false); }} className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white text-sm rounded-lg">Edit</button>
+              <div className="flex gap-2">
+                <button onClick={() => {
+                  setSelectedMilestone(null);
+                  setAssistantOpen(true);
+                  // The assistant will receive this milestone in context — user can ask to plan it
+                  setTimeout(() => {
+                    const input = document.querySelector('[data-assistant-input]');
+                    if (input) {
+                      const nativeSet = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+                      nativeSet.call(input, `Plan out "${selectedMilestone.title}" milestone — what needs to happen and when?`);
+                      input.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                  }, 300);
+                }} className="px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm rounded-lg flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                  Plan
+                </button>
+                <button onClick={() => { setEditingMilestone(selectedMilestone); setIsCreatingMilestone(false); }} className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white text-sm rounded-lg">Edit</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1360,6 +1384,10 @@ export default function PalazzoTimeline() {
           setOpportunities(prev => [...prev, newOpp]);
           saveOpportunity(newOpp);
           showNotification(`Created "${opp.title}"`, 'success');
+        }}
+        onFocusMilestone={(id) => {
+          setFocusMilestoneId(id);
+          setViewMode('gantt');
         }}
         showNotification={showNotification}
       />

@@ -33,7 +33,22 @@ CONTEXT:
 - Months use IDs like "jan26", "feb26", "mar26" etc.
 - Statuses: not_started, in_progress, done, blocked
 
-Be concise and action-oriented. When proposing changes, be specific about what you'll change and why. Reference opportunities and milestones by name. For bulk operations, summarize what you'll do before doing it.`;
+Be concise and action-oriented. When proposing changes, be specific about what you'll change and why. Reference opportunities and milestones by name. For bulk operations, summarize what you'll do before doing it.
+
+PLAN_MILESTONE TOOL:
+When you call plan_milestone and receive the context data back, you MUST analyze it and then call set_opportunity_dates with the proposed dates. Your analysis should:
+1. Derive the milestone target date (from targetDate, or last day of the milestone's month)
+2. Estimate durations for items without dates (based on linked issues count, complexity, similar items)
+3. Sequence backward from the deadline respecting dependency chains
+4. Identify parallel tracks vs critical path (longest sequential chain)
+5. Calculate buffer (days between earliest needed start and today)
+6. In your text response, include a JSON block tagged with \`\`\`milestone_plan that contains the structured plan with these fields:
+   - milestone: {id, title, targetDate, area}
+   - criticalPath: [{id, title, startDate, endDate, durationDays, dateSource, status, isCritical, dependsOn, order}]
+   - parallelWork: [same shape but isCritical: false]
+   - suggestedNewOpportunities: [{title, description, area, initiative, estimatedDays, reason}]
+   - analysis: {totalDays, availableDays, bufferDays, bufferStatus (healthy/tight/behind), earliestStart, latestEnd, riskLevel, risks[]}
+7. Then call set_opportunity_dates with the proposed dates for all items that need scheduling.`;
 
   const tools = [
     {
@@ -281,6 +296,31 @@ Be concise and action-oriented. When proposing changes, be specific about what y
         required: ["action"],
       },
     },
+    {
+      name: "plan_milestone",
+      description:
+        "Work backward from a milestone deadline to build a critical path plan. Analyzes all linked opportunities, their dependencies, estimates durations for undated items, sequences work, identifies gaps and timeline risks. Use when users ask about what's needed for a milestone, whether a deadline is achievable, or want to plan backward from a commitment.",
+      input_schema: {
+        type: "object",
+        properties: {
+          milestoneId: {
+            type: "string",
+            description: "Milestone ID (e.g., 'm5')",
+          },
+          targetDate: {
+            type: "string",
+            description:
+              "Override target date YYYY-MM-DD. If not provided, derives from milestone month (last day of month).",
+          },
+          includeEstimates: {
+            type: "boolean",
+            description:
+              "Whether to estimate durations for items without dates. Default true.",
+          },
+        },
+        required: ["milestoneId"],
+      },
+    },
   ];
 
   // Process a tool call and return result
@@ -351,6 +391,92 @@ Be concise and action-oriented. When proposing changes, be specific about what y
       case "sync_linear":
         // sync_linear is handled inline below (needs async fetch)
         return { type: "pending_sync", action: "sync_linear" };
+
+      case "plan_milestone": {
+        // Gather context for Claude to build the plan
+        const milestone = (state.milestones || []).find(
+          (m) => m.id === input.milestoneId
+        );
+        if (!milestone) {
+          return {
+            type: "error",
+            message: `Milestone "${input.milestoneId}" not found`,
+          };
+        }
+
+        // Find linked opportunities and their dependency chains
+        const opps = state.opportunities || [];
+        const linkedOpps = opps.filter(
+          (o) => o.milestoneId === input.milestoneId
+        );
+
+        // Also find transitive dependencies (blockedBy chains)
+        const allRelatedIds = new Set(linkedOpps.map((o) => o.id));
+        let changed = true;
+        while (changed) {
+          changed = false;
+          opps.forEach((o) => {
+            if (!allRelatedIds.has(o.id)) {
+              const blocks = o.blocks || [];
+              if (blocks.some((bid) => allRelatedIds.has(bid))) {
+                allRelatedIds.add(o.id);
+                changed = true;
+              }
+            }
+          });
+          // Also check blockedBy references
+          for (const id of allRelatedIds) {
+            const o = opps.find((op) => op.id === id);
+            if (o) {
+              (o.blockedBy || []).forEach((depId) => {
+                if (!allRelatedIds.has(depId)) {
+                  allRelatedIds.add(depId);
+                  changed = true;
+                }
+              });
+            }
+          }
+        }
+
+        const relatedOpps = opps
+          .filter((o) => allRelatedIds.has(o.id))
+          .map((o) => ({
+            id: o.id,
+            title: o.title,
+            area: o.area,
+            initiative: o.initiative,
+            status: o.status,
+            startDate: o.startDate,
+            endDate: o.endDate,
+            estimatedDays: o.estimatedDays,
+            blocks: o.blocks || [],
+            blockedBy: o.blockedBy || [],
+            milestoneId: o.milestoneId,
+            issues: o.issues || [],
+            impactScore: o.impactScore,
+            effortScore: o.effortScore,
+          }));
+
+        // Return context for Claude to analyze and build the plan
+        return {
+          type: "milestone_plan_context",
+          action: "plan_milestone",
+          data: {
+            milestone: {
+              id: milestone.id,
+              title: milestone.title,
+              area: milestone.area,
+              month: milestone.month,
+              targetDate:
+                input.targetDate || milestone.targetDate || null,
+            },
+            linkedOpportunities: relatedOpps,
+            linkedCount: linkedOpps.length,
+            totalRelated: relatedOpps.length,
+            includeEstimates: input.includeEstimates !== false,
+          },
+        };
+      }
 
       default:
         return { type: "error", message: `Unknown tool: ${name}` };
