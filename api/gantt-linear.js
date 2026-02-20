@@ -63,7 +63,8 @@ export default async function handler(req, res) {
               identifier
               title
               description
-              priority { value name }
+              priority
+              priorityLabel
               state { name type }
               assignee { id name email displayName avatarUrl }
               project { id name color }
@@ -161,8 +162,8 @@ export default async function handler(req, res) {
         title: issue.title,
         status: mapStatus(issue.state),
         stateName: issue.state?.name || "Unknown",
-        priority: issue.priority?.value || 4,
-        priorityName: issue.priority?.name || "None",
+        priority: issue.priority || 4,
+        priorityName: issue.priorityLabel || "None",
         assignee: issue.assignee ? {
           id: issue.assignee.id,
           name: issue.assignee.displayName || issue.assignee.name,
