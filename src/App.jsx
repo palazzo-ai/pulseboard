@@ -1203,7 +1203,7 @@ export default function PalazzoTimeline() {
                                   <span className="font-medium text-slate-200 leading-tight flex-1">{opp.title}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                  <StatusBadge status={opp.status} size="xs" />
+                                  <StatusBadge status={opp.status} size="xs" onStatusChange={(newStatus) => quickStatusChange(opp.id, newStatus)} />
                                   {linkedMilestone && (
                                     <span className="text-yellow-500 text-[9px] flex items-center gap-0.5">→ {linkedMilestone.title}</span>
                                   )}
