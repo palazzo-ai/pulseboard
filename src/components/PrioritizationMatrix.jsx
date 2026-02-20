@@ -48,6 +48,7 @@ export default function PrioritizationMatrix({
   milestones,
   assignments,
   onUpdateOpportunity,
+  onResetPrioritization,
   onSelectOpportunity,
   onOpenAIScoring,
   getInitiativeColor,
@@ -61,6 +62,7 @@ export default function PrioritizationMatrix({
   const [selected, setSelected] = useState(null);
   const [showClusters, setShowClusters] = useState(true);
   const [showDone, setShowDone] = useState(true);
+  const [confirmReset, setConfirmReset] = useState(false);
   const canvasRef = useRef(null);
 
   // --- Filter ---
@@ -378,6 +380,49 @@ export default function PrioritizationMatrix({
                 style={{ accentColor: '#6366F1', width: 13, height: 13 }} />
               Show done
             </label>
+            {onResetPrioritization && scored.length > 0 && (
+              confirmReset ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 11, color: '#DC2626', fontWeight: 500 }}>Reset all {scored.length} items?</span>
+                  <button
+                    onClick={() => { onResetPrioritization(); setConfirmReset(false); }}
+                    style={{
+                      padding: '4px 8px', borderRadius: 6,
+                      backgroundColor: '#DC2626', border: 'none', color: '#fff',
+                      fontSize: 10, fontWeight: 500, cursor: 'pointer',
+                    }}
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    onClick={() => setConfirmReset(false)}
+                    style={{
+                      padding: '4px 8px', borderRadius: 6,
+                      backgroundColor: '#F1F5F9', border: '1px solid #E2E8F0', color: '#64748B',
+                      fontSize: 10, fontWeight: 500, cursor: 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmReset(true)}
+                  style={{
+                    padding: '5px 10px', borderRadius: 7,
+                    backgroundColor: '#F1F5F9', border: '1px solid #E2E8F0',
+                    color: '#64748B', fontSize: 11, fontWeight: 500,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                  }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 4v6h6M23 20v-6h-6" />
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+                  </svg>
+                  Start Over
+                </button>
+              )
+            )}
             {onOpenAIScoring && (
               <button
                 onClick={onOpenAIScoring}

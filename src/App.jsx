@@ -1030,23 +1030,31 @@ export default function PalazzoTimeline() {
 
       {/* Prioritization Matrix View - UPDATED with onOpenAIScoring and array filters */}
       {viewMode === 'prioritize' && (
-        <PrioritizationMatrix
-          opportunities={opportunities}
-          milestones={milestones}
-          assignments={assignments}
-          onUpdateOpportunity={(opp) => {
-            saveToUndo();
-            setOpportunities(prev => prev.map(o => o.id === opp.id ? opp : o));
-            saveOpportunity(opp);
-          }}
-          onSelectOpportunity={setSelectedOpportunity}
-          onOpenAIScoring={() => setAiScoringOpen(true)}
-          getInitiativeColor={getInitiativeColor}
-          getAreaName={getAreaName}
-          filterInitiative={filterInitiative}
-          filterArea={filterArea}
-          filterStatus={filterStatus}
-        />
+        <div style={{ height: 'calc(100vh - 180px)' }}>
+          <PrioritizationMatrix
+            opportunities={opportunities}
+            milestones={milestones}
+            assignments={assignments}
+            onUpdateOpportunity={(opp) => {
+              saveToUndo();
+              setOpportunities(prev => prev.map(o => o.id === opp.id ? opp : o));
+              saveOpportunity(opp);
+            }}
+            onResetPrioritization={() => {
+              saveToUndo();
+              const reset = opportunities.map(o => ({ ...o, impactScore: null, effortScore: null }));
+              setOpportunities(reset);
+              reset.forEach(o => saveOpportunity(o));
+            }}
+            onSelectOpportunity={setSelectedOpportunity}
+            onOpenAIScoring={() => setAiScoringOpen(true)}
+            getInitiativeColor={getInitiativeColor}
+            getAreaName={getAreaName}
+            filterInitiative={filterInitiative}
+            filterArea={filterArea}
+            filterStatus={filterStatus}
+          />
+        </div>
       )}
 
       {/* Main Timeline Grid */}
