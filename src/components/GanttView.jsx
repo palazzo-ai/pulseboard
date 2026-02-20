@@ -194,6 +194,8 @@ export default function GanttView({
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterProject, setFilterProject] = useState("all");
   const [editingDateFor, setEditingDateFor] = useState(null); // issue being date-edited
+  const [groupBy, setGroupBy] = useState("area"); // "area" | "initiative" | "none"
+  const [collapsedLanes, setCollapsedLanes] = useState(new Set());
   const scrollRef = useRef(null);
 
   // Linear state
@@ -345,6 +347,8 @@ export default function GanttView({
   }, [viewMode, saveDateOverride]);
 
   // ===== BUILD ROWS =====
+  const SWIMLANE_HEIGHT = 32;
+
   const oppRows = useMemo(() => {
     const filtered = opportunities.filter(o => {
       if (filterArea !== "all" && o.area !== filterArea) return false;
@@ -375,12 +379,59 @@ export default function GanttView({
       y += 8; // separator gap
     }
 
-    filtered.forEach(opp => {
-      layout.push({ type: "opportunity", item: opp, y, height: ROW_HEIGHT });
-      y += ROW_HEIGHT + ROW_GAP;
-    });
+    if (groupBy !== "none") {
+      // Group by area or initiative
+      const groups = groupBy === "area" ? areas : initiatives;
+      groups.forEach(group => {
+        const groupOpps = filtered.filter(o => o[groupBy] === group.id);
+        if (groupOpps.length === 0) return;
+
+        const isCollapsed = collapsedLanes.has(group.id);
+        layout.push({
+          type: "swimlane-header",
+          item: { id: `lane-${group.id}`, title: group.name, laneId: group.id, color: group.color, count: groupOpps.length },
+          y,
+          height: SWIMLANE_HEIGHT,
+        });
+        y += SWIMLANE_HEIGHT + ROW_GAP;
+
+        if (!isCollapsed) {
+          groupOpps.forEach(opp => {
+            layout.push({ type: "opportunity", item: opp, y, height: ROW_HEIGHT, laneId: group.id });
+            y += ROW_HEIGHT + ROW_GAP;
+          });
+        }
+      });
+
+      // Ungrouped opportunities (no area/initiative set)
+      const ungrouped = filtered.filter(o => !o[groupBy]);
+      if (ungrouped.length > 0) {
+        const isCollapsed = collapsedLanes.has("ungrouped");
+        layout.push({
+          type: "swimlane-header",
+          item: { id: "lane-ungrouped", title: "Ungrouped", laneId: "ungrouped", color: "#4a5568", count: ungrouped.length },
+          y,
+          height: SWIMLANE_HEIGHT,
+        });
+        y += SWIMLANE_HEIGHT + ROW_GAP;
+
+        if (!isCollapsed) {
+          ungrouped.forEach(opp => {
+            layout.push({ type: "opportunity", item: opp, y, height: ROW_HEIGHT, laneId: "ungrouped" });
+            y += ROW_HEIGHT + ROW_GAP;
+          });
+        }
+      }
+    } else {
+      // Flat list (no grouping)
+      filtered.forEach(opp => {
+        layout.push({ type: "opportunity", item: opp, y, height: ROW_HEIGHT });
+        y += ROW_HEIGHT + ROW_GAP;
+      });
+    }
+
     return { rows: layout, totalHeight: y + 40 };
-  }, [opportunities, milestones, filterArea, filterStatus]);
+  }, [opportunities, milestones, filterArea, filterStatus, groupBy, collapsedLanes]);
 
   const issueRows = useMemo(() => {
     if (!linearIssues) return { rows: [], totalHeight: 100 };
@@ -410,6 +461,10 @@ export default function GanttView({
 
   const toggleExpand = (id) => setExpandedRows(prev => {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+
+  const toggleLane = (laneId) => setCollapsedLanes(prev => {
+    const n = new Set(prev); n.has(laneId) ? n.delete(laneId) : n.add(laneId); return n;
   });
 
   // ===== MONTH COLUMNS =====
@@ -504,10 +559,14 @@ export default function GanttView({
           </select>
 
           {viewMode === "opportunities" && (
-            <button onClick={() => setShowDependencies(!showDependencies)}
-              className={`px-2.5 py-1 text-[11px] rounded border transition-all ${showDependencies ? "border-[#4a7dff] text-[#4a7dff] bg-[#4a7dff10]" : "border-[#1e2433] text-[#4a5568]"}`}>
-              Deps
-            </button>
+            <div className="flex bg-[#12161f] rounded-md border border-[#1e2433] overflow-hidden">
+              {[{ key: "area", label: "Area" }, { key: "initiative", label: "Initiative" }, { key: "none", label: "Flat" }].map(g => (
+                <button key={g.key} onClick={() => { setGroupBy(g.key); setCollapsedLanes(new Set()); }}
+                  className={`px-2.5 py-1 text-[10px] uppercase tracking-wider transition-all ${groupBy === g.key ? "bg-[#1a2035] text-white" : "text-[#4a5568] hover:text-[#8896ab]"}`}>
+                  {g.label}
+                </button>
+              ))}
+            </div>
           )}
 
           {viewMode === "issues" && linearIssues && (
@@ -578,6 +637,29 @@ export default function GanttView({
                 );
               }
 
+              // Swimlane header row
+              if (row.type === "swimlane-header") {
+                const isCollapsed = collapsedLanes.has(item.laneId);
+                return (
+                  <div key={`row-lane-${item.laneId}`}
+                    className="flex items-center gap-2 px-3 border-b border-[#1a1f2e] cursor-pointer hover:bg-[#111520] transition-colors"
+                    style={{ height: row.height + ROW_GAP, backgroundColor: `${item.color}08` }}
+                    onClick={() => toggleLane(item.laneId)}
+                  >
+                    <button className="text-[#6b7a94] hover:text-[#8896ab] w-4 flex-shrink-0 text-xs">
+                      {isCollapsed ? "▸" : "▾"}
+                    </button>
+                    <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: item.color }} />
+                    <span className="text-[11px] font-semibold flex-1 truncate" style={{ color: item.color }}>
+                      {item.title}
+                    </span>
+                    <span className="text-[9px] text-[#4a5568] flex-shrink-0 tabular-nums">
+                      {item.count}
+                    </span>
+                  </div>
+                );
+              }
+
               const isParent = row.type === "opportunity" || row.type === "parent";
               const hasChildren = isParent && (
                 row.type === "opportunity" ? item.issues?.length > 0 : item.childIds?.length > 0
@@ -593,7 +675,7 @@ export default function GanttView({
                     className={`flex items-center gap-2 px-3 border-b border-[#151a26] hover:bg-[#111520] cursor-pointer transition-colors ${
                       selectedItem?.id === item.id ? "bg-[#131825]" : ""
                     }`}
-                    style={{ height: row.height + ROW_GAP, paddingLeft: isParent ? 8 : 28 }}
+                    style={{ height: row.height + ROW_GAP, paddingLeft: isParent ? (row.laneId ? 24 : 8) : 28 }}
                     onClick={() => setSelectedItem(item)}
                   >
                     {isParent && hasChildren && (
@@ -667,9 +749,22 @@ export default function GanttView({
 
             {currentRows.rows.map((row, i) => (
               <g key={`bg-${i}`}>
-                <rect x={0} y={row.y} width={totalWidth} height={row.height}
-                  fill={selectedItem?.id === row.item.id ? "#131825" : row.type === "milestone" ? "#12100a" : (row.type === "issue" || row.type === "child") ? "#0a0d13" : "#0c0f16"} />
-                <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height} stroke={row.type === "milestone" ? "#2a2210" : "#151a26"} strokeWidth={0.5} />
+                {row.type === "swimlane-header" ? (
+                  <>
+                    <rect x={0} y={row.y} width={totalWidth} height={row.height}
+                      fill={row.item.color} opacity={0.04} />
+                    <rect x={0} y={row.y} width={3} height={row.height}
+                      fill={row.item.color} opacity={0.5} />
+                    <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height}
+                      stroke={row.item.color} strokeWidth={0.5} opacity={0.2} />
+                  </>
+                ) : (
+                  <>
+                    <rect x={0} y={row.y} width={totalWidth} height={row.height}
+                      fill={selectedItem?.id === row.item.id ? "#131825" : row.type === "milestone" ? "#12100a" : (row.type === "issue" || row.type === "child") ? "#0a0d13" : "#0c0f16"} />
+                    <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height} stroke={row.type === "milestone" ? "#2a2210" : "#151a26"} strokeWidth={0.5} />
+                  </>
+                )}
               </g>
             ))}
 
