@@ -67,7 +67,7 @@ const InlineScoreEditor = ({ value, onChange, label, color = 'indigo' }) => {
         onChange={(e) => setTempValue(e.target.value)}
         onBlur={handleSubmit}
         onKeyDown={handleKeyDown}
-        className={`w-10 px-1 py-0.5 text-[10px] font-medium rounded border bg-slate-800 text-white text-center focus:outline-none focus:ring-1 focus:ring-${color}-500 border-${color}-500`}
+        className={`w-10 px-1 py-0.5 text-[10px] font-medium rounded border bg-white text-slate-800 text-center focus:outline-none focus:ring-1 focus:ring-${color}-500 border-${color}-500`}
         onClick={(e) => e.stopPropagation()}
       />
     );
@@ -115,7 +115,7 @@ const OpportunityCard = ({
     <div
       className={`
         absolute select-none transition-shadow duration-150
-        ${isDragging ? 'z-50 cursor-grabbing shadow-2xl shadow-indigo-500/30' : 'z-10 cursor-grab hover:z-20'}
+        ${isDragging ? 'z-50 cursor-grabbing shadow-2xl shadow-indigo-500/20' : 'z-10 cursor-grab hover:z-20'}
         ${isHighlighted ? 'ring-2 ring-yellow-400 z-30' : ''}
       `}
       style={{
@@ -131,9 +131,9 @@ const OpportunityCard = ({
       <div
         className={`
           relative p-2 rounded-lg border transition-all duration-150
-          ${isDragging 
-            ? 'border-indigo-500 bg-slate-800 scale-105' 
-            : 'border-slate-700/60 bg-slate-800/90 hover:border-slate-500 hover:bg-slate-800'
+          ${isDragging
+            ? 'border-indigo-500 bg-white scale-105'
+            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 shadow-sm'
           }
           ${opportunity.atRisk ? 'ring-1 ring-orange-500/50' : ''}
         `}
@@ -148,7 +148,7 @@ const OpportunityCard = ({
         <div className="pl-2">
           {/* Title row */}
           <div className="flex items-start justify-between gap-1 mb-0.5">
-            <h4 className="text-[11px] font-medium text-white leading-tight line-clamp-2 flex-1">
+            <h4 className="text-[11px] font-medium text-slate-900 leading-tight line-clamp-2 flex-1">
               {opportunity.title}
             </h4>
             <div className="flex items-center gap-0.5 flex-shrink-0">
@@ -162,7 +162,7 @@ const OpportunityCard = ({
           </div>
 
           {/* Area */}
-          <div className="text-[9px] text-slate-500 mb-1">
+          <div className="text-[9px] text-slate-400 mb-1">
             {getAreaName?.(opportunity.area) || opportunity.area}
           </div>
 
@@ -206,7 +206,7 @@ const OpportunityCard = ({
 
             {/* Assignees */}
             {assigneeCount > 0 && (
-              <span className="text-[8px] text-slate-500">
+              <span className="text-[8px] text-slate-400">
                 👤{assigneeCount}
               </span>
             )}
@@ -243,9 +243,9 @@ const ClusterCard = ({
       <div 
         className={`
           relative p-3 rounded-xl border-2 transition-all duration-200
-          ${isExpanded 
-            ? 'border-dashed border-slate-500 bg-slate-800/30' 
-            : 'border-slate-600 bg-slate-800/80 hover:border-slate-500 hover:bg-slate-800'
+          ${isExpanded
+            ? 'border-dashed border-slate-300 bg-white/80'
+            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 shadow-sm'
           }
           ${cluster.atRiskCount > 0 ? 'ring-2 ring-orange-500/30' : ''}
         `}
@@ -259,7 +259,7 @@ const ClusterCard = ({
           <span className="text-sm">
             {cluster.type === 'milestone' ? '🎯' : '🔗'}
           </span>
-          <span className="text-xs font-medium text-white truncate flex-1">
+          <span className="text-xs font-medium text-slate-900 truncate flex-1">
             {cluster.label}
           </span>
           <button
@@ -267,11 +267,11 @@ const ClusterCard = ({
               e.stopPropagation();
               onToggleExpand();
             }}
-            className="p-1 rounded hover:bg-slate-700 transition-colors"
+            className="p-1 rounded hover:bg-slate-100 transition-colors"
             title={isExpanded ? 'Collapse cluster' : 'Expand cluster'}
           >
             <svg 
-              className={`w-3 h-3 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+              className={`w-3 h-3 text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -283,7 +283,7 @@ const ClusterCard = ({
 
         {/* Stats row */}
         <div className="flex items-center gap-3 text-[10px]">
-          <span className="text-slate-400">
+          <span className="text-slate-500">
             {cluster.opportunities.length} items
           </span>
           {cluster.atRiskCount > 0 && (
@@ -297,7 +297,7 @@ const ClusterCard = ({
         </div>
 
         {/* Progress bar */}
-        <div className="mt-2 h-1 bg-slate-700 rounded-full overflow-hidden">
+        <div className="mt-2 h-1 bg-slate-200 rounded-full overflow-hidden">
           <div 
             className="h-full bg-emerald-500 transition-all"
             style={{ width: `${progressPct}%` }}
@@ -372,7 +372,7 @@ const Minimap = ({
 
   return (
     <div 
-      className="absolute bottom-4 right-4 border border-slate-600 rounded-lg bg-slate-900/90 overflow-hidden cursor-crosshair"
+      className="absolute bottom-4 right-4 border border-slate-200 rounded-lg bg-white/90 shadow-sm overflow-hidden cursor-crosshair"
       style={{ width: minimapSize.width, height: minimapSize.height }}
       onClick={handleClick}
     >
@@ -403,7 +403,7 @@ const Minimap = ({
 
       {/* Viewport indicator */}
       <div
-        className="absolute border-2 border-white/50 rounded pointer-events-none"
+        className="absolute border-2 border-slate-900/50 rounded pointer-events-none"
         style={{
           left: viewBox.x * scaleX,
           top: viewBox.y * scaleY,
@@ -817,14 +817,14 @@ export default function PrioritizationMatrix({
   }, [highlightedOpp, opportunities, getPosition, canvasToScreen]);
 
   return (
-    <div className="bg-slate-900 rounded-xl border border-slate-700 overflow-hidden">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between flex-wrap gap-4">
+      <div className="p-4 border-b border-slate-200 flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
             <span>📊</span> Impact vs Effort Matrix
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-400 mt-0.5">
             Drag cards • Scroll to zoom • Alt+drag to pan • {filteredOpportunities.length} items
             {clusters.length > 0 && <span className="text-indigo-400 ml-2">({clusters.length} clusters)</span>}
             {unscoredCount > 0 && <span className="text-amber-400 ml-2">({unscoredCount} unscored)</span>}
@@ -837,9 +837,9 @@ export default function PrioritizationMatrix({
             <button
               onClick={() => setEnableClustering(!enableClustering)}
               className={`px-2 py-1 text-xs rounded transition-colors ${
-                enableClustering 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                enableClustering
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
               }`}
             >
               {enableClustering ? '🔗 Clustered' : '📍 Individual'}
@@ -847,13 +847,13 @@ export default function PrioritizationMatrix({
             
             <button
               onClick={resetView}
-              className="px-2 py-1 text-xs bg-slate-700 text-slate-300 hover:bg-slate-600 rounded transition-colors"
+              className="px-2 py-1 text-xs bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded transition-colors"
               title="Reset zoom & pan"
             >
               🔄 Reset
             </button>
             
-            <span className="text-xs text-slate-500 px-2">
+            <span className="text-xs text-slate-400 px-2">
               {Math.round(scale * 100)}%
             </span>
           </div>
@@ -877,20 +877,20 @@ export default function PrioritizationMatrix({
           {/* Quadrant Summary */}
           <div className="flex gap-4 text-xs">
             <div className="text-center">
-              <div className="text-lg font-bold text-emerald-400">{quadrantCounts.quickWins}</div>
-              <div className="text-slate-500">🚀 Quick Wins</div>
+              <div className="text-lg font-bold text-emerald-600">{quadrantCounts.quickWins}</div>
+              <div className="text-slate-400">🚀 Quick Wins</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-blue-400">{quadrantCounts.majorProjects}</div>
-              <div className="text-slate-500">🎯 Major</div>
+              <div className="text-lg font-bold text-blue-600">{quadrantCounts.majorProjects}</div>
+              <div className="text-slate-400">🎯 Major</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-slate-400">{quadrantCounts.fillIns}</div>
-              <div className="text-slate-500">📝 Fill-Ins</div>
+              <div className="text-lg font-bold text-slate-500">{quadrantCounts.fillIns}</div>
+              <div className="text-slate-400">📝 Fill-Ins</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-red-400">{quadrantCounts.avoid}</div>
-              <div className="text-slate-500">⚠️ Avoid</div>
+              <div className="text-lg font-bold text-red-500">{quadrantCounts.avoid}</div>
+              <div className="text-slate-400">⚠️ Avoid</div>
             </div>
           </div>
         </div>
@@ -899,7 +899,7 @@ export default function PrioritizationMatrix({
       {/* Matrix Canvas */}
       <div 
         ref={containerRef}
-        className="relative h-[600px] bg-slate-950/50 overflow-hidden"
+        className="relative h-[600px] bg-slate-50/50 overflow-hidden"
         style={{ cursor: isPanning ? 'grabbing' : dragging ? 'grabbing' : 'default' }}
         onWheel={handleWheel}
         onMouseDown={handlePanStart}
@@ -919,41 +919,41 @@ export default function PrioritizationMatrix({
           {/* Grid background */}
           <div className="absolute inset-0 pointer-events-none">
             {/* Quadrant backgrounds */}
-            <div className="absolute top-0 left-0 w-1/2 h-1/2 bg-emerald-500/5 border-r border-b border-slate-700/30" />
-            <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-blue-500/5 border-b border-slate-700/30" />
-            <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-slate-500/5 border-r border-slate-700/30" />
+            <div className="absolute top-0 left-0 w-1/2 h-1/2 bg-emerald-500/5 border-r border-b border-slate-200/60" />
+            <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-blue-500/5 border-b border-slate-200/60" />
+            <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-slate-500/5 border-r border-slate-200/60" />
             <div className="absolute bottom-0 right-0 w-1/2 h-1/2 bg-red-500/5" />
-            
+
             {/* Center lines */}
-            <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-700/50" />
-            <div className="absolute left-0 right-0 top-1/2 h-px bg-slate-700/50" />
+            <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-300/60" />
+            <div className="absolute left-0 right-0 top-1/2 h-px bg-slate-300/60" />
             
             {/* Quadrant labels */}
-            <div className="absolute top-8 left-8 text-emerald-500/40 text-sm font-medium">
+            <div className="absolute top-8 left-8 text-emerald-600/50 text-sm font-medium">
               🚀 Quick Wins
-              <div className="text-xs text-slate-600">High Impact, Low Effort</div>
+              <div className="text-xs text-slate-400">High Impact, Low Effort</div>
             </div>
-            <div className="absolute top-8 right-8 text-right text-blue-500/40 text-sm font-medium">
+            <div className="absolute top-8 right-8 text-right text-blue-600/50 text-sm font-medium">
               🎯 Major Projects
-              <div className="text-xs text-slate-600">High Impact, High Effort</div>
+              <div className="text-xs text-slate-400">High Impact, High Effort</div>
             </div>
-            <div className="absolute bottom-8 left-8 text-slate-500/40 text-sm font-medium">
+            <div className="absolute bottom-8 left-8 text-slate-500/50 text-sm font-medium">
               📝 Fill-Ins
-              <div className="text-xs text-slate-600">Low Impact, Low Effort</div>
+              <div className="text-xs text-slate-400">Low Impact, Low Effort</div>
             </div>
-            <div className="absolute bottom-8 right-8 text-right text-red-500/40 text-sm font-medium">
+            <div className="absolute bottom-8 right-8 text-right text-red-500/50 text-sm font-medium">
               ⚠️ Avoid
-              <div className="text-xs text-slate-600">Low Impact, High Effort</div>
+              <div className="text-xs text-slate-400">Low Impact, High Effort</div>
             </div>
           </div>
 
           {/* Y-axis label */}
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 -rotate-90 text-slate-500 text-sm font-medium whitespace-nowrap">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 -rotate-90 text-slate-400 text-sm font-medium whitespace-nowrap">
             ← Low Impact — High Impact →
           </div>
 
           {/* X-axis label */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-slate-500 text-sm font-medium">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-slate-400 text-sm font-medium">
             ← Low Effort — High Effort →
           </div>
 
@@ -1022,13 +1022,13 @@ export default function PrioritizationMatrix({
         <div className="absolute bottom-4 left-4 flex flex-col gap-1">
           <button
             onClick={() => setScale(s => Math.min(3, s + 0.2))}
-            className="w-8 h-8 bg-slate-800 hover:bg-slate-700 text-white rounded flex items-center justify-center text-lg border border-slate-600"
+            className="w-8 h-8 bg-white hover:bg-slate-50 text-slate-600 rounded flex items-center justify-center text-lg border border-slate-200 shadow-sm"
           >
             +
           </button>
           <button
             onClick={() => setScale(s => Math.max(0.3, s - 0.2))}
-            className="w-8 h-8 bg-slate-800 hover:bg-slate-700 text-white rounded flex items-center justify-center text-lg border border-slate-600"
+            className="w-8 h-8 bg-white hover:bg-slate-50 text-slate-600 rounded flex items-center justify-center text-lg border border-slate-200 shadow-sm"
           >
             −
           </button>
@@ -1036,7 +1036,7 @@ export default function PrioritizationMatrix({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-500">
+      <div className="px-4 py-2 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-400">
         <div className="flex items-center gap-4">
           <span>Left bar = Initiative</span>
           <span>⚠️ = At risk</span>
@@ -1044,7 +1044,7 @@ export default function PrioritizationMatrix({
           <span>🎯 = Milestone</span>
           <span>🔗 = Dependencies</span>
         </div>
-        <div className="text-slate-400">
+        <div className="text-slate-500">
           Drag cards • Click scores to edit • Scroll to zoom • Alt+drag to pan
         </div>
       </div>

@@ -25,7 +25,7 @@ const MiniMatrix = ({ current, suggested, onAdjust }) => {
   };
 
   return (
-    <div className="relative w-24 h-24 bg-slate-900 rounded border border-slate-700 overflow-hidden">
+    <div className="relative w-24 h-24 bg-white rounded border border-slate-200 overflow-hidden">
       {/* Quadrant backgrounds */}
       <div className="absolute top-0 left-0 w-1/2 h-1/2 bg-emerald-500/10" />
       <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-blue-500/10" />
@@ -33,13 +33,13 @@ const MiniMatrix = ({ current, suggested, onAdjust }) => {
       <div className="absolute bottom-0 right-0 w-1/2 h-1/2 bg-red-500/10" />
       
       {/* Center lines */}
-      <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-600" />
-      <div className="absolute left-0 right-0 top-1/2 h-px bg-slate-600" />
+      <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-300" />
+      <div className="absolute left-0 right-0 top-1/2 h-px bg-slate-300" />
       
       {/* Current position (gray dot) */}
       {current.impact !== null && (
         <div 
-          className="absolute w-2 h-2 rounded-full bg-slate-500 border border-slate-400 transform -translate-x-1/2 translate-y-1/2"
+          className="absolute w-2 h-2 rounded-full bg-slate-400 border border-slate-300 transform -translate-x-1/2 translate-y-1/2"
           style={getPosition(current.impact, current.effort)}
           title={`Current: Impact ${current.impact}, Effort ${current.effort}`}
         />
@@ -90,10 +90,10 @@ const SuggestionCard = ({
   };
 
   const getQuadrantName = (impact, effort) => {
-    if (impact >= 50 && effort < 50) return { name: 'Quick Win', emoji: '🚀', color: 'text-emerald-400' };
-    if (impact >= 50 && effort >= 50) return { name: 'Major Project', emoji: '🎯', color: 'text-blue-400' };
-    if (impact < 50 && effort < 50) return { name: 'Fill-In', emoji: '📝', color: 'text-slate-400' };
-    return { name: 'Avoid', emoji: '⚠️', color: 'text-red-400' };
+    if (impact >= 50 && effort < 50) return { name: 'Quick Win', emoji: '🚀', color: 'text-emerald-600' };
+    if (impact >= 50 && effort >= 50) return { name: 'Major Project', emoji: '🎯', color: 'text-blue-600' };
+    if (impact < 50 && effort < 50) return { name: 'Fill-In', emoji: '📝', color: 'text-slate-500' };
+    return { name: 'Avoid', emoji: '⚠️', color: 'text-red-600' };
   };
 
   const quadrant = getQuadrantName(adjustedScores.impact, adjustedScores.effort);
@@ -101,9 +101,9 @@ const SuggestionCard = ({
   return (
     <div className={`
       p-3 rounded-lg border transition-all
-      ${accepted ? 'bg-emerald-900/20 border-emerald-600/50' : 
-        rejected ? 'bg-slate-800/30 border-slate-700/50 opacity-50' : 
-        'bg-slate-800/50 border-slate-700 hover:border-slate-600'}
+      ${accepted ? 'bg-emerald-50 border-emerald-300' :
+        rejected ? 'bg-slate-50/50 border-slate-200 opacity-50' :
+        'bg-slate-50 border-slate-200 hover:border-slate-300'}
     `}>
       <div className="flex gap-3">
         {/* Mini Matrix */}
@@ -128,7 +128,7 @@ const SuggestionCard = ({
               className="w-1 h-4 rounded-full flex-shrink-0 mt-0.5"
               style={{ backgroundColor: initiativeColor }}
             />
-            <h4 className="text-sm font-medium text-white leading-tight flex-1">
+            <h4 className="text-sm font-medium text-slate-900 leading-tight flex-1">
               {opportunity.title}
             </h4>
             <span 
@@ -147,7 +147,7 @@ const SuggestionCard = ({
           </div>
 
           {/* Reasoning */}
-          <div className="text-[11px] text-slate-400 mb-2 leading-relaxed">
+          <div className="text-[11px] text-slate-600 mb-2 leading-relaxed">
             {suggestion.reasoning}
           </div>
 
@@ -155,16 +155,16 @@ const SuggestionCard = ({
           <div className="flex items-center gap-4 text-[11px]">
             <div className="flex items-center gap-1">
               <span className="text-slate-500">Impact:</span>
-              <span className="font-medium text-indigo-400">{adjustedScores.impact}</span>
+              <span className="font-medium text-indigo-600">{adjustedScores.impact}</span>
               {hasCurrentScores && currentScores.impact !== adjustedScores.impact && (
-                <span className="text-slate-600">(was {currentScores.impact})</span>
+                <span className="text-slate-400">(was {currentScores.impact})</span>
               )}
             </div>
             <div className="flex items-center gap-1">
               <span className="text-slate-500">Effort:</span>
-              <span className="font-medium text-indigo-400">{adjustedScores.effort}</span>
+              <span className="font-medium text-indigo-600">{adjustedScores.effort}</span>
               {hasCurrentScores && currentScores.effort !== adjustedScores.effort && (
-                <span className="text-slate-600">(was {currentScores.effort})</span>
+                <span className="text-slate-400">(was {currentScores.effort})</span>
               )}
             </div>
           </div>
@@ -182,19 +182,19 @@ const SuggestionCard = ({
               </button>
               <button
                 onClick={() => onReject(opportunity.id)}
-                className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] font-medium rounded transition-colors"
+                className="px-2 py-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-[10px] font-medium rounded transition-colors"
               >
                 Skip
               </button>
             </>
           )}
           {accepted && (
-            <span className="text-emerald-400 text-[10px] font-medium">✓ Applied</span>
+            <span className="text-emerald-600 text-[10px] font-medium">✓ Applied</span>
           )}
           {rejected && (
             <button
               onClick={() => onReject(opportunity.id, true)} // undo
-              className="text-slate-500 hover:text-slate-300 text-[10px]"
+              className="text-slate-400 hover:text-slate-600 text-[10px]"
             >
               Undo skip
             </button>
@@ -342,24 +342,24 @@ export default function AIScoringModal({
   const pendingCount = suggestions.filter(s => !accepted.has(s.id) && !rejected.has(s.id)).length;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
-        className="bg-slate-900 border border-slate-700 rounded-xl max-w-3xl w-full shadow-2xl max-h-[85vh] overflow-hidden flex flex-col"
+        className="bg-white border border-slate-200 rounded-xl max-w-3xl w-full shadow-xl max-h-[85vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 border-b border-slate-800 bg-gradient-to-r from-violet-900/50 to-indigo-900/50">
+        <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-violet-50 to-indigo-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
                 <span className="text-lg">🤖</span>
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">AI-Assisted Scoring</h2>
-                <p className="text-xs text-slate-400">Let Claude suggest Impact & Effort scores</p>
+                <h2 className="text-lg font-semibold text-slate-900">AI-Assisted Scoring</h2>
+                <p className="text-xs text-slate-500">Let Claude suggest Impact & Effort scores</p>
               </div>
             </div>
-            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -368,16 +368,16 @@ export default function AIScoringModal({
         </div>
 
         {/* Controls */}
-        <div className="p-4 border-b border-slate-800 bg-slate-800/30">
+        <div className="p-4 border-b border-slate-200 bg-slate-50/50">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">Analyze:</span>
               <button
                 onClick={() => setMode('unscored')}
                 className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                  mode === 'unscored' 
-                    ? 'bg-indigo-600 text-white' 
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  mode === 'unscored'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 Unscored ({unscoredOpps.length})
@@ -385,9 +385,9 @@ export default function AIScoringModal({
               <button
                 onClick={() => setMode('all')}
                 className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                  mode === 'all' 
-                    ? 'bg-indigo-600 text-white' 
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  mode === 'all'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 All ({opportunities.length})
@@ -397,7 +397,7 @@ export default function AIScoringModal({
             <button
               onClick={analyzewithClaude}
               disabled={loading || oppsToAnalyze.length === 0}
-              className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-all flex items-center gap-2"
+              className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 text-white text-sm font-medium rounded-lg transition-all flex items-center gap-2"
             >
               {loading ? (
                 <>
@@ -414,7 +414,7 @@ export default function AIScoringModal({
           </div>
           
           {oppsToAnalyze.length === 0 && (
-            <p className="text-xs text-amber-400 mt-2">
+            <p className="text-xs text-amber-600 mt-2">
               All opportunities already have scores. Switch to "All" to re-analyze.
             </p>
           )}
@@ -423,7 +423,7 @@ export default function AIScoringModal({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {error && (
-            <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-400 text-sm">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
               {error}
             </div>
           )}
@@ -432,7 +432,7 @@ export default function AIScoringModal({
             <div className="text-center py-12 text-slate-500">
               <div className="text-4xl mb-3">📊</div>
               <p className="text-sm">Click "Analyze with Claude" to get scoring suggestions</p>
-              <p className="text-xs mt-1 text-slate-600">
+              <p className="text-xs mt-1 text-slate-400">
                 Claude will analyze {oppsToAnalyze.length} opportunities and suggest Impact/Effort scores
               </p>
             </div>
@@ -464,16 +464,16 @@ export default function AIScoringModal({
 
         {/* Footer */}
         {suggestions.length > 0 && (
-          <div className="p-4 border-t border-slate-800 flex items-center justify-between">
+          <div className="p-4 border-t border-slate-200 flex items-center justify-between">
             <div className="text-xs text-slate-500">
-              <span className="text-emerald-400">{accepted.size} accepted</span>
+              <span className="text-emerald-600">{accepted.size} accepted</span>
               {rejected.size > 0 && <span className="ml-2 text-slate-500">{rejected.size} skipped</span>}
               {pendingCount > 0 && <span className="ml-2">{pendingCount} pending</span>}
             </div>
             <div className="flex gap-2">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-slate-400 hover:text-white text-sm transition-colors"
+                className="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm transition-colors"
               >
                 Close
               </button>

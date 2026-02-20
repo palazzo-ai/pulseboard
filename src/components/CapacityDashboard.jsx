@@ -53,15 +53,15 @@ const CapacityDashboard = ({
     : 0;
 
   return (
-    <div className="border border-slate-800 rounded-lg bg-slate-900 p-4">
+    <div className="border border-slate-200 rounded-lg bg-white shadow-sm p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
             📊 Sprint Capacity Dashboard
           </h3>
           {teamStats.overallocatedCount > 0 && (
-            <div className="px-3 py-1 bg-red-900/30 border border-red-700 rounded-full text-red-400 text-xs font-medium flex items-center gap-1.5">
+            <div className="px-3 py-1 bg-red-50 border border-red-200 rounded-full text-red-600 text-xs font-medium flex items-center gap-1.5">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
@@ -71,7 +71,7 @@ const CapacityDashboard = ({
         </div>
         <div className="flex items-center gap-3">
           {/* Team summary */}
-          <div className="text-sm text-slate-400">
+          <div className="text-sm text-slate-500">
             Team: <span className={teamUtilization > 100 ? 'text-red-400' : teamUtilization > 80 ? 'text-amber-400' : 'text-emerald-400'}>
               {teamStats.totalAllocated}/{teamStats.totalCapacity} pts ({teamUtilization}%)
             </span>
@@ -79,7 +79,7 @@ const CapacityDashboard = ({
           <select 
             value={selectedSprint} 
             onChange={e => setSelectedSprint(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white"
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-900"
           >
             {months.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
@@ -96,15 +96,15 @@ const CapacityDashboard = ({
               key={member.id} 
               className={`p-4 rounded-lg border transition-all ${
                 stats.isOverallocated 
-                  ? 'border-red-500/50 bg-red-900/10 shadow-red-900/20 shadow-lg' 
-                  : 'border-slate-700 bg-slate-800/50'
+                  ? 'border-red-500/50 bg-red-50 shadow-red-100/40 shadow-lg'
+                  : 'border-slate-200 bg-slate-50'
               }`}
             >
               {/* Member Header */}
               <div className="flex items-center gap-3 mb-3">
                 <TeamMemberBadge member={member} size="lg" />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-white truncate">{member.name}</div>
+                  <div className="font-medium text-slate-900 truncate">{member.name}</div>
                   <div className="text-xs text-slate-500">{member.role}</div>
                 </div>
                 {stats.isOverallocated && (
@@ -119,13 +119,13 @@ const CapacityDashboard = ({
               {/* Capacity Bar */}
               <div className="mb-3">
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-400">Capacity</span>
-                  <span className={stats.isOverallocated ? 'text-red-400 font-medium' : 'text-slate-300'}>
+                  <span className="text-slate-500">Capacity</span>
+                  <span className={stats.isOverallocated ? 'text-red-500 font-medium' : 'text-slate-700'}>
                     {stats.allocatedPoints} / {stats.capacity} pts
                     {stats.isOverallocated && ` (+${stats.allocatedPoints - stats.capacity})`}
                   </span>
                 </div>
-                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                   <div 
                     className={`h-full transition-all ${
                       stats.isOverallocated 
@@ -151,7 +151,7 @@ const CapacityDashboard = ({
                   return opp && (
                     <div 
                       key={a.opportunityId} 
-                      className="text-xs text-slate-400 flex justify-between items-center cursor-pointer hover:text-slate-200 transition-colors"
+                      className="text-xs text-slate-500 flex justify-between items-center cursor-pointer hover:text-slate-700 transition-colors"
                       onClick={() => onOpportunityClick?.(opp)}
                     >
                       <span className="truncate flex-1">{opp.title}</span>

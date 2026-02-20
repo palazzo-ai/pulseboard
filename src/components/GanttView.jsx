@@ -31,30 +31,30 @@ function InlineDateEditor({ item, onSave, onCancel }) {
   }, [onCancel]);
 
   return (
-    <div ref={ref} className="absolute z-50 bg-[#1a1f2e] border border-[#2a3555] rounded-lg shadow-2xl p-3 w-[260px]"
+    <div ref={ref} className="absolute z-50 bg-white border border-[#E2E8F0] rounded-lg shadow-2xl p-3 w-[260px]"
       style={{ top: '100%', left: 0, marginTop: 4 }}>
-      <div className="text-[10px] text-[#6b7a94] uppercase tracking-widest mb-2 flex items-center gap-2">
-        <span className="text-[#4a7dff]">●</span> Set dates for {item.identifier}
+      <div className="text-[10px] text-[#64748B] uppercase tracking-widest mb-2 flex items-center gap-2">
+        <span className="text-[#2563EB]">●</span> Set dates for {item.identifier}
       </div>
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
-          <label className="text-[9px] text-[#4a5568] uppercase tracking-widest block mb-1">Start</label>
+          <label className="text-[9px] text-[#64748B] uppercase tracking-widest block mb-1">Start</label>
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-            className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1.5 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+            className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded px-2 py-1.5 text-[11px] text-[#334155] focus:border-[#2563EB] focus:outline-none" />
         </div>
         <div>
-          <label className="text-[9px] text-[#4a5568] uppercase tracking-widest block mb-1">End</label>
+          <label className="text-[9px] text-[#64748B] uppercase tracking-widest block mb-1">End</label>
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
-            className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1.5 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+            className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded px-2 py-1.5 text-[11px] text-[#334155] focus:border-[#2563EB] focus:outline-none" />
         </div>
       </div>
       <div className="flex gap-2">
         <button onClick={() => onSave(item, startDate, endDate)}
-          className="flex-1 px-3 py-1.5 bg-[#4a7dff] hover:bg-[#5a8dff] text-white text-[11px] font-medium rounded transition-colors">
+          className="flex-1 px-3 py-1.5 bg-[#2563EB] hover:bg-[#3B82F6] text-white text-[11px] font-medium rounded transition-colors">
           Save
         </button>
         <button onClick={onCancel}
-          className="px-3 py-1.5 bg-[#1e2433] hover:bg-[#252d3f] text-[#8896ab] text-[11px] rounded transition-colors">
+          className="px-3 py-1.5 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#64748B] text-[11px] rounded transition-colors">
           Cancel
         </button>
       </div>
@@ -121,7 +121,7 @@ function GanttBar({ item, timelineStart, dayWidth, rowY, barHeight, isSubtask, b
       {/* Background bar */}
       <rect x={startOffset} y={rowY} width={width} height={barHeight} rx={barHeight / 2}
         fill={barColor} opacity={isSubtask ? 0.25 : 0.2}
-        stroke={isSelected ? "#fff" : isPulseboardDate ? "#4a7dff" : "transparent"}
+        stroke={isSelected ? "#334155" : isPulseboardDate ? "#2563EB" : "transparent"}
         strokeWidth={isSelected ? 1.5 : isPulseboardDate ? 1 : 0}
         strokeOpacity={isSelected ? 0.6 : 0.3}
         strokeDasharray={isPulseboardDate && !isSelected ? "3 2" : "none"}
@@ -135,10 +135,10 @@ function GanttBar({ item, timelineStart, dayWidth, rowY, barHeight, isSubtask, b
       <circle cx={startOffset + 10} cy={rowY + barHeight / 2} r={3} fill={statusColor} style={{ pointerEvents: "none" }} />
       {/* Title */}
       {width > 60 && (
-        <text x={startOffset + 20} y={rowY + barHeight / 2 + 1} fill="#c8d4e6"
+        <text x={startOffset + 20} y={rowY + barHeight / 2 + 1} fill="#334155"
           fontSize={isSubtask ? 10 : 11} fontWeight={isSubtask ? 400 : 500}
           dominantBaseline="middle" style={{ pointerEvents: "none" }}>
-          {isSubtask && item.identifier && <tspan fill="#6b7a94" fontSize={9}>{item.identifier}  </tspan>}
+          {isSubtask && item.identifier && <tspan fill="#64748B" fontSize={9}>{item.identifier}  </tspan>}
           {item.title.length > Math.floor(width / 7) ? item.title.slice(0, Math.floor(width / 7)) + "…" : item.title}
         </text>
       )}
@@ -146,13 +146,13 @@ function GanttBar({ item, timelineStart, dayWidth, rowY, barHeight, isSubtask, b
       {!isSubtask && initials && width > 50 && (
         <g>
           <circle cx={startOffset + width - 14} cy={rowY + barHeight / 2} r={8} fill={barColor} opacity={0.8} />
-          <text x={startOffset + width - 14} y={rowY + barHeight / 2 + 1} fill="#fff" fontSize={8} fontWeight={600}
+          <text x={startOffset + width - 14} y={rowY + barHeight / 2 + 1} fill="#0F172A" fontSize={8} fontWeight={600}
             textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: "none" }}>{initials}</text>
         </g>
       )}
       {/* Pulseboard date indicator */}
       {isPulseboardDate && (
-        <circle cx={startOffset + 4} cy={rowY + 4} r={2.5} fill="#4a7dff" style={{ pointerEvents: "none" }} />
+        <circle cx={startOffset + 4} cy={rowY + 4} r={2.5} fill="#2563EB" style={{ pointerEvents: "none" }} />
       )}
       {/* Resize handles */}
       <rect x={startOffset} y={rowY} width={6} height={barHeight} fill="transparent"
@@ -168,7 +168,7 @@ function DependencyArrow({ fromX, fromY, toX, toY, isCritical, isLinked, hasFocu
   const midX = (fromX + toX) / 2;
   const path = `M ${fromX} ${fromY} C ${midX} ${fromY}, ${midX} ${toY}, ${toX} ${toY}`;
   // Focus mode styling
-  const stroke = isCritical ? '#F59E0B' : '#4a7dff';
+  const stroke = isCritical ? '#F59E0B' : '#2563EB';
   const width = isCritical ? 2 : 1.5;
   const dash = isCritical ? 'none' : '4 3';
   const opacity = isCritical ? 0.8 : 0.5;
@@ -364,7 +364,7 @@ export default function GanttView({
       return true;
     });
     const layout = [];
-    let y = HEADER_HEIGHT;
+    let y = 0;
 
     // Pre-sort milestones by date
     const sortedMilestones = [...milestones].sort((a, b) => {
@@ -443,7 +443,7 @@ export default function GanttView({
         const isCollapsed = collapsedLanes.has("ungrouped");
         layout.push({
           type: "swimlane-header",
-          item: { id: "lane-ungrouped", title: "Ungrouped", laneId: "ungrouped", color: "#4a5568", count: ungrouped.length + ungroupedMs.length },
+          item: { id: "lane-ungrouped", title: "Ungrouped", laneId: "ungrouped", color: "#94A3B8", count: ungrouped.length + ungroupedMs.length },
           y,
           height: SWIMLANE_HEIGHT,
         });
@@ -469,7 +469,7 @@ export default function GanttView({
       return true;
     });
     const layout = [];
-    let y = HEADER_HEIGHT;
+    let y = 0;
     parents.forEach(parent => {
       const color = parent.project?.color || "#6366F1";
       layout.push({ type: "parent", item: { ...parent, assigneeName: parent.assignee?.name }, color, y, height: ROW_HEIGHT });
@@ -513,7 +513,7 @@ export default function GanttView({
   const todayOffset = daysBetween(timelineStart, TODAY) * dayWidth;
 
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollLeft = Math.max(0, todayOffset - 300);
+    if (scrollRef.current) scrollRef.current.scrollLeft = Math.max(0, todayOffset + LEFT_PANEL_WIDTH - 300);
   }, [todayOffset]);
 
   // Focus mode: compute which items are related to the focused milestone
@@ -621,14 +621,14 @@ export default function GanttView({
   }, [linearIssues]);
 
   return (
-    <div className="flex flex-col h-full bg-[#0b0e14] text-[#c8d4e6]" style={{ fontFamily: "'JetBrains Mono', 'SF Mono', monospace" }}>
+    <div className="flex flex-col h-full bg-[#F4F5F7] text-[#334155]" style={{ fontFamily: "'JetBrains Mono', 'SF Mono', monospace" }}>
       {/* Top bar */}
-      <div className="border-b border-[#1a1f2e] px-5 py-3 flex items-center justify-between flex-shrink-0">
+      <div className="border-b border-[#E2E8F0] px-5 py-3 flex items-center justify-between flex-shrink-0 bg-white">
         <div className="flex items-center gap-4">
-          <div className="flex bg-[#12161f] rounded-md border border-[#1e2433] overflow-hidden">
+          <div className="flex bg-[#F8FAFC] rounded-md border border-[#E2E8F0] overflow-hidden">
             {["opportunities", "issues"].map(m => (
               <button key={m} onClick={() => { setViewMode(m); setExpandedRows(new Set()); setSelectedItem(null); setEditingDateFor(null); }}
-                className={`px-3 py-1.5 text-[11px] uppercase tracking-wider transition-all ${viewMode === m ? "bg-[#1a2035] text-white" : "text-[#4a5568] hover:text-[#8896ab]"}`}>
+                className={`px-3 py-1.5 text-[11px] uppercase tracking-wider transition-all ${viewMode === m ? "bg-white text-[#1E293B] shadow-sm" : "text-[#94A3B8] hover:text-[#64748B]"}`}>
                 {m}
               </button>
             ))}
@@ -636,7 +636,7 @@ export default function GanttView({
 
           {viewMode === "opportunities" && (
             <select value={filterArea} onChange={(e) => setFilterArea(e.target.value)}
-              className="bg-[#12161f] border border-[#1e2433] rounded px-2 py-1 text-[11px] text-[#8896ab] focus:outline-none focus:border-[#4a7dff]">
+              className="bg-[#F8FAFC] border border-[#E2E8F0] rounded px-2 py-1 text-[11px] text-[#64748B] focus:outline-none focus:border-[#2563EB]">
               <option value="all">All Areas</option>
               {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
@@ -644,23 +644,23 @@ export default function GanttView({
 
           {viewMode === "issues" && (
             <select value={filterProject} onChange={(e) => setFilterProject(e.target.value)}
-              className="bg-[#12161f] border border-[#1e2433] rounded px-2 py-1 text-[11px] text-[#8896ab] focus:outline-none focus:border-[#4a7dff]">
+              className="bg-[#F8FAFC] border border-[#E2E8F0] rounded px-2 py-1 text-[11px] text-[#64748B] focus:outline-none focus:border-[#2563EB]">
               <option value="all">All Projects</option>
               {linearProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           )}
 
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-[#12161f] border border-[#1e2433] rounded px-2 py-1 text-[11px] text-[#8896ab] focus:outline-none focus:border-[#4a7dff]">
+            className="bg-[#F8FAFC] border border-[#E2E8F0] rounded px-2 py-1 text-[11px] text-[#64748B] focus:outline-none focus:border-[#2563EB]">
             <option value="all">All Status</option>
             {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
 
           {viewMode === "opportunities" && (
-            <div className="flex bg-[#12161f] rounded-md border border-[#1e2433] overflow-hidden">
+            <div className="flex bg-[#F8FAFC] rounded-md border border-[#E2E8F0] overflow-hidden">
               {[{ key: "area", label: "Area" }, { key: "initiative", label: "Initiative" }, { key: "none", label: "Flat" }].map(g => (
                 <button key={g.key} onClick={() => { setGroupBy(g.key); setCollapsedLanes(new Set()); }}
-                  className={`px-2.5 py-1 text-[10px] uppercase tracking-wider transition-all ${groupBy === g.key ? "bg-[#1a2035] text-white" : "text-[#4a5568] hover:text-[#8896ab]"}`}>
+                  className={`px-2.5 py-1 text-[10px] uppercase tracking-wider transition-all ${groupBy === g.key ? "bg-white text-[#1E293B] shadow-sm" : "text-[#94A3B8] hover:text-[#64748B]"}`}>
                   {g.label}
                 </button>
               ))}
@@ -668,7 +668,7 @@ export default function GanttView({
           )}
 
           {viewMode === "issues" && linearIssues && (
-            <span className="text-[10px] text-[#4a5568]">
+            <span className="text-[10px] text-[#94A3B8]">
               {linearIssues.withDates} with dates · {datelessCount} need dates
             </span>
           )}
@@ -676,335 +676,355 @@ export default function GanttView({
 
         <div className="flex items-center gap-3">
           {focusData && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-[#F59E0B15] border border-[#F59E0B40] rounded-lg animate-pulse-slow">
-              <span className="text-amber-400 text-xs">◆</span>
-              <span className="text-amber-300 text-[11px] font-medium">Focus: {focusData.milestone.title}</span>
+            <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-lg animate-pulse-slow">
+              <span className="text-amber-500 text-xs">◆</span>
+              <span className="text-amber-700 text-[11px] font-medium">Focus: {focusData.milestone.title}</span>
               {focusData.bufferDays != null && (
                 <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                  focusData.bufferDays > 7 ? 'bg-emerald-500/20 text-emerald-400' :
-                  focusData.bufferDays > 0 ? 'bg-amber-500/20 text-amber-400' :
-                  'bg-red-500/20 text-red-400'
+                  focusData.bufferDays > 7 ? 'bg-emerald-100 text-emerald-700' :
+                  focusData.bufferDays > 0 ? 'bg-amber-100 text-amber-700' :
+                  'bg-red-100 text-red-700'
                 }`}>
                   {focusData.bufferDays > 0 ? `${focusData.bufferDays}d buffer` : `${Math.abs(focusData.bufferDays)}d over`}
                 </span>
               )}
-              <button onClick={onClearFocus} className="text-amber-400/60 hover:text-white text-xs ml-1 transition-colors">✕</button>
+              <button onClick={onClearFocus} className="text-amber-400 hover:text-amber-700 text-xs ml-1 transition-colors">✕</button>
             </div>
           )}
           {viewMode === "issues" && (
             <button onClick={fetchLinearIssues} disabled={linearLoading}
-              className="px-2.5 py-1 text-[11px] rounded border border-[#1e2433] text-[#6b7a94] hover:text-white hover:border-[#4a7dff] transition-all disabled:opacity-50">
+              className="px-2.5 py-1 text-[11px] rounded border border-[#E2E8F0] text-[#64748B] hover:text-[#1E293B] hover:border-[#2563EB] transition-all disabled:opacity-50">
               {linearLoading ? "Loading…" : "↻ Refresh"}
             </button>
           )}
-          <div className="flex items-center gap-1 bg-[#12161f] rounded border border-[#1e2433] overflow-hidden">
-            <button onClick={() => setZoom(z => Math.max(0.4, z - 0.2))} className="px-2 py-1 text-[#6b7a94] hover:text-white text-xs">−</button>
-            <span className="text-[10px] text-[#4a5568] w-10 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(z => Math.min(3, z + 0.2))} className="px-2 py-1 text-[#6b7a94] hover:text-white text-xs">+</button>
+          <div className="flex items-center gap-1 bg-[#F8FAFC] rounded border border-[#E2E8F0] overflow-hidden">
+            <button onClick={() => setZoom(z => Math.max(0.4, z - 0.2))} className="px-2 py-1 text-[#64748B] hover:text-[#1E293B] text-xs">−</button>
+            <span className="text-[10px] text-[#94A3B8] w-10 text-center">{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom(z => Math.min(3, z + 0.2))} className="px-2 py-1 text-[#64748B] hover:text-[#1E293B] text-xs">+</button>
           </div>
         </div>
       </div>
 
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left panel */}
-        <div className="flex-shrink-0 border-r border-[#1a1f2e] overflow-y-auto" style={{ width: LEFT_PANEL_WIDTH }}>
-          <div className="sticky top-0 bg-[#0b0e14] z-10 border-b border-[#1a1f2e] px-3 flex items-center"
-            style={{ height: HEADER_HEIGHT }}>
-            <span className="text-[10px] text-[#4a5568] uppercase tracking-widest">
-              {viewMode === "issues" ? "Issues / Sub-issues" : "Opportunities"}
-            </span>
-          </div>
-
-          <div style={{ minHeight: currentRows.totalHeight - HEADER_HEIGHT }}>
-            {viewMode === "issues" && linearLoading && (
-              <div className="flex items-center justify-center py-12">
-                <div className="w-5 h-5 border-2 border-[#1e2433] border-t-[#4a7dff] rounded-full animate-spin mr-3" />
-                <span className="text-[#6b7a94] text-sm">Loading from Linear…</span>
-              </div>
-            )}
-            {viewMode === "issues" && linearError && (
-              <div className="p-4">
-                <div className="bg-red-900/20 border border-red-800 rounded-lg p-3 text-red-400 text-xs">{linearError}</div>
-              </div>
-            )}
-
-            {currentRows.rows.map((row) => {
-              const item = row.item;
-
-              // Focus mode: no dimming, just highlight critical path
-              const leftFocusOpacity = 1;
-
-              // Milestone row
-              if (row.type === "milestone") {
-                const areaInfo = areas.find(a => a.id === item.area);
-                const monthName = months.find(m => m.id === item.month)?.name || item.month;
-                return (
-                  <div key={`row-ms-${item.id}`}
-                    className={`flex items-center gap-2 px-3 border-b border-[#151a26] hover:bg-[#111520] cursor-pointer transition-colors ${
-                      selectedItem?.id === item.id ? "bg-[#131825]" : ""
-                    }`}
-                    style={{ height: row.height + ROW_GAP, paddingLeft: 8, opacity: leftFocusOpacity }}
-                    onClick={() => {
-                      setSelectedItem(item);
-                      if (onFocusMilestone) onFocusMilestone(item.id);
-                    }}
-                  >
-                    <span className={`text-xs flex-shrink-0 ${focusMilestoneId === item.id ? 'text-amber-300' : 'text-yellow-400'}`} style={{ transform: "rotate(45deg)", display: "inline-block", width: 10, height: 10, lineHeight: "10px", textAlign: "center" }}>◆</span>
-                    <span className={`truncate flex-1 text-xs font-medium ${focusMilestoneId === item.id ? 'text-amber-200' : 'text-yellow-300'}`}>{item.title}</span>
-                    {focusMilestoneId === item.id && <span className="text-[8px] text-amber-400/60 uppercase tracking-wider flex-shrink-0">focused</span>}
-                    <span className="text-[9px] text-[#4a5568] flex-shrink-0">{monthName}</span>
-                  </div>
-                );
-              }
-
-              // Swimlane header row
-              if (row.type === "swimlane-header") {
-                const isCollapsed = collapsedLanes.has(item.laneId);
-                return (
-                  <div key={`row-lane-${item.laneId}`}
-                    className="flex items-center gap-2 px-3 border-b border-[#1a1f2e] cursor-pointer hover:bg-[#111520] transition-colors"
-                    style={{ height: row.height + ROW_GAP, backgroundColor: `${item.color}08` }}
-                    onClick={() => toggleLane(item.laneId)}
-                  >
-                    <button className="text-[#6b7a94] hover:text-[#8896ab] w-4 flex-shrink-0 text-xs">
-                      {isCollapsed ? "▸" : "▾"}
-                    </button>
-                    <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: item.color }} />
-                    <span className="text-[11px] font-semibold flex-1 truncate" style={{ color: item.color }}>
-                      {item.title}
-                    </span>
-                    <span className="text-[9px] text-[#4a5568] flex-shrink-0 tabular-nums">
-                      {item.count}
-                    </span>
-                  </div>
-                );
-              }
-
-              const isParent = row.type === "opportunity" || row.type === "parent";
-              const hasChildren = isParent && (
-                row.type === "opportunity" ? item.issues?.length > 0 : item.childIds?.length > 0
-              );
-              const isExpanded = expandedRows.has(item.id);
-              const statusColor = STATUS_CONFIG[item.status]?.color || "#64748B";
-              const hasDates = item.startDate && item.endDate;
-              const isEditing = editingDateFor === item.id;
-
-              const isCriticalPath = focusData && focusData.criticalIds.has(item.id);
-
-              return (
-                <div key={`row-${item.id}`} className="relative">
-                  <div
-                    className={`flex items-center gap-2 px-3 border-b border-[#151a26] hover:bg-[#111520] cursor-pointer transition-colors ${
-                      selectedItem?.id === item.id ? "bg-[#131825]" : ""
-                    } ${isCriticalPath ? "bg-[#F59E0B08]" : ""}`}
-                    style={{ height: row.height + ROW_GAP, paddingLeft: isParent ? (row.laneId ? 24 : 8) : 28, opacity: leftFocusOpacity }}
-                    onClick={() => setSelectedItem(item)}
-                  >
-                    {isParent && hasChildren && (
-                      <button onClick={(e) => { e.stopPropagation(); toggleExpand(item.id); }}
-                        className="text-[#4a5568] hover:text-[#8896ab] w-4 flex-shrink-0 text-xs">
-                        {isExpanded ? "▾" : "▸"}
-                      </button>
-                    )}
-                    {isParent && !hasChildren && <span className="w-4 flex-shrink-0" />}
-
-                    {isCriticalPath ? (
-                      <span className="w-2 h-2 rounded-full flex-shrink-0 bg-amber-400" title="Critical path" />
-                    ) : (
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getBarColor(row) }} />
-                    )}
-
-                    {viewMode === "issues" && item.identifier && (
-                      <span className="text-[10px] text-[#4a5568] font-mono flex-shrink-0">{item.identifier}</span>
-                    )}
-
-                    <span className={`truncate flex-1 ${isParent ? "text-xs text-[#c8d4e6] font-medium" : "text-[11px] text-[#8896ab]"}`}>
-                      {item.title}
-                    </span>
-
-                    {/* Date badge / set dates button */}
-                    {viewMode === "issues" && !hasDates && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setEditingDateFor(item.id); }}
-                        className="px-1.5 py-0.5 text-[9px] bg-[#4a7dff20] text-[#4a7dff] rounded hover:bg-[#4a7dff30] transition-colors flex-shrink-0"
-                        title="Set dates for this issue">
-                        + dates
-                      </button>
-                    )}
-
-                    {viewMode === "issues" && hasDates && item.hasPulseboardDates && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setEditingDateFor(item.id); }}
-                        className="w-2 h-2 rounded-full bg-[#4a7dff] flex-shrink-0 hover:ring-2 hover:ring-[#4a7dff40]"
-                        title="Edit Pulseboard dates" />
-                    )}
-
-                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: statusColor }} />
-                  </div>
-
-                  {/* Inline date editor */}
-                  {isEditing && (
-                    <InlineDateEditor
-                      item={item}
-                      onSave={saveDateOverride}
-                      onCancel={() => setEditingDateFor(null)}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Right panel — timeline */}
+        {/* Single scroll container for synced scrolling */}
         <div className="flex-1 overflow-auto" ref={scrollRef}>
-          <svg width={totalWidth} height={currentRows.totalHeight} className="select-none">
-            {monthColumns.map((col, i) => (
-              <g key={`month-${i}`}>
-                <rect x={col.x} y={0} width={col.width} height={HEADER_HEIGHT} fill="#0b0e14" />
-                <text x={col.x + col.width / 2} y={24} textAnchor="middle"
-                  fill="#6b7a94" fontSize={11} fontWeight={600} letterSpacing={0.5}>{col.label}</text>
-                {i > 0 && (
-                  <line x1={col.x} y1={HEADER_HEIGHT} x2={col.x} y2={currentRows.totalHeight}
-                    stroke="#1a1f2e" strokeWidth={1} strokeDasharray="3 6" opacity={0.5} />
-                )}
-              </g>
-            ))}
+          <div style={{ width: LEFT_PANEL_WIDTH + totalWidth }}>
+            {/* ===== STICKY HEADER ROW ===== */}
+            <div className="sticky top-0 z-20 flex" style={{ height: HEADER_HEIGHT }}>
+              {/* Corner cell */}
+              <div className="sticky left-0 z-30 flex-shrink-0 bg-white border-b border-r border-[#E2E8F0] px-3 flex items-center"
+                style={{ width: LEFT_PANEL_WIDTH, minWidth: LEFT_PANEL_WIDTH }}>
+                <span className="text-[10px] text-[#94A3B8] uppercase tracking-widest">
+                  {viewMode === "issues" ? "Issues / Sub-issues" : "Opportunities"}
+                </span>
+              </div>
+              {/* Month header SVG */}
+              <svg width={totalWidth} height={HEADER_HEIGHT} className="select-none" style={{ display: 'block', flexShrink: 0 }}>
+                <rect width={totalWidth} height={HEADER_HEIGHT} fill="#ECEEF1" />
+                {monthColumns.map((col, i) => (
+                  <g key={`month-h-${i}`}>
+                    <text x={col.x + col.width / 2} y={24} textAnchor="middle"
+                      fill="#64748B" fontSize={11} fontWeight={600} letterSpacing={0.5}>{col.label}</text>
+                    {i > 0 && <line x1={col.x} y1={0} x2={col.x} y2={HEADER_HEIGHT} stroke="#E2E8F0" strokeWidth={1} opacity={0.5} />}
+                  </g>
+                ))}
+                <line x1={0} y1={HEADER_HEIGHT - 1} x2={totalWidth} y2={HEADER_HEIGHT - 1} stroke="#E2E8F0" strokeWidth={1} />
+                {/* Today marker in header */}
+                <line x1={todayOffset} y1={0} x2={todayOffset} y2={HEADER_HEIGHT} stroke="#2563EB" strokeWidth={2} opacity={0.5} />
+                <rect x={todayOffset - 22} y={32} width={44} height={16} rx={8} fill="#2563EB" opacity={0.15} />
+                <text x={todayOffset} y={43} textAnchor="middle" fill="#2563EB" fontSize={9} fontWeight={600}>Today</text>
+              </svg>
+            </div>
 
-            <line x1={0} y1={HEADER_HEIGHT} x2={totalWidth} y2={HEADER_HEIGHT} stroke="#1a1f2e" strokeWidth={1} />
-
-            {currentRows.rows.map((row, i) => {
-              const isCritRow = focusData && row.type !== "swimlane-header" && row.type !== "milestone" && focusData.criticalIds.has(row.item.id);
-              return (
-              <g key={`bg-${i}`}>
-                {row.type === "swimlane-header" ? (
-                  <>
-                    <rect x={0} y={row.y} width={totalWidth} height={row.height}
-                      fill={row.item.color} opacity={0.04} />
-                    <rect x={0} y={row.y} width={3} height={row.height}
-                      fill={row.item.color} opacity={0.5} />
-                    <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height}
-                      stroke={row.item.color} strokeWidth={0.5} opacity={0.2} />
-                  </>
-                ) : (
-                  <>
-                    <rect x={0} y={row.y} width={totalWidth} height={row.height}
-                      fill={isCritRow ? "#1a1508" : selectedItem?.id === row.item.id ? "#131825" : row.type === "milestone" ? "#12100a" : (row.type === "issue" || row.type === "child") ? "#0a0d13" : "#0c0f16"} />
-                    {isCritRow && <rect x={0} y={row.y} width={3} height={row.height} fill="#F59E0B" opacity={0.4} />}
-                    <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height} stroke={row.type === "milestone" ? "#2a2210" : "#151a26"} strokeWidth={0.5} />
-                  </>
-                )}
-              </g>
-            );
-            })}
-
-            {/* Today */}
-            <rect x={todayOffset - 1} y={0} width={2} height={currentRows.totalHeight} fill="#4a7dff" opacity={0.3} />
-            <line x1={todayOffset} y1={0} x2={todayOffset} y2={currentRows.totalHeight} stroke="#4a7dff" strokeWidth={2} opacity={0.5} />
-            <rect x={todayOffset - 22} y={32} width={44} height={16} rx={8} fill="#4a7dff" opacity={0.2} />
-            <text x={todayOffset} y={43} textAnchor="middle" fill="#4a7dff" fontSize={9} fontWeight={600}>Today</text>
-
-            {dependencyArrows.map((a, i) => <DependencyArrow key={`dep-${i}`} {...a} hasFocus={!!focusData} />)}
-
-            {/* Buffer zone — only in focus mode */}
-            {focusData && focusData.lastEnd && focusData.msDate && (() => {
-              const bufferStartX = daysBetween(timelineStart, focusData.lastEnd) * dayWidth;
-              const bufferEndX = daysBetween(timelineStart, focusData.msDate) * dayWidth;
-              const bufferWidth = bufferEndX - bufferStartX;
-              if (bufferWidth <= 0) return null;
-              const bufferColor = focusData.bufferDays > 7 ? '#22C55E' : focusData.bufferDays > 0 ? '#F59E0B' : '#EF4444';
-              return (
-                <g key="buffer-zone">
-                  <rect x={bufferStartX} y={HEADER_HEIGHT} width={bufferWidth} height={currentRows.totalHeight - HEADER_HEIGHT}
-                    fill={bufferColor} opacity={0.06} />
-                  <line x1={bufferStartX} y1={HEADER_HEIGHT} x2={bufferStartX} y2={currentRows.totalHeight}
-                    stroke={bufferColor} strokeWidth={1} strokeDasharray="4 4" opacity={0.3} />
-                  <rect x={bufferStartX + 4} y={HEADER_HEIGHT + 4} width={Math.min(bufferWidth - 8, 80)} height={16} rx={4}
-                    fill={bufferColor} opacity={0.15} />
-                  <text x={bufferStartX + 8} y={HEADER_HEIGHT + 15} fill={bufferColor} fontSize={9} fontWeight={500} opacity={0.7}>
-                    {focusData.bufferDays}d buffer
-                  </text>
-                </g>
-              );
-            })()}
-
-            {/* Milestone diamonds */}
-            {currentRows.rows.filter(r => r.type === "milestone").map((row) => {
-              const item = row.item;
-              if (!item.startDate) return null;
-              const msDate = parseDate(item.startDate);
-              if (!msDate) return null;
-              const xPos = daysBetween(timelineStart, msDate) * dayWidth;
-              const cy = row.y + row.height / 2;
-              const size = 10;
-              const isSelected = selectedItem?.id === item.id;
-              const isFocused = focusMilestoneId === item.id;
-              const msOpacity = 1;
-              return (
-                <g key={`ms-${item.id}`} style={{ cursor: "pointer", opacity: msOpacity }}
-                  onClick={() => {
-                    setSelectedItem(item);
-                    if (onFocusMilestone) onFocusMilestone(item.id);
-                  }}>
-                  {/* Glow when focused */}
-                  {isFocused && (
-                    <>
-                      <circle cx={xPos} cy={cy} r={20} fill="#eab308" opacity={0.08}>
-                        <animate attributeName="r" values="18;24;18" dur="2s" repeatCount="indefinite" />
-                        <animate attributeName="opacity" values="0.08;0.15;0.08" dur="2s" repeatCount="indefinite" />
-                      </circle>
-                      <line x1={xPos} y1={HEADER_HEIGHT} x2={xPos} y2={currentRows.totalHeight}
-                        stroke="#eab308" strokeWidth={1} strokeDasharray="4 4" opacity={0.15} />
-                    </>
+            {/* ===== BODY ROW ===== */}
+            <div className="flex">
+              {/* Left panel — sticky left */}
+              <div className="sticky left-0 z-10 flex-shrink-0 bg-white border-r border-[#E2E8F0]"
+                style={{ width: LEFT_PANEL_WIDTH, minWidth: LEFT_PANEL_WIDTH }}>
+                <div style={{ minHeight: currentRows.totalHeight }}>
+                  {viewMode === "issues" && linearLoading && (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="w-5 h-5 border-2 border-[#E2E8F0] border-t-[#2563EB] rounded-full animate-spin mr-3" />
+                      <span className="text-[#64748B] text-sm">Loading from Linear…</span>
+                    </div>
                   )}
-                  {/* Dashed vertical line */}
-                  <line x1={xPos} y1={row.y + 2} x2={xPos} y2={row.y + row.height - 2}
-                    stroke="#eab308" strokeWidth={1} strokeDasharray="2 3" opacity={0.3} />
-                  {/* Diamond */}
-                  <polygon
-                    points={`${xPos},${cy - size} ${xPos + size},${cy} ${xPos},${cy + size} ${xPos - size},${cy}`}
-                    fill={isFocused ? "#F59E0B" : "#eab308"} opacity={isFocused ? 1 : isSelected ? 0.9 : 0.7}
-                    stroke={isFocused ? "#fff" : isSelected ? "#fff" : "#eab308"}
-                    strokeWidth={isFocused ? 2 : isSelected ? 1.5 : 0.5} />
-                  {/* Label */}
-                  <text x={xPos + size + 6} y={cy + 1} fill={isFocused ? "#F59E0B" : "#eab308"} fontSize={isFocused ? 11 : 10} fontWeight={isFocused ? 600 : 500}
-                    dominantBaseline="middle" opacity={isFocused ? 1 : 0.8} style={{ pointerEvents: "none" }}>
-                    {item.title}
-                  </text>
-                </g>
-              );
-            })}
+                  {viewMode === "issues" && linearError && (
+                    <div className="p-4">
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-xs">{linearError}</div>
+                    </div>
+                  )}
 
-            {/* Opportunity & issue bars */}
-            {currentRows.rows.filter(r => r.type !== "milestone" && r.type !== "swimlane-header").map((row) => {
-              const item = row.item;
-              if (!item.startDate || !item.endDate) return null;
-              const isParent = row.type === "opportunity" || row.type === "parent";
-              // Focus mode: critical path in amber, everything else normal
-              let barColor = getBarColor(row);
-              let focusOpacity = 1;
-              if (focusData && focusData.criticalIds.has(item.id)) {
-                barColor = '#F59E0B'; // amber for critical path
-              }
-              return (
-                <GanttBar key={`bar-${item.id}`} item={item} timelineStart={timelineStart} dayWidth={dayWidth}
-                  rowY={row.y + (row.height - (isParent ? BAR_HEIGHT : SUB_BAR_HEIGHT)) / 2}
-                  barHeight={isParent ? BAR_HEIGHT : SUB_BAR_HEIGHT}
-                  isSubtask={!isParent} barColor={barColor} focusOpacity={focusOpacity}
-                  onDragEnd={handleBarDragEnd} onSelect={setSelectedItem} isSelected={selectedItem?.id === item.id} />
-              );
-            })}
-          </svg>
+                  {currentRows.rows.map((row) => {
+                    const item = row.item;
+
+                    // Focus mode: no dimming, just highlight critical path
+                    const leftFocusOpacity = 1;
+
+                    // Milestone row
+                    if (row.type === "milestone") {
+                      const areaInfo = areas.find(a => a.id === item.area);
+                      const monthName = months.find(m => m.id === item.month)?.name || item.month;
+                      return (
+                        <div key={`row-ms-${item.id}`}
+                          className={`flex items-center gap-2 px-3 border-b border-[#E5E7EB] hover:bg-[#F8FAFC] cursor-pointer transition-colors bg-white ${
+                            selectedItem?.id === item.id ? "!bg-[#EFF6FF]" : ""
+                          }`}
+                          style={{ height: row.height + ROW_GAP, paddingLeft: 8, opacity: leftFocusOpacity }}
+                          onClick={() => {
+                            setSelectedItem(item);
+                            if (onFocusMilestone) onFocusMilestone(item.id);
+                          }}
+                        >
+                          <span className={`text-xs flex-shrink-0 ${focusMilestoneId === item.id ? 'text-amber-300' : 'text-yellow-400'}`} style={{ transform: "rotate(45deg)", display: "inline-block", width: 10, height: 10, lineHeight: "10px", textAlign: "center" }}>◆</span>
+                          <span className={`truncate flex-1 text-xs font-medium ${focusMilestoneId === item.id ? 'text-amber-200' : 'text-yellow-300'}`}>{item.title}</span>
+                          {focusMilestoneId === item.id && <span className="text-[8px] text-amber-400/60 uppercase tracking-wider flex-shrink-0">focused</span>}
+                          <span className="text-[9px] text-[#94A3B8] flex-shrink-0">{monthName}</span>
+                        </div>
+                      );
+                    }
+
+                    // Swimlane header row
+                    if (row.type === "swimlane-header") {
+                      const isCollapsed = collapsedLanes.has(item.laneId);
+                      return (
+                        <div key={`row-lane-${item.laneId}`}
+                          className="flex items-center gap-2 px-3 border-b border-[#EAECF0] cursor-pointer hover:bg-[#F8FAFC] transition-colors"
+                          style={{ height: row.height + ROW_GAP, backgroundColor: `${item.color}08` }}
+                          onClick={() => toggleLane(item.laneId)}
+                        >
+                          <button className="text-[#94A3B8] hover:text-[#64748B] w-4 flex-shrink-0 text-xs">
+                            {isCollapsed ? "▸" : "▾"}
+                          </button>
+                          <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: item.color }} />
+                          <span className="text-[11px] font-semibold flex-1 truncate" style={{ color: item.color }}>
+                            {item.title}
+                          </span>
+                          <span className="text-[9px] text-[#94A3B8] flex-shrink-0 tabular-nums">
+                            {item.count}
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    const isParent = row.type === "opportunity" || row.type === "parent";
+                    const hasChildren = isParent && (
+                      row.type === "opportunity" ? item.issues?.length > 0 : item.childIds?.length > 0
+                    );
+                    const isExpanded = expandedRows.has(item.id);
+                    const statusColor = STATUS_CONFIG[item.status]?.color || "#64748B";
+                    const hasDates = item.startDate && item.endDate;
+                    const isEditing = editingDateFor === item.id;
+
+                    const isCriticalPath = focusData && focusData.criticalIds.has(item.id);
+
+                    return (
+                      <div key={`row-${item.id}`} className="relative">
+                        <div
+                          className={`flex items-center gap-2 px-3 border-b border-[#E5E7EB] hover:bg-[#F8FAFC] cursor-pointer transition-colors bg-white ${
+                            selectedItem?.id === item.id ? "!bg-[#EFF6FF]" : ""
+                          } ${isCriticalPath ? "!bg-[#F59E0B08]" : ""}`}
+                          style={{ height: row.height + ROW_GAP, paddingLeft: isParent ? (row.laneId ? 24 : 8) : 28, opacity: leftFocusOpacity }}
+                          onClick={() => setSelectedItem(item)}
+                        >
+                          {isParent && hasChildren && (
+                            <button onClick={(e) => { e.stopPropagation(); toggleExpand(item.id); }}
+                              className="text-[#94A3B8] hover:text-[#64748B] w-4 flex-shrink-0 text-xs">
+                              {isExpanded ? "▾" : "▸"}
+                            </button>
+                          )}
+                          {isParent && !hasChildren && <span className="w-4 flex-shrink-0" />}
+
+                          {isCriticalPath ? (
+                            <span className="w-2 h-2 rounded-full flex-shrink-0 bg-amber-400" title="Critical path" />
+                          ) : (
+                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getBarColor(row) }} />
+                          )}
+
+                          {viewMode === "issues" && item.identifier && (
+                            <span className="text-[10px] text-[#94A3B8] font-mono flex-shrink-0">{item.identifier}</span>
+                          )}
+
+                          <span className={`truncate flex-1 ${isParent ? "text-xs text-[#334155] font-medium" : "text-[11px] text-[#64748B]"}`}>
+                            {item.title}
+                          </span>
+
+                          {/* Date badge / set dates button */}
+                          {viewMode === "issues" && !hasDates && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditingDateFor(item.id); }}
+                              className="px-1.5 py-0.5 text-[9px] bg-[#4a7dff20] text-[#4a7dff] rounded hover:bg-[#4a7dff30] transition-colors flex-shrink-0"
+                              title="Set dates for this issue">
+                              + dates
+                            </button>
+                          )}
+
+                          {viewMode === "issues" && hasDates && item.hasPulseboardDates && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditingDateFor(item.id); }}
+                              className="w-2 h-2 rounded-full bg-[#4a7dff] flex-shrink-0 hover:ring-2 hover:ring-[#4a7dff40]"
+                              title="Edit Pulseboard dates" />
+                          )}
+
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: statusColor }} />
+                        </div>
+
+                        {/* Inline date editor */}
+                        {isEditing && (
+                          <InlineDateEditor
+                            item={item}
+                            onSave={saveDateOverride}
+                            onCancel={() => setEditingDateFor(null)}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Chart SVG */}
+              <svg width={totalWidth} height={currentRows.totalHeight} className="select-none" style={{ display: 'block', flexShrink: 0 }}>
+                {/* Month column grid lines */}
+                {monthColumns.map((col, i) => (
+                  i > 0 ? (
+                    <line key={`grid-${i}`} x1={col.x} y1={0} x2={col.x} y2={currentRows.totalHeight}
+                      stroke="#E5E7EB" strokeWidth={1} strokeDasharray="3 6" opacity={0.5} />
+                  ) : null
+                ))}
+
+                {/* Row backgrounds */}
+                {currentRows.rows.map((row, i) => {
+                  const isCritRow = focusData && row.type !== "swimlane-header" && row.type !== "milestone" && focusData.criticalIds.has(row.item.id);
+                  return (
+                    <g key={`bg-${i}`}>
+                      {row.type === "swimlane-header" ? (
+                        <>
+                          <rect x={0} y={row.y} width={totalWidth} height={row.height}
+                            fill={row.item.color} opacity={0.04} />
+                          <rect x={0} y={row.y} width={3} height={row.height}
+                            fill={row.item.color} opacity={0.5} />
+                          <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height}
+                            stroke={row.item.color} strokeWidth={0.5} opacity={0.2} />
+                        </>
+                      ) : (
+                        <>
+                          <rect x={0} y={row.y} width={totalWidth} height={row.height}
+                            fill={isCritRow ? "#FFFBEB" : selectedItem?.id === row.item.id ? "#EFF6FF" : row.type === "milestone" ? "#FEF9EE" : (row.type === "issue" || row.type === "child") ? "#FAFBFC" : "#F4F5F7"} />
+                          {isCritRow && <rect x={0} y={row.y} width={3} height={row.height} fill="#F59E0B" opacity={0.4} />}
+                          <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height} stroke={row.type === "milestone" ? "#FDE68A" : "#E5E7EB"} strokeWidth={0.5} />
+                        </>
+                      )}
+                    </g>
+                  );
+                })}
+
+                {/* Today line */}
+                <rect x={todayOffset - 1} y={0} width={2} height={currentRows.totalHeight} fill="#4a7dff" opacity={0.3} />
+                <line x1={todayOffset} y1={0} x2={todayOffset} y2={currentRows.totalHeight} stroke="#4a7dff" strokeWidth={2} opacity={0.5} />
+
+                {dependencyArrows.map((a, i) => <DependencyArrow key={`dep-${i}`} {...a} hasFocus={!!focusData} />)}
+
+                {/* Buffer zone — only in focus mode */}
+                {focusData && focusData.lastEnd && focusData.msDate && (() => {
+                  const bufferStartX = daysBetween(timelineStart, focusData.lastEnd) * dayWidth;
+                  const bufferEndX = daysBetween(timelineStart, focusData.msDate) * dayWidth;
+                  const bufferWidth = bufferEndX - bufferStartX;
+                  if (bufferWidth <= 0) return null;
+                  const bufferColor = focusData.bufferDays > 7 ? '#22C55E' : focusData.bufferDays > 0 ? '#F59E0B' : '#EF4444';
+                  return (
+                    <g key="buffer-zone">
+                      <rect x={bufferStartX} y={0} width={bufferWidth} height={currentRows.totalHeight}
+                        fill={bufferColor} opacity={0.06} />
+                      <line x1={bufferStartX} y1={0} x2={bufferStartX} y2={currentRows.totalHeight}
+                        stroke={bufferColor} strokeWidth={1} strokeDasharray="4 4" opacity={0.3} />
+                      <rect x={bufferStartX + 4} y={4} width={Math.min(bufferWidth - 8, 80)} height={16} rx={4}
+                        fill={bufferColor} opacity={0.15} />
+                      <text x={bufferStartX + 8} y={15} fill={bufferColor} fontSize={9} fontWeight={500} opacity={0.7}>
+                        {focusData.bufferDays}d buffer
+                      </text>
+                    </g>
+                  );
+                })()}
+
+                {/* Milestone diamonds */}
+                {currentRows.rows.filter(r => r.type === "milestone").map((row) => {
+                  const item = row.item;
+                  if (!item.startDate) return null;
+                  const msDate = parseDate(item.startDate);
+                  if (!msDate) return null;
+                  const xPos = daysBetween(timelineStart, msDate) * dayWidth;
+                  const cy = row.y + row.height / 2;
+                  const size = 10;
+                  const isSelected = selectedItem?.id === item.id;
+                  const isFocused = focusMilestoneId === item.id;
+                  const msOpacity = 1;
+                  return (
+                    <g key={`ms-${item.id}`} style={{ cursor: "pointer", opacity: msOpacity }}
+                      onClick={() => {
+                        setSelectedItem(item);
+                        if (onFocusMilestone) onFocusMilestone(item.id);
+                      }}>
+                      {/* Glow when focused */}
+                      {isFocused && (
+                        <>
+                          <circle cx={xPos} cy={cy} r={20} fill="#eab308" opacity={0.08}>
+                            <animate attributeName="r" values="18;24;18" dur="2s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.08;0.15;0.08" dur="2s" repeatCount="indefinite" />
+                          </circle>
+                          <line x1={xPos} y1={0} x2={xPos} y2={currentRows.totalHeight}
+                            stroke="#eab308" strokeWidth={1} strokeDasharray="4 4" opacity={0.15} />
+                        </>
+                      )}
+                      {/* Dashed vertical line */}
+                      <line x1={xPos} y1={row.y + 2} x2={xPos} y2={row.y + row.height - 2}
+                        stroke="#eab308" strokeWidth={1} strokeDasharray="2 3" opacity={0.3} />
+                      {/* Diamond */}
+                      <polygon
+                        points={`${xPos},${cy - size} ${xPos + size},${cy} ${xPos},${cy + size} ${xPos - size},${cy}`}
+                        fill={isFocused ? "#F59E0B" : "#eab308"} opacity={isFocused ? 1 : isSelected ? 0.9 : 0.7}
+                        stroke={isFocused ? "#fff" : isSelected ? "#fff" : "#eab308"}
+                        strokeWidth={isFocused ? 2 : isSelected ? 1.5 : 0.5} />
+                      {/* Label */}
+                      <text x={xPos + size + 6} y={cy + 1} fill={isFocused ? "#F59E0B" : "#eab308"} fontSize={isFocused ? 11 : 10} fontWeight={isFocused ? 600 : 500}
+                        dominantBaseline="middle" opacity={isFocused ? 1 : 0.8} style={{ pointerEvents: "none" }}>
+                        {item.title}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {/* Opportunity & issue bars */}
+                {currentRows.rows.filter(r => r.type !== "milestone" && r.type !== "swimlane-header").map((row) => {
+                  const item = row.item;
+                  if (!item.startDate || !item.endDate) return null;
+                  const isParent = row.type === "opportunity" || row.type === "parent";
+                  // Focus mode: critical path in amber, everything else normal
+                  let barColor = getBarColor(row);
+                  let focusOpacity = 1;
+                  if (focusData && focusData.criticalIds.has(item.id)) {
+                    barColor = '#F59E0B'; // amber for critical path
+                  }
+                  return (
+                    <GanttBar key={`bar-${item.id}`} item={item} timelineStart={timelineStart} dayWidth={dayWidth}
+                      rowY={row.y + (row.height - (isParent ? BAR_HEIGHT : SUB_BAR_HEIGHT)) / 2}
+                      barHeight={isParent ? BAR_HEIGHT : SUB_BAR_HEIGHT}
+                      isSubtask={!isParent} barColor={barColor} focusOpacity={focusOpacity}
+                      onDragEnd={handleBarDragEnd} onSelect={setSelectedItem} isSelected={selectedItem?.id === item.id} />
+                  );
+                })}
+              </svg>
+            </div>
+          </div>
         </div>
 
-        {/* Detail panel */}
+        {/* Detail panel — outside scroll container */}
         {selectedItem && (
-          <div className="flex-shrink-0 border-l border-[#1a1f2e] overflow-y-auto bg-[#0d1018]" style={{ width: 300 }}>
+          <div className="flex-shrink-0 border-l border-[#EAECF0] overflow-y-auto bg-[#FAFBFC]" style={{ width: 300 }}>
             <div className="p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-white truncate flex-1">{selectedItem.title}</h3>
-                <button onClick={() => setSelectedItem(null)} className="text-[#4a5568] hover:text-white text-xs ml-2">✕</button>
+                <h3 className="text-sm font-semibold text-slate-900 truncate flex-1">{selectedItem.title}</h3>
+                <button onClick={() => setSelectedItem(null)} className="text-[#94A3B8] hover:text-slate-900 text-xs ml-2">✕</button>
               </div>
 
               {/* === MILESTONE DETAILS === */}
@@ -1021,7 +1041,7 @@ export default function GanttView({
 
                     {areaInfo && (
                       <div className="mb-3">
-                        <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1">Area</label>
+                        <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1">Area</label>
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px]"
                           style={{ backgroundColor: `${areaInfo.color}20`, color: areaInfo.color }}>
                           <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: areaInfo.color }} />
@@ -1032,26 +1052,26 @@ export default function GanttView({
 
                     {monthName && (
                       <div className="mb-3">
-                        <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1">Target Month</label>
-                        <span className="text-xs text-[#8896ab]">{monthName}</span>
+                        <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1">Target Month</label>
+                        <span className="text-xs text-[#64748B]">{monthName}</span>
                       </div>
                     )}
 
                     {selectedItem.description && (
                       <div className="mb-3">
-                        <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Description</label>
-                        <p className="text-[11px] text-[#8896ab] leading-relaxed">{selectedItem.description}</p>
+                        <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1.5">Description</label>
+                        <p className="text-[11px] text-[#64748B] leading-relaxed">{selectedItem.description}</p>
                       </div>
                     )}
 
                     {linkedOpps.length > 0 && (
                       <div className="mb-3">
-                        <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Linked Opportunities ({linkedOpps.length})</label>
+                        <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1.5">Linked Opportunities ({linkedOpps.length})</label>
                         <div className="space-y-1">
                           {linkedOpps.map(opp => (
-                            <div key={opp.id} className="flex items-center gap-2 px-2 py-1 bg-[#111520] rounded text-[11px]">
+                            <div key={opp.id} className="flex items-center gap-2 px-2 py-1 bg-[#F8FAFC] rounded text-[11px]">
                               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: STATUS_CONFIG[opp.status]?.color }} />
-                              <span className="text-[#c8d4e6] truncate">{opp.title}</span>
+                              <span className="text-[#334155] truncate">{opp.title}</span>
                             </div>
                           ))}
                         </div>
@@ -1076,7 +1096,7 @@ export default function GanttView({
                       const area = areas.find(a => a.id === selectedItem.area);
                       return area ? (
                         <div>
-                          <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1">Area</label>
+                          <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1">Area</label>
                           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px]"
                             style={{ backgroundColor: `${area.color}20`, color: area.color }}>
                             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: area.color }} />
@@ -1089,7 +1109,7 @@ export default function GanttView({
                       const init = initiatives.find(i => i.id === selectedItem.initiative);
                       return init ? (
                         <div>
-                          <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1">Initiative</label>
+                          <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1">Initiative</label>
                           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px]"
                             style={{ backgroundColor: `${init.color}20`, color: init.color }}>
                             {init.name}
@@ -1102,16 +1122,16 @@ export default function GanttView({
                   {/* Month */}
                   {selectedItem.month && (
                     <div className="mb-4">
-                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1">Month</label>
-                      <span className="text-xs text-[#8896ab]">{months.find(m => m.id === selectedItem.month)?.name || selectedItem.month}</span>
+                      <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1">Month</label>
+                      <span className="text-xs text-[#64748B]">{months.find(m => m.id === selectedItem.month)?.name || selectedItem.month}</span>
                     </div>
                   )}
 
                   {/* Description */}
                   {selectedItem.description && (
                     <div className="mb-4">
-                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Description</label>
-                      <p className="text-[11px] text-[#8896ab] leading-relaxed">{selectedItem.description}</p>
+                      <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1.5">Description</label>
+                      <p className="text-[11px] text-[#64748B] leading-relaxed">{selectedItem.description}</p>
                     </div>
                   )}
                 </>
@@ -1122,46 +1142,46 @@ export default function GanttView({
                 <>
                   {/* Status */}
                   <div className="mb-4">
-                    <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Status</label>
+                    <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1.5">Status</label>
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_CONFIG[selectedItem.status]?.color }} />
-                      <span className="text-xs text-[#8896ab]">{selectedItem.stateName || STATUS_CONFIG[selectedItem.status]?.label}</span>
+                      <span className="text-xs text-[#64748B]">{selectedItem.stateName || STATUS_CONFIG[selectedItem.status]?.label}</span>
                     </div>
                   </div>
 
                   {/* Dates — editable */}
                   <div className="mb-4">
-                    <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">
+                    <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1.5">
                       Dates
                       {selectedItem.hasPulseboardDates && <span className="text-[#4a7dff] ml-1">(Pulseboard)</span>}
                     </label>
                     {selectedItem.startDate && selectedItem.endDate ? (
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <span className="text-[9px] text-[#4a5568] block">Start</span>
+                          <span className="text-[9px] text-[#94A3B8] block">Start</span>
                           <input type="date" value={selectedItem.startDate}
                             onChange={(e) => saveDateOverride(selectedItem, e.target.value, selectedItem.endDate)}
-                            className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+                            className="w-full bg-white border border-[#E2E8F0] rounded px-2 py-1 text-[11px] text-[#334155] focus:border-[#4F46E5] focus:outline-none" />
                         </div>
                         <div>
-                          <span className="text-[9px] text-[#4a5568] block">End</span>
+                          <span className="text-[9px] text-[#94A3B8] block">End</span>
                           <input type="date" value={selectedItem.endDate}
                             onChange={(e) => saveDateOverride(selectedItem, selectedItem.startDate, e.target.value)}
-                            className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+                            className="w-full bg-white border border-[#E2E8F0] rounded px-2 py-1 text-[11px] text-[#334155] focus:border-[#4F46E5] focus:outline-none" />
                         </div>
                       </div>
                     ) : editingDateFor === selectedItem.id ? (
                       <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <span className="text-[9px] text-[#4a5568] block">Start</span>
+                            <span className="text-[9px] text-[#94A3B8] block">Start</span>
                             <input type="date" id="panel-start-date" defaultValue={formatDate(TODAY)}
-                              className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+                              className="w-full bg-white border border-[#E2E8F0] rounded px-2 py-1 text-[11px] text-[#334155] focus:border-[#4F46E5] focus:outline-none" />
                           </div>
                           <div>
-                            <span className="text-[9px] text-[#4a5568] block">End</span>
+                            <span className="text-[9px] text-[#94A3B8] block">End</span>
                             <input type="date" id="panel-end-date" defaultValue={formatDate(addDays(TODAY, 14))}
-                              className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+                              className="w-full bg-white border border-[#E2E8F0] rounded px-2 py-1 text-[11px] text-[#334155] focus:border-[#4F46E5] focus:outline-none" />
                           </div>
                         </div>
                         <div className="flex gap-2">
@@ -1174,7 +1194,7 @@ export default function GanttView({
                             Save
                           </button>
                           <button onClick={() => setEditingDateFor(null)}
-                            className="px-3 py-1.5 bg-[#1e2433] hover:bg-[#252d3f] text-[#8896ab] text-[11px] rounded transition-colors">
+                            className="px-3 py-1.5 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#64748B] text-[11px] rounded transition-colors">
                             Cancel
                           </button>
                         </div>
@@ -1189,9 +1209,9 @@ export default function GanttView({
 
                   {/* Duration */}
                   {selectedItem.startDate && selectedItem.endDate && (
-                    <div className="mb-4 px-3 py-2 bg-[#111520] rounded-md">
-                      <span className="text-[10px] text-[#4a5568] uppercase tracking-widest">Duration</span>
-                      <span className="text-sm text-white ml-2 font-medium">
+                    <div className="mb-4 px-3 py-2 bg-[#F8FAFC] rounded-md">
+                      <span className="text-[10px] text-[#94A3B8] uppercase tracking-widest">Duration</span>
+                      <span className="text-sm text-slate-900 ml-2 font-medium">
                         {daysBetween(parseDate(selectedItem.startDate), parseDate(selectedItem.endDate))} days
                       </span>
                     </div>
@@ -1209,7 +1229,7 @@ export default function GanttView({
                         <span>⚠</span> At Risk
                       </div>
                       {selectedItem.atRiskReason && (
-                        <p className="text-[10px] text-[#8896ab]">{selectedItem.atRiskReason}</p>
+                        <p className="text-[10px] text-[#64748B]">{selectedItem.atRiskReason}</p>
                       )}
                     </div>
                   )}
@@ -1217,11 +1237,11 @@ export default function GanttView({
                   {/* Linked Issues */}
                   {selectedItem.issues?.length > 0 && (
                     <div className="mb-4">
-                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Linear Issues ({selectedItem.issues.length})</label>
+                      <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1.5">Linear Issues ({selectedItem.issues.length})</label>
                       <div className="flex flex-wrap gap-1">
                         {selectedItem.issues.map(issue => (
                           <a key={issue} href={`https://linear.app/palazzo-ai/issue/${issue}`} target="_blank" rel="noopener noreferrer"
-                            className="px-2 py-0.5 bg-[#1a1f2e] text-[#4a7dff] hover:text-[#6b9bff] hover:bg-[#1e2538] text-[10px] rounded font-mono transition-colors">
+                            className="px-2 py-0.5 bg-[#F1F5F9] text-[#4F46E5] hover:text-[#818CF8] hover:bg-[#E2E8F0] text-[10px] rounded font-mono transition-colors">
                             {issue}
                           </a>
                         ))}
@@ -1232,13 +1252,13 @@ export default function GanttView({
                   {/* Impact & Effort */}
                   {(selectedItem.impactScore != null || selectedItem.effortScore != null) && (
                     <div className="grid grid-cols-2 gap-2 mb-4">
-                      <div className="px-2 py-1.5 bg-[#111520] rounded">
-                        <span className="text-[9px] text-[#4a5568] uppercase tracking-widest block">Impact</span>
-                        <span className="text-sm text-white font-medium">{selectedItem.impactScore ?? '—'}</span>
+                      <div className="px-2 py-1.5 bg-[#F8FAFC] rounded">
+                        <span className="text-[9px] text-[#94A3B8] uppercase tracking-widest block">Impact</span>
+                        <span className="text-sm text-slate-900 font-medium">{selectedItem.impactScore ?? '—'}</span>
                       </div>
-                      <div className="px-2 py-1.5 bg-[#111520] rounded">
-                        <span className="text-[9px] text-[#4a5568] uppercase tracking-widest block">Effort</span>
-                        <span className="text-sm text-white font-medium">{selectedItem.effortScore ?? '—'}</span>
+                      <div className="px-2 py-1.5 bg-[#F8FAFC] rounded">
+                        <span className="text-[9px] text-[#94A3B8] uppercase tracking-widest block">Effort</span>
+                        <span className="text-sm text-slate-900 font-medium">{selectedItem.effortScore ?? '—'}</span>
                       </div>
                     </div>
                   )}
@@ -1246,13 +1266,13 @@ export default function GanttView({
                   {/* Dependencies */}
                   {(selectedItem.blocks?.length > 0 || selectedItem.blockedBy?.length > 0) && (
                     <div className="mb-4">
-                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Dependencies</label>
+                      <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1.5">Dependencies</label>
                       {selectedItem.blockedBy?.length > 0 && (
                         <div className="mb-1">
                           <span className="text-[9px] text-red-400">Blocked by: </span>
                           {selectedItem.blockedBy.map(id => {
                             const dep = opportunities.find(o => o.id === id);
-                            return <span key={id} className="text-[10px] text-[#8896ab]">{dep?.title || `#${id}`}{' '}</span>;
+                            return <span key={id} className="text-[10px] text-[#64748B]">{dep?.title || `#${id}`}{' '}</span>;
                           })}
                         </div>
                       )}
@@ -1261,7 +1281,7 @@ export default function GanttView({
                           <span className="text-[9px] text-emerald-400">Blocks: </span>
                           {selectedItem.blocks.map(id => {
                             const dep = opportunities.find(o => o.id === id);
-                            return <span key={id} className="text-[10px] text-[#8896ab]">{dep?.title || `#${id}`}{' '}</span>;
+                            return <span key={id} className="text-[10px] text-[#64748B]">{dep?.title || `#${id}`}{' '}</span>;
                           })}
                         </div>
                       )}
@@ -1273,7 +1293,7 @@ export default function GanttView({
                     const ms = milestones.find(m => m.id === selectedItem.milestoneId);
                     return ms ? (
                       <div className="mb-4">
-                        <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1">Milestone</label>
+                        <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1">Milestone</label>
                         <span className="text-xs text-yellow-400">{ms.title}</span>
                       </div>
                     ) : null;
@@ -1287,26 +1307,26 @@ export default function GanttView({
                   {/* Assignee */}
                   {selectedItem.assignee && (
                     <div className="mb-4">
-                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Assignee</label>
-                      <span className="text-xs text-[#8896ab]">{selectedItem.assignee.name}</span>
+                      <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1.5">Assignee</label>
+                      <span className="text-xs text-[#64748B]">{selectedItem.assignee.name}</span>
                     </div>
                   )}
 
                   {/* Project */}
                   {selectedItem.project && (
                     <div className="mb-4">
-                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Project</label>
-                      <span className="text-xs text-[#8896ab]">{selectedItem.project.name}</span>
+                      <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1.5">Project</label>
+                      <span className="text-xs text-[#64748B]">{selectedItem.project.name}</span>
                     </div>
                   )}
 
                   {/* Labels */}
                   {selectedItem.labels?.length > 0 && (
                     <div className="mb-4">
-                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Labels</label>
+                      <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1.5">Labels</label>
                       <div className="flex flex-wrap gap-1">
                         {selectedItem.labels.map((l, i) => (
-                          <span key={i} className="px-2 py-0.5 rounded text-[10px] bg-[#1a1f2e] text-[#8896ab]">{l.name}</span>
+                          <span key={i} className="px-2 py-0.5 rounded text-[10px] bg-[#F1F5F9] text-[#64748B]">{l.name}</span>
                         ))}
                       </div>
                     </div>
@@ -1315,10 +1335,10 @@ export default function GanttView({
                   {/* Sub-issues */}
                   {selectedItem.childIds?.length > 0 && (
                     <div className="mb-4">
-                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Sub-issues ({selectedItem.childIds.length})</label>
+                      <label className="text-[10px] text-[#94A3B8] uppercase tracking-widest block mb-1.5">Sub-issues ({selectedItem.childIds.length})</label>
                       <div className="space-y-1">
                         {selectedItem.childIdentifiers?.map((id, i) => (
-                          <div key={i} className="text-[11px] text-[#6b7a94] font-mono">{id}</div>
+                          <div key={i} className="text-[11px] text-[#94A3B8] font-mono">{id}</div>
                         ))}
                       </div>
                     </div>

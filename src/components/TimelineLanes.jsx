@@ -94,7 +94,7 @@ const TimelineLanes = ({
         onDragStart={(e) => handleDragStart(e, opp)}
         onDragEnd={handleDragEnd}
         onClick={() => onOpportunityClick?.(opp)}
-        className={`p-1.5 rounded text-[10px] cursor-grab active:cursor-grabbing transition-all hover:translate-x-0.5 ${
+        className={`p-1.5 rounded text-[10px] cursor-grab active:cursor-grabbing transition-all hover:translate-x-0.5 shadow-sm hover:shadow ${
           opp.atRisk ? 'ring-1 ring-orange-500' : ''
         } ${isDragging ? 'opacity-50' : ''}`}
         style={{ 
@@ -104,10 +104,10 @@ const TimelineLanes = ({
       >
         <div className="flex items-center gap-1">
           {opp.atRisk && <span className="text-orange-500">⚠</span>}
-          <span className="font-medium text-slate-200 truncate">{opp.title}</span>
+          <span className="font-medium text-slate-700 truncate">{opp.title}</span>
         </div>
         <div className="flex items-center gap-1 mt-0.5">
-          <span 
+          <span
             className="px-1 py-0.5 rounded text-[8px] font-medium"
             style={{ backgroundColor: statusInfo.bgColor, color: statusInfo.color }}
           >
@@ -119,10 +119,10 @@ const TimelineLanes = ({
   };
 
   return (
-    <div className="border border-slate-800 rounded-lg bg-slate-900 overflow-hidden">
+    <div className="border border-slate-200 rounded-lg bg-white overflow-hidden shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-800">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+      <div className="flex items-center justify-between p-4 border-b border-slate-200">
+        <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
           👤 Team Timeline
           <span className="text-xs text-slate-500 font-normal ml-2">
             Drag opportunities to assign team members
@@ -135,11 +135,11 @@ const TimelineLanes = ({
               end: Math.max(3, timelineRange.end - 3) 
             })}
             disabled={timelineRange.start === 0}
-            className="px-2 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed rounded text-xs text-white"
+            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded text-xs text-slate-700 border border-slate-200"
           >
             ← Earlier
           </button>
-          <span className="text-sm text-slate-400 min-w-[140px] text-center">
+          <span className="text-sm text-slate-500 min-w-[140px] text-center">
             {months[timelineRange.start]?.name} - {months[timelineRange.end]?.name}
           </span>
           <button 
@@ -148,7 +148,7 @@ const TimelineLanes = ({
               end: Math.min(months.length - 1, timelineRange.end + 3) 
             })}
             disabled={timelineRange.end >= months.length - 1}
-            className="px-2 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed rounded text-xs text-white"
+            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded text-xs text-slate-700 border border-slate-200"
           >
             Later →
           </button>
@@ -159,15 +159,15 @@ const TimelineLanes = ({
       <div className="overflow-x-auto">
         <div className="min-w-[900px]">
           {/* Month Headers */}
-          <div className="flex border-b border-slate-700 bg-slate-800/50">
-            <div className="w-48 flex-shrink-0 p-2 text-xs font-medium text-slate-400 border-r border-slate-700">
+          <div className="flex border-b border-slate-200 bg-[#ECEEF1]">
+            <div className="w-48 flex-shrink-0 p-2 text-xs font-medium text-slate-500 border-r border-slate-200">
               Team Member
             </div>
             {visibleMonths.map(month => (
               <div 
                 key={month.id} 
-                className={`flex-1 p-2 text-xs font-medium text-center border-r border-slate-700/50 last:border-r-0 ${
-                  month.current ? 'bg-emerald-950/30 text-emerald-400' : 'text-slate-400'
+                className={`flex-1 p-2 text-xs font-medium text-center border-r border-slate-200 last:border-r-0 ${
+                  month.current ? 'bg-[#EFF8F4] text-emerald-700' : 'text-slate-500'
                 }`}
               >
                 {month.name}
@@ -183,18 +183,18 @@ const TimelineLanes = ({
             return (
               <div 
                 key={member.id} 
-                className={`flex min-h-[80px] border-b border-slate-700/50 transition-colors ${
-                  isDropping ? 'bg-indigo-900/20' : 'hover:bg-slate-800/30'
+                className={`flex min-h-[80px] border-b border-slate-200 transition-colors ${
+                  isDropping ? 'bg-indigo-50' : 'hover:bg-slate-50'
                 }`}
                 onDragOver={(e) => handleDragOver(e, member.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, member.id)}
               >
                 {/* Member Info */}
-                <div className="w-48 flex-shrink-0 p-3 bg-slate-800/30 border-r border-slate-700 flex items-center gap-2">
+                <div className="w-48 flex-shrink-0 p-3 bg-[#ECEEF1] border-r border-slate-200 flex items-center gap-2">
                   <TeamMemberBadge member={member} size="sm" />
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-white truncate">{member.name}</div>
+                    <div className="text-sm font-medium text-slate-900 truncate">{member.name}</div>
                     <div className="text-[10px] text-slate-500">{member.role}</div>
                   </div>
                 </div>
@@ -203,7 +203,7 @@ const TimelineLanes = ({
                 <div className="flex-1 flex relative">
                   {isDropping && (
                     <div className="absolute inset-0 border-2 border-dashed border-indigo-500 rounded pointer-events-none z-10 flex items-center justify-center">
-                      <span className="bg-indigo-600 text-white text-xs px-2 py-1 rounded">
+                      <span className="bg-indigo-500 text-white text-xs px-2 py-1 rounded shadow-sm">
                         Drop to assign {member.name}
                       </span>
                     </div>
@@ -213,8 +213,8 @@ const TimelineLanes = ({
                     return (
                       <div 
                         key={month.id}
-                        className={`flex-1 p-1.5 border-r border-slate-700/50 last:border-r-0 ${
-                          month.current ? 'bg-emerald-950/10' : ''
+                        className={`flex-1 p-1.5 border-r border-slate-200 last:border-r-0 ${
+                          month.current ? 'bg-[#EFF8F4]' : ''
                         }`}
                       >
                         <div className="space-y-1">
@@ -235,15 +235,15 @@ const TimelineLanes = ({
           })}
 
           {/* Unassigned Lane */}
-          <div className="flex min-h-[100px] bg-amber-950/10">
-            <div className="w-48 flex-shrink-0 p-3 bg-amber-900/20 border-r border-slate-700 flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-amber-600/30 flex items-center justify-center">
-                <svg className="w-3 h-3 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex min-h-[100px] bg-[#FFFBEB]">
+            <div className="w-48 flex-shrink-0 p-3 bg-[#FFFBEB] border-r border-slate-200 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
+                <svg className="w-3 h-3 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-medium text-amber-400">Unassigned</div>
+                <div className="text-sm font-medium text-amber-700">Unassigned</div>
                 <div className="text-[10px] text-slate-500">Drag to team above</div>
               </div>
             </div>
@@ -254,8 +254,8 @@ const TimelineLanes = ({
                 return (
                   <div 
                     key={month.id}
-                    className={`flex-1 p-1.5 border-r border-slate-700/50 last:border-r-0 ${
-                      month.current ? 'bg-emerald-950/10' : ''
+                    className={`flex-1 p-1.5 border-r border-slate-200 last:border-r-0 ${
+                      month.current ? 'bg-[#EFF8F4]' : ''
                     }`}
                   >
                     <div className="space-y-1">
@@ -266,13 +266,13 @@ const TimelineLanes = ({
                           onDragStart={(e) => handleDragStart(e, opp)}
                           onDragEnd={handleDragEnd}
                           onClick={() => onOpportunityClick?.(opp)}
-                          className={`p-1.5 rounded text-[10px] cursor-grab active:cursor-grabbing border border-dashed border-amber-600/50 bg-amber-900/20 transition-all hover:border-amber-500 ${
+                          className={`p-1.5 rounded text-[10px] cursor-grab active:cursor-grabbing border border-dashed border-[#FDE68A] bg-[#FFFBEB] transition-all hover:border-amber-400 shadow-sm ${
                             draggedOpp?.id === opp.id ? 'opacity-50' : ''
                           }`}
                         >
                           <div className="flex items-center gap-1">
                             <span className="text-amber-500">⚠</span>
-                            <span className="font-medium text-slate-200 truncate">{opp.title}</span>
+                            <span className="font-medium text-slate-700 truncate">{opp.title}</span>
                           </div>
                           <div className="flex items-center gap-1 mt-0.5">
                             <span 

@@ -54,13 +54,13 @@ export default function MultiSelectFilter({
         onClick={() => setIsOpen(!isOpen)}
         className={`
           flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-          ${selectedCount > 0 
-            ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/50' 
-            : 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700'
+          ${selectedCount > 0
+            ? 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+            : 'bg-white text-slate-700 border border-slate-200 shadow-sm hover:bg-slate-50'
           }
         `}
       >
-        <span className="text-slate-500">{label}:</span>
+        <span className="text-slate-400">{label}:</span>
         <span>{displayText}</span>
         <svg 
           className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
@@ -74,19 +74,19 @@ export default function MultiSelectFilter({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 z-50 min-w-[200px] bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden">
+        <div className="absolute top-full left-0 mt-1 z-50 min-w-[200px] bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
           {/* All option */}
           <button
             onClick={selectAll}
             className={`
               w-full flex items-center gap-2 px-3 py-2 text-left text-xs transition-colors
-              ${selectedCount === 0 
-                ? 'bg-indigo-600/20 text-indigo-300' 
-                : 'text-slate-300 hover:bg-slate-700'
+              ${selectedCount === 0
+                ? 'bg-indigo-50 text-indigo-600'
+                : 'text-slate-700 hover:bg-slate-50'
               }
             `}
           >
-            <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedCount === 0 ? 'bg-indigo-600 border-indigo-600' : 'border-slate-600'}`}>
+            <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedCount === 0 ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}>
               {selectedCount === 0 && (
                 <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -96,7 +96,7 @@ export default function MultiSelectFilter({
             <span className="flex-1">{allLabel}</span>
           </button>
 
-          <div className="border-t border-slate-700" />
+          <div className="border-t border-slate-200" />
 
           {/* Options */}
           <div className="max-h-[300px] overflow-y-auto">
@@ -108,11 +108,11 @@ export default function MultiSelectFilter({
                   onClick={() => toggleOption(option.id)}
                   className={`
                     w-full flex items-center gap-2 px-3 py-2 text-left text-xs transition-colors group
-                    ${isSelected ? 'bg-indigo-600/10' : 'hover:bg-slate-700'}
+                    ${isSelected ? 'bg-slate-50' : 'hover:bg-slate-50'}
                   `}
                 >
                   {/* Checkbox */}
-                  <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-600'}`}>
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}>
                     {isSelected && (
                       <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -129,14 +129,14 @@ export default function MultiSelectFilter({
                   )}
 
                   {/* Label */}
-                  <span className={`flex-1 ${isSelected ? 'text-indigo-300' : 'text-slate-300'}`}>
+                  <span className={`flex-1 ${isSelected ? 'text-indigo-600' : 'text-slate-700'}`}>
                     {option.name}
                   </span>
 
                   {/* Only button */}
                   <span 
                     onClick={(e) => selectOnly(option.id, e)}
-                    className="text-[10px] text-slate-500 hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="text-[10px] text-slate-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     only
                   </span>
@@ -148,10 +148,10 @@ export default function MultiSelectFilter({
           {/* Clear button */}
           {selectedCount > 0 && (
             <>
-              <div className="border-t border-slate-700" />
+              <div className="border-t border-slate-200" />
               <button
                 onClick={selectAll}
-                className="w-full px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                className="w-full px-3 py-2 text-xs text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 Clear filters
               </button>

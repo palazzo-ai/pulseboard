@@ -4,31 +4,31 @@
 
 // ========== STATUSES ==========
 export const STATUSES = {
-  not_started: { label: 'Not Started', color: '#6b7280', bgColor: '#6b728020' },
-  in_progress: { label: 'In Progress', color: '#3b82f6', bgColor: '#3b82f620' },
-  done: { label: 'Done', color: '#22c55e', bgColor: '#22c55e20' },
-  blocked: { label: 'Blocked', color: '#ef4444', bgColor: '#ef444420' }
+  not_started: { label: 'Not Started', color: '#9CA3AF', dotColor: '#D1D5DB', bgColor: '#F3F4F6' },
+  in_progress: { label: 'In Progress', color: '#2563EB', dotColor: '#3B82F6', bgColor: '#EFF6FF' },
+  done: { label: 'Done', color: '#16A34A', dotColor: '#22C55E', bgColor: '#F0FDF4' },
+  blocked: { label: 'Blocked', color: '#DC2626', dotColor: '#EF4444', bgColor: '#FEF2F2' }
 };
 
 // ========== AREAS ==========
 export const areas = [
-  { id: 'visualizer', name: 'Visualizer', color: '#3fb950' },
-  { id: 'vinci', name: 'Vinci', color: '#38bdf8' },
-  { id: 'spaces', name: 'Spaces', color: '#a371f7' },
-  { id: 'showcase', name: 'Showcase', color: '#f85149' },
-  { id: 'studio', name: 'Studio', color: '#f778ba' },
-  { id: 'platform', name: 'Platform', color: '#d29922' },
-  { id: 'admin', name: 'Admin', color: '#8b949e' }
+  { id: 'visualizer', name: 'Visualizer', color: '#7C3AED' },
+  { id: 'vinci', name: 'Vinci', color: '#059669' },
+  { id: 'spaces', name: 'Spaces', color: '#0891B2' },
+  { id: 'showcase', name: 'Showcase', color: '#D97706' },
+  { id: 'studio', name: 'Studio', color: '#DB2777' },
+  { id: 'platform', name: 'Platform', color: '#2563EB' },
+  { id: 'admin', name: 'Admin', color: '#6B7280' }
 ];
 
 // ========== INITIATIVES ==========
 export const initiatives = [
-  { id: 'launch', name: 'Launch Partner Commitments', color: '#f85149' },
-  { id: 'selfserve', name: 'Self-Serve Scale', color: '#58a6ff' },
-  { id: 'embed', name: 'Embed Everywhere', color: '#a371f7' },
-  { id: 'ai', name: 'AI Model Excellence', color: '#3fb950' },
-  { id: 'commerce', name: 'Commerce Enablement', color: '#d29922' },
-  { id: 'enterprise', name: 'Enterprise Content Scale', color: '#f778ba' }
+  { id: 'launch', name: 'Launch Partner Commitments', color: '#D97706' },
+  { id: 'selfserve', name: 'Self-Serve Scale', color: '#7C3AED' },
+  { id: 'embed', name: 'Embed Everywhere', color: '#2563EB' },
+  { id: 'ai', name: 'AI Model Excellence', color: '#DB2777' },
+  { id: 'commerce', name: 'Commerce Enablement', color: '#059669' },
+  { id: 'enterprise', name: 'Enterprise Content Scale', color: '#0891B2' }
 ];
 
 // ========== DYNAMIC MONTHS ==========

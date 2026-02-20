@@ -9,19 +9,19 @@ function DateUpdatesCard({ toolCall, onApply, applied }) {
   const activeUpdates = updates.filter((_, i) => !dismissed.has(i));
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
-      <div className="px-3 py-2 border-b border-slate-700/50 flex items-center gap-2">
-        <span className="text-indigo-400 text-sm">&#128197;</span>
-        <span className="text-xs font-semibold text-white">Date Updates ({activeUpdates.length})</span>
+    <div className="bg-white border border-slate-200 shadow-sm rounded-lg overflow-hidden">
+      <div className="px-3 py-2 border-b border-slate-200 flex items-center gap-2">
+        <span className="text-indigo-500 text-sm">&#128197;</span>
+        <span className="text-xs font-semibold text-slate-900">Date Updates ({activeUpdates.length})</span>
       </div>
       <div className="max-h-48 overflow-y-auto">
         {updates.map((u, i) => dismissed.has(i) ? null : (
-          <div key={i} className="px-3 py-1.5 border-b border-slate-800 flex items-center justify-between text-xs">
-            <span className="text-slate-300 truncate flex-1">{u.title}</span>
+          <div key={i} className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between text-xs">
+            <span className="text-slate-700 truncate flex-1">{u.title}</span>
             <span className="text-slate-500 ml-2 flex-shrink-0">{u.startDate} &rarr; {u.endDate}</span>
             {!applied && (
               <button onClick={() => setDismissed(prev => new Set(prev).add(i))}
-                className="ml-2 text-slate-600 hover:text-slate-400 flex-shrink-0">&times;</button>
+                className="ml-2 text-slate-400 hover:text-slate-600 flex-shrink-0">&times;</button>
             )}
           </div>
         ))}
@@ -33,13 +33,13 @@ function DateUpdatesCard({ toolCall, onApply, applied }) {
             Apply All
           </button>
           <button onClick={() => setDismissed(new Set(updates.map((_, i) => i)))}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors">
+            className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded transition-colors">
             Dismiss
           </button>
         </div>
       )}
       {applied && (
-        <div className="px-3 py-2 text-xs text-emerald-400 font-medium">Applied &#10003;</div>
+        <div className="px-3 py-2 text-xs text-emerald-600 font-medium">Applied &#10003;</div>
       )}
     </div>
   );
@@ -48,8 +48,8 @@ function DateUpdatesCard({ toolCall, onApply, applied }) {
 function StatusUpdatesCard({ toolCall, onApply, applied }) {
   const updates = toolCall.input.updates || [];
   const statusColors = {
-    not_started: 'text-slate-400', in_progress: 'text-blue-400',
-    done: 'text-emerald-400', blocked: 'text-red-400',
+    not_started: 'text-slate-500', in_progress: 'text-blue-600',
+    done: 'text-emerald-600', blocked: 'text-red-600',
   };
   const statusLabels = {
     not_started: 'Not Started', in_progress: 'In Progress',
@@ -57,21 +57,21 @@ function StatusUpdatesCard({ toolCall, onApply, applied }) {
   };
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
-      <div className="px-3 py-2 border-b border-slate-700/50 flex items-center gap-2">
-        <span className="text-amber-400 text-sm">&#9881;</span>
-        <span className="text-xs font-semibold text-white">Status Updates ({updates.length})</span>
+    <div className="bg-white border border-slate-200 shadow-sm rounded-lg overflow-hidden">
+      <div className="px-3 py-2 border-b border-slate-200 flex items-center gap-2">
+        <span className="text-amber-500 text-sm">&#9881;</span>
+        <span className="text-xs font-semibold text-slate-900">Status Updates ({updates.length})</span>
       </div>
       <div className="max-h-48 overflow-y-auto">
         {updates.map((u, i) => (
-          <div key={i} className="px-3 py-1.5 border-b border-slate-800 flex items-center justify-between text-xs">
-            <span className="text-slate-300 truncate flex-1">{u.title}</span>
+          <div key={i} className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between text-xs">
+            <span className="text-slate-700 truncate flex-1">{u.title}</span>
             {u.status && (
-              <span className={`ml-2 flex-shrink-0 ${statusColors[u.status] || 'text-slate-400'}`}>
+              <span className={`ml-2 flex-shrink-0 ${statusColors[u.status] || 'text-slate-500'}`}>
                 {statusLabels[u.status] || u.status}
               </span>
             )}
-            {u.atRisk && <span className="ml-1 text-amber-400 flex-shrink-0">&#9888;</span>}
+            {u.atRisk && <span className="ml-1 text-amber-500 flex-shrink-0">&#9888;</span>}
           </div>
         ))}
       </div>
@@ -83,7 +83,7 @@ function StatusUpdatesCard({ toolCall, onApply, applied }) {
           </button>
         </div>
       ) : (
-        <div className="px-3 py-2 text-xs text-emerald-400 font-medium">Applied &#10003;</div>
+        <div className="px-3 py-2 text-xs text-emerald-600 font-medium">Applied &#10003;</div>
       )}
     </div>
   );
@@ -92,14 +92,14 @@ function StatusUpdatesCard({ toolCall, onApply, applied }) {
 function CreateOpportunityCard({ toolCall, onApply, applied }) {
   const opp = toolCall.input;
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
-      <div className="px-3 py-2 border-b border-slate-700/50 flex items-center gap-2">
-        <span className="text-emerald-400 text-sm">+</span>
-        <span className="text-xs font-semibold text-white">Create Opportunity</span>
+    <div className="bg-white border border-slate-200 shadow-sm rounded-lg overflow-hidden">
+      <div className="px-3 py-2 border-b border-slate-200 flex items-center gap-2">
+        <span className="text-emerald-600 text-sm">+</span>
+        <span className="text-xs font-semibold text-slate-900">Create Opportunity</span>
       </div>
       <div className="px-3 py-2 space-y-1 text-xs">
-        <div className="text-white font-medium">{opp.title}</div>
-        <div className="text-slate-400">
+        <div className="text-slate-900 font-medium">{opp.title}</div>
+        <div className="text-slate-500">
           {opp.area} &middot; {opp.initiative} &middot; {opp.month}
         </div>
         {opp.description && <div className="text-slate-500">{opp.description}</div>}
@@ -112,7 +112,7 @@ function CreateOpportunityCard({ toolCall, onApply, applied }) {
           </button>
         </div>
       ) : (
-        <div className="px-3 py-2 text-xs text-emerald-400 font-medium">Created &#10003;</div>
+        <div className="px-3 py-2 text-xs text-emerald-600 font-medium">Created &#10003;</div>
       )}
     </div>
   );
@@ -121,15 +121,15 @@ function CreateOpportunityCard({ toolCall, onApply, applied }) {
 function MoveCard({ toolCall, onApply, applied }) {
   const moves = toolCall.input.moves || [];
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
-      <div className="px-3 py-2 border-b border-slate-700/50 flex items-center gap-2">
-        <span className="text-violet-400 text-sm">&#8618;</span>
-        <span className="text-xs font-semibold text-white">Move ({moves.length})</span>
+    <div className="bg-white border border-slate-200 shadow-sm rounded-lg overflow-hidden">
+      <div className="px-3 py-2 border-b border-slate-200 flex items-center gap-2">
+        <span className="text-violet-500 text-sm">&#8618;</span>
+        <span className="text-xs font-semibold text-slate-900">Move ({moves.length})</span>
       </div>
       <div className="max-h-48 overflow-y-auto">
         {moves.map((m, i) => (
-          <div key={i} className="px-3 py-1.5 border-b border-slate-800 text-xs">
-            <span className="text-slate-300">{m.title}</span>
+          <div key={i} className="px-3 py-1.5 border-b border-slate-100 text-xs">
+            <span className="text-slate-700">{m.title}</span>
             <span className="text-slate-500 ml-1">
               {m.month && <>&rarr; {m.month}</>}
               {m.area && <> &middot; {m.area}</>}
@@ -145,7 +145,7 @@ function MoveCard({ toolCall, onApply, applied }) {
           </button>
         </div>
       ) : (
-        <div className="px-3 py-2 text-xs text-emerald-400 font-medium">Applied &#10003;</div>
+        <div className="px-3 py-2 text-xs text-emerald-600 font-medium">Applied &#10003;</div>
       )}
     </div>
   );
@@ -159,15 +159,15 @@ function SummaryCard({ content }) {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
-      <div className="px-3 py-2 border-b border-slate-700/50 flex items-center justify-between">
-        <span className="text-xs font-semibold text-white">Summary</span>
+    <div className="bg-white border border-slate-200 shadow-sm rounded-lg overflow-hidden">
+      <div className="px-3 py-2 border-b border-slate-200 flex items-center justify-between">
+        <span className="text-xs font-semibold text-slate-900">Summary</span>
         <button onClick={handleCopy}
-          className="text-xs text-slate-400 hover:text-white transition-colors">
+          className="text-xs text-slate-500 hover:text-slate-900 transition-colors">
           {copied ? 'Copied!' : 'Copy'}
         </button>
       </div>
-      <div className="px-3 py-2 text-xs text-slate-300 leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto">
+      <div className="px-3 py-2 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto">
         {content}
       </div>
     </div>
@@ -176,19 +176,19 @@ function SummaryCard({ content }) {
 
 function MilestonePlanCard({ plan, onApplyDates, onCreateOpportunity, onFocusMilestone, applied }) {
   const bufferColors = {
-    healthy: 'text-emerald-400', tight: 'text-amber-400', behind: 'text-red-400',
+    healthy: 'text-emerald-600', tight: 'text-amber-600', behind: 'text-red-600',
   };
   const riskColors = {
-    low: 'text-emerald-400', medium: 'text-amber-400', high: 'text-red-400',
+    low: 'text-emerald-600', medium: 'text-amber-600', high: 'text-red-600',
   };
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
+    <div className="bg-white border border-slate-200 shadow-sm rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-slate-700/50">
+      <div className="px-3 py-2 border-b border-slate-200">
         <div className="flex items-center gap-2">
-          <span className="text-amber-400 text-sm">&#9670;</span>
-          <span className="text-xs font-semibold text-white flex-1">{plan.milestone.title}</span>
+          <span className="text-amber-500 text-sm">&#9670;</span>
+          <span className="text-xs font-semibold text-slate-900 flex-1">{plan.milestone.title}</span>
           <span className="text-[10px] text-slate-500">{plan.milestone.targetDate}</span>
         </div>
         <div className="text-[10px] text-slate-500 mt-0.5">
@@ -198,21 +198,21 @@ function MilestonePlanCard({ plan, onApplyDates, onCreateOpportunity, onFocusMil
 
       {/* Critical Path */}
       {plan.criticalPath?.length > 0 && (
-        <div className="px-3 py-2 border-b border-slate-800">
-          <div className="text-[10px] text-amber-400 uppercase tracking-widest mb-1.5 font-medium">Critical Path</div>
+        <div className="px-3 py-2 border-b border-slate-100">
+          <div className="text-[10px] text-amber-600 uppercase tracking-widest mb-1.5 font-medium">Critical Path</div>
           <div className="space-y-1.5">
             {[...plan.criticalPath].reverse().map((item, i) => (
               <div key={item.id || i} className="flex items-start gap-2 text-xs">
-                <span className="text-slate-600 text-[10px] w-4 flex-shrink-0 text-right mt-0.5">{plan.criticalPath.length - i}.</span>
+                <span className="text-slate-400 text-[10px] w-4 flex-shrink-0 text-right mt-0.5">{plan.criticalPath.length - i}.</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-slate-200 truncate">{item.title}</div>
+                  <div className="text-slate-700 truncate">{item.title}</div>
                   <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
                     <span>{item.startDate} &rarr; {item.endDate}</span>
                     <span>({item.durationDays}d)</span>
-                    {item.dateSource === 'ai_estimated' && <span className="text-amber-500">est.</span>}
+                    {item.dateSource === 'ai_estimated' && <span className="text-amber-600">est.</span>}
                   </div>
                   {item.dependsOn?.length > 0 && (
-                    <div className="text-[9px] text-slate-600">
+                    <div className="text-[9px] text-slate-400">
                       depends on: {item.dependsOn.map(id => {
                         const dep = plan.criticalPath.find(c => c.id === id) || plan.parallelWork?.find(p => p.id === id);
                         return dep?.title || `#${id}`;
@@ -228,13 +228,13 @@ function MilestonePlanCard({ plan, onApplyDates, onCreateOpportunity, onFocusMil
 
       {/* Parallel Work */}
       {plan.parallelWork?.length > 0 && (
-        <div className="px-3 py-2 border-b border-slate-800">
+        <div className="px-3 py-2 border-b border-slate-100">
           <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Parallel Work</div>
           {plan.parallelWork.map((item, i) => (
-            <div key={item.id || i} className="text-xs text-slate-400 flex items-center gap-1.5 py-0.5">
+            <div key={item.id || i} className="text-xs text-slate-600 flex items-center gap-1.5 py-0.5">
               <span>&middot;</span>
               <span className="truncate">{item.title}</span>
-              <span className="text-slate-600 flex-shrink-0">({item.durationDays}d)</span>
+              <span className="text-slate-400 flex-shrink-0">({item.durationDays}d)</span>
             </div>
           ))}
         </div>
@@ -242,23 +242,23 @@ function MilestonePlanCard({ plan, onApplyDates, onCreateOpportunity, onFocusMil
 
       {/* Suggested Additions */}
       {plan.suggestedNewOpportunities?.length > 0 && (
-        <div className="px-3 py-2 border-b border-slate-800">
-          <div className="text-[10px] text-amber-500 uppercase tracking-widest mb-1">Suggested Additions</div>
+        <div className="px-3 py-2 border-b border-slate-100">
+          <div className="text-[10px] text-amber-600 uppercase tracking-widest mb-1">Suggested Additions</div>
           {plan.suggestedNewOpportunities.map((item, i) => (
             <div key={i} className="py-1">
-              <div className="text-xs text-slate-300 flex items-center gap-1.5">
-                <span className="text-emerald-500">+</span>
+              <div className="text-xs text-slate-700 flex items-center gap-1.5">
+                <span className="text-emerald-600">+</span>
                 <span className="truncate flex-1">{item.title}</span>
-                <span className="text-slate-600 flex-shrink-0">({item.estimatedDays}d)</span>
+                <span className="text-slate-400 flex-shrink-0">({item.estimatedDays}d)</span>
               </div>
-              <div className="text-[9px] text-slate-600 ml-4">{item.reason}</div>
+              <div className="text-[9px] text-slate-400 ml-4">{item.reason}</div>
               {!applied && (
                 <button onClick={() => onCreateOpportunity({
                   title: item.title, description: item.description || item.reason,
                   area: item.area, initiative: item.initiative,
                   month: plan.milestone.month || 'feb26',
                 })}
-                  className="ml-4 mt-0.5 text-[9px] text-indigo-400 hover:text-indigo-300 transition-colors">
+                  className="ml-4 mt-0.5 text-[9px] text-indigo-600 hover:text-indigo-500 transition-colors">
                   Create this opportunity
                 </button>
               )}
@@ -269,16 +269,16 @@ function MilestonePlanCard({ plan, onApplyDates, onCreateOpportunity, onFocusMil
 
       {/* Analysis */}
       {plan.analysis && (
-        <div className="px-3 py-2 border-b border-slate-800 grid grid-cols-2 gap-x-3 gap-y-1">
+        <div className="px-3 py-2 border-b border-slate-100 grid grid-cols-2 gap-x-3 gap-y-1">
           <div className="text-[10px]">
             <span className="text-slate-500">Buffer: </span>
-            <span className={bufferColors[plan.analysis.bufferStatus] || 'text-slate-400'}>
+            <span className={bufferColors[plan.analysis.bufferStatus] || 'text-slate-500'}>
               {plan.analysis.bufferDays}d &middot; {plan.analysis.bufferStatus}
             </span>
           </div>
           <div className="text-[10px]">
             <span className="text-slate-500">Risk: </span>
-            <span className={riskColors[plan.analysis.riskLevel] || 'text-slate-400'}>
+            <span className={riskColors[plan.analysis.riskLevel] || 'text-slate-500'}>
               {plan.analysis.riskLevel}
             </span>
           </div>
@@ -288,7 +288,7 @@ function MilestonePlanCard({ plan, onApplyDates, onCreateOpportunity, onFocusMil
           {plan.analysis.risks?.length > 0 && (
             <div className="col-span-2 mt-1">
               {plan.analysis.risks.map((risk, i) => (
-                <div key={i} className="text-[9px] text-amber-500/70 flex items-start gap-1">
+                <div key={i} className="text-[9px] text-amber-600/70 flex items-start gap-1">
                   <span className="flex-shrink-0 mt-0.5">&#9888;</span>
                   <span>{risk}</span>
                 </div>
@@ -314,13 +314,13 @@ function MilestonePlanCard({ plan, onApplyDates, onCreateOpportunity, onFocusMil
             </button>
             {onFocusMilestone && (
               <button onClick={() => onFocusMilestone(plan.milestone.id)}
-                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors">
+                className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded transition-colors">
                 View on Gantt
               </button>
             )}
           </>
         ) : (
-          <div className="text-xs text-emerald-400 font-medium">Dates applied &#10003;</div>
+          <div className="text-xs text-emerald-600 font-medium">Dates applied &#10003;</div>
         )}
       </div>
     </div>
@@ -519,13 +519,13 @@ function LinearWriteCard({ toolCall, onUpdateOpportunities }) {
     const result = itemResults[idx];
 
     return (
-      <div key={idx} className={`px-3 py-2 border-b border-slate-800 text-xs ${
-        state === 'skipped' ? 'opacity-40' : state === 'done' ? 'bg-emerald-950/10' : ''
+      <div key={idx} className={`px-3 py-2 border-b border-slate-100 text-xs ${
+        state === 'skipped' ? 'opacity-40' : state === 'done' ? 'bg-emerald-50/50' : ''
       }`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             {/* Title */}
-            <div className={`font-medium ${state === 'skipped' ? 'line-through text-slate-500' : 'text-slate-200'}`}>
+            <div className={`font-medium ${state === 'skipped' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
               {action === 'linear_add_comment' ? item.issueIdentifier : item.title || item.issueIdentifier}
             </div>
 
@@ -537,7 +537,7 @@ function LinearWriteCard({ toolCall, onUpdateOpportunities }) {
                 {item.priority != null && <span>Priority: {PRIORITY_LABELS[item.priority] || item.priority}</span>}
                 {item.dueDate && <span>Due: {item.dueDate}</span>}
                 {item.assigneeName && <span>Assignee: {item.assigneeName}</span>}
-                {item.opportunityId && <span className="text-indigo-400">Links to opp #{item.opportunityId}</span>}
+                {item.opportunityId && <span className="text-indigo-600">Links to opp #{item.opportunityId}</span>}
               </div>
             )}
 
@@ -556,7 +556,7 @@ function LinearWriteCard({ toolCall, onUpdateOpportunities }) {
             )}
 
             {action === 'linear_add_comment' && (
-              <div className="text-[10px] text-slate-400 mt-0.5 whitespace-pre-wrap max-h-12 overflow-hidden">
+              <div className="text-[10px] text-slate-500 mt-0.5 whitespace-pre-wrap max-h-12 overflow-hidden">
                 {item.body?.length > 120 ? item.body.slice(0, 120) + '...' : item.body}
               </div>
             )}
@@ -578,39 +578,39 @@ function LinearWriteCard({ toolCall, onUpdateOpportunities }) {
                   Confirm
                 </button>
                 <button onClick={() => setState(idx, 'skipped')}
-                  className="px-2 py-0.5 bg-slate-700 hover:bg-slate-600 text-slate-400 text-[10px] rounded transition-colors">
+                  className="px-2 py-0.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 text-[10px] rounded transition-colors">
                   Skip
                 </button>
               </>
             )}
             {state === 'executing' && (
-              <div className="flex items-center gap-1 text-[10px] text-blue-400">
-                <div className="w-3 h-3 border border-slate-600 border-t-blue-400 rounded-full animate-spin" />
+              <div className="flex items-center gap-1 text-[10px] text-blue-600">
+                <div className="w-3 h-3 border border-slate-300 border-t-blue-600 rounded-full animate-spin" />
                 <span>Running...</span>
               </div>
             )}
             {state === 'done' && (
-              <div className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium">
+              <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
                 <span>&#10003;</span>
                 {result && result !== 'Done' && (
                   action === 'linear_create_issue' || action === 'linear_create_sub_issues'
                     ? <a href={`https://linear.app/palazzo-ai/issue/${result}`} target="_blank" rel="noopener noreferrer"
-                        className="text-emerald-400 hover:text-emerald-300 underline">{result}</a>
+                        className="text-emerald-600 hover:text-emerald-500 underline">{result}</a>
                     : <span>{result}</span>
                 )}
               </div>
             )}
             {state === 'failed' && (
               <div className="flex items-center gap-1">
-                <span className="text-[10px] text-red-400 max-w-[120px] truncate" title={result}>&#10007; {result}</span>
+                <span className="text-[10px] text-red-600 max-w-[120px] truncate" title={result}>&#10007; {result}</span>
                 <button onClick={() => executeItem(item, idx)}
-                  className="px-1.5 py-0.5 bg-red-900/50 hover:bg-red-900 text-red-400 text-[10px] rounded transition-colors">
+                  className="px-1.5 py-0.5 bg-red-50 hover:bg-red-100 text-red-600 text-[10px] rounded transition-colors">
                   Retry
                 </button>
               </div>
             )}
             {state === 'skipped' && (
-              <span className="text-[10px] text-slate-600">Skipped</span>
+              <span className="text-[10px] text-slate-400">Skipped</span>
             )}
           </div>
         </div>
@@ -619,11 +619,11 @@ function LinearWriteCard({ toolCall, onUpdateOpportunities }) {
   };
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
+    <div className="bg-white border border-slate-200 shadow-sm rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-slate-700/50 flex items-center gap-2">
+      <div className="px-3 py-2 border-b border-slate-200 flex items-center gap-2">
         <span className={`text-sm ${header.color}`} dangerouslySetInnerHTML={{ __html: header.icon }} />
-        <span className="text-xs font-semibold text-white">{header.title}</span>
+        <span className="text-xs font-semibold text-slate-900">{header.title}</span>
       </div>
 
       {/* Items */}
@@ -633,13 +633,13 @@ function LinearWriteCard({ toolCall, onUpdateOpportunities }) {
 
       {/* Footer: Confirm All / Cancel */}
       {hasPending && (
-        <div className="px-3 py-2 flex gap-2 border-t border-slate-700/50">
+        <div className="px-3 py-2 flex gap-2 border-t border-slate-200">
           <button onClick={confirmAll}
-            className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded transition-colors">
+            className="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded transition-colors">
             Confirm All
           </button>
           <button onClick={cancelAll}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors">
+            className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs rounded transition-colors">
             Cancel
           </button>
         </div>
@@ -647,7 +647,7 @@ function LinearWriteCard({ toolCall, onUpdateOpportunities }) {
 
       {/* All done summary */}
       {!hasPending && allDone && (
-        <div className="px-3 py-2 border-t border-slate-700/50">
+        <div className="px-3 py-2 border-t border-slate-200">
           <div className="text-xs text-slate-400 flex gap-3">
             {Object.values(itemStates).filter(s => s === 'done').length > 0 && (
               <span className="text-emerald-400">
@@ -900,22 +900,22 @@ export default function AIAssistantPanel({
 
       {/* Panel */}
       <div
-        className={`fixed top-0 right-0 h-full bg-slate-900 border-l border-slate-700 z-50 flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full bg-white border-l border-slate-200 shadow-lg z-50 flex flex-col transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{ width: 380 }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/50 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 flex-shrink-0">
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
             </svg>
-            <h2 className="text-sm font-semibold text-white">Pulseboard Assistant</h2>
+            <h2 className="text-sm font-semibold text-slate-900">Pulseboard Assistant</h2>
           </div>
           <button onClick={onClose}
-            className="text-slate-500 hover:text-white transition-colors text-lg leading-none">&times;</button>
+            className="text-slate-500 hover:text-slate-700 transition-colors text-lg leading-none">&times;</button>
         </div>
 
         {/* Messages */}
@@ -938,7 +938,7 @@ export default function AIAssistantPanel({
               <div className="grid grid-cols-2 gap-1.5">
                 {capabilities.map((cap) => (
                   <button key={cap.label} onClick={() => { handleQuickAction(cap.prompt); setShowCapabilities(false); }}
-                    className="flex items-start gap-2 px-2.5 py-2 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/30 hover:border-slate-600 rounded-lg text-left transition-colors group">
+                    className="flex items-start gap-2 px-2.5 py-2 bg-slate-50 hover:bg-white border border-slate-200 hover:border-slate-300 shadow-sm rounded-lg text-left transition-colors group">
                     <span className="text-slate-500 group-hover:text-slate-300 text-sm flex-shrink-0 mt-0.5 w-4 text-center"
                       dangerouslySetInnerHTML={{ __html: cap.icon }} />
                     <div className="min-w-0">
@@ -963,7 +963,7 @@ export default function AIAssistantPanel({
                     <div className={`max-w-[90%] px-3 py-2 rounded-lg text-xs leading-relaxed ${
                       msg.role === 'user'
                         ? 'bg-indigo-600 text-white rounded-br-sm'
-                        : 'bg-slate-800 text-slate-300 rounded-bl-sm'
+                        : 'bg-slate-50 text-slate-700 rounded-bl-sm'
                     }`}>
                       <span className="whitespace-pre-wrap">{displayContent}</span>
                     </div>
@@ -1000,7 +1000,7 @@ export default function AIAssistantPanel({
           {/* Loading indicator */}
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-slate-800 rounded-lg rounded-bl-sm px-3 py-2">
+              <div className="bg-slate-50 rounded-lg rounded-bl-sm px-3 py-2">
                 <div className="flex gap-1">
                   <span className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -1014,11 +1014,11 @@ export default function AIAssistantPanel({
         </div>
 
         {/* Input */}
-        <form onSubmit={handleSubmit} className="px-4 py-3 border-t border-slate-700/50 flex-shrink-0">
+        <form onSubmit={handleSubmit} className="px-4 py-3 border-t border-slate-200 flex-shrink-0">
           <div className="flex gap-2">
             {messages.length > 0 && !showCapabilities && (
               <button type="button" onClick={() => setShowCapabilities(true)}
-                className="px-2 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-500 hover:text-slate-300 transition-colors text-xs flex-shrink-0"
+                className="px-2 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition-colors text-xs flex-shrink-0"
                 title="Show capabilities">
                 /?
               </button>
@@ -1031,10 +1031,10 @@ export default function AIAssistantPanel({
               placeholder="Type a message..."
               disabled={loading}
               data-assistant-input="true"
-              className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+              className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
             />
             <button type="submit" disabled={loading || !input.trim()}
-              className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors text-xs font-medium">
+              className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-lg transition-colors text-xs font-medium">
               &#10148;
             </button>
           </div>

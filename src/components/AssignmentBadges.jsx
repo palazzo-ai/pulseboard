@@ -36,7 +36,7 @@ const AssignmentBadges = ({
         ))}
         
         {remainingCount > 0 && (
-          <div className={`${size === 'xs' ? 'w-5 h-5 text-[8px]' : 'w-6 h-6 text-[9px]'} rounded-full bg-slate-700 flex items-center justify-center text-slate-400 font-medium ring-1 ring-slate-900`}>
+          <div className={`${size === 'xs' ? 'w-5 h-5 text-[8px]' : 'w-6 h-6 text-[9px]'} rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-medium ring-1 ring-white`}>
             +{remainingCount}
           </div>
         )}
@@ -49,7 +49,7 @@ const AssignmentBadges = ({
       {onAddClick && (
         <button
           onClick={(e) => { e.stopPropagation(); onAddClick(); }}
-          className={`${size === 'xs' ? 'w-4 h-4' : 'w-5 h-5'} rounded-full border border-dashed border-slate-600 flex items-center justify-center text-slate-500 hover:border-indigo-400 hover:text-indigo-400 hover:bg-indigo-900/20 transition-colors`}
+          className={`${size === 'xs' ? 'w-4 h-4' : 'w-5 h-5'} rounded-full border border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-indigo-400 hover:text-indigo-400 hover:bg-indigo-50 transition-colors`}
           title="Assign team"
         >
           <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

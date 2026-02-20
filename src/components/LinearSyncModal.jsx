@@ -47,20 +47,20 @@ const MONTHS = [
 // Section Header Component
 const SectionHeader = ({ icon, title, count, color }) => {
   const colorClasses = {
-    emerald: 'text-emerald-400 bg-emerald-900/30',
-    amber: 'text-amber-400 bg-amber-900/30',
-    blue: 'text-blue-400 bg-blue-900/30',
-    red: 'text-red-400 bg-red-900/30',
-    purple: 'text-purple-400 bg-purple-900/30'
+    emerald: 'text-emerald-600 bg-emerald-50',
+    amber: 'text-amber-600 bg-amber-50',
+    blue: 'text-blue-600 bg-blue-50',
+    red: 'text-red-600 bg-red-50',
+    purple: 'text-purple-600 bg-purple-50'
   };
 
   return (
     <div className="flex items-center gap-2">
       <span className="text-lg">{icon}</span>
-      <span className={`font-semibold ${colorClasses[color]?.split(' ')[0] || 'text-slate-300'}`}>
+      <span className={`font-semibold ${colorClasses[color]?.split(' ')[0] || 'text-slate-600'}`}>
         {title}
       </span>
-      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses[color] || 'text-slate-400 bg-slate-800'}`}>
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses[color] || 'text-slate-400 bg-slate-50'}`}>
         {count}
       </span>
     </div>
@@ -70,14 +70,14 @@ const SectionHeader = ({ icon, title, count, color }) => {
 // Summary Stat Card
 const StatCard = ({ icon, label, value, color }) => {
   const colorClasses = {
-    blue: 'bg-blue-900/30 border-blue-700/50 text-blue-400',
-    emerald: 'bg-emerald-900/30 border-emerald-700/50 text-emerald-400',
-    amber: 'bg-amber-900/30 border-amber-700/50 text-amber-400',
-    red: 'bg-red-900/30 border-red-700/50 text-red-400'
+    blue: 'bg-blue-50 border-blue-200 text-blue-600',
+    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-600',
+    amber: 'bg-amber-50 border-amber-200 text-amber-600',
+    red: 'bg-red-50 border-red-200 text-red-600'
   };
 
   return (
-    <div className={`p-3 rounded-lg border ${colorClasses[color] || 'bg-slate-800 border-slate-700'}`}>
+    <div className={`p-3 rounded-lg border ${colorClasses[color] || 'bg-slate-50 border-slate-200'}`}>
       <div className="flex items-center gap-2 mb-1">
         <span className="text-sm">{icon}</span>
         <span className="text-xs text-slate-400">{label}</span>
@@ -94,9 +94,9 @@ const NewOpportunityCard = ({ recommendation, onCreateOpportunity, onLinkToExist
   const [selectedOpp, setSelectedOpp] = useState(null);
 
   const confidenceColors = {
-    high: 'bg-emerald-900/30 text-emerald-400 border-emerald-600/50',
-    medium: 'bg-amber-900/30 text-amber-400 border-amber-600/50',
-    low: 'bg-slate-800 text-slate-400 border-slate-600'
+    high: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+    medium: 'bg-amber-50 text-amber-600 border-amber-200',
+    low: 'bg-slate-50 text-slate-400 border-slate-200'
   };
 
   const handleCreate = () => {
@@ -123,9 +123,9 @@ const NewOpportunityCard = ({ recommendation, onCreateOpportunity, onLinkToExist
   };
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
+    <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
       <div 
-        className="p-3 cursor-pointer hover:bg-slate-800 transition-colors"
+        className="p-3 cursor-pointer hover:bg-slate-50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-start justify-between gap-3">
@@ -138,7 +138,7 @@ const NewOpportunityCard = ({ recommendation, onCreateOpportunity, onLinkToExist
                 {AREAS.find(a => a.id === recommendation.area)?.name} • {MONTHS.find(m => m.id === recommendation.suggestedMonth)?.name}
               </span>
             </div>
-            <h4 className="font-medium text-white truncate">{recommendation.title}</h4>
+            <h4 className="font-medium text-slate-800 truncate">{recommendation.title}</h4>
             <p className="text-xs text-slate-400 mt-1 line-clamp-2">{recommendation.description}</p>
           </div>
           <svg className={`w-5 h-5 text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,12 +148,12 @@ const NewOpportunityCard = ({ recommendation, onCreateOpportunity, onLinkToExist
       </div>
 
       {expanded && (
-        <div className="px-3 pb-3 border-t border-slate-700 pt-3 space-y-3">
+        <div className="px-3 pb-3 border-t border-slate-200 pt-3 space-y-3">
           <div>
             <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">Related Issues ({(recommendation.issues || []).length})</div>
             <div className="flex flex-wrap gap-1">
               {(recommendation.issues || []).map(issue => (
-                <span key={issue.identifier} className="px-2 py-1 bg-slate-900 text-slate-300 text-xs rounded font-mono">
+                <span key={issue.identifier} className="px-2 py-1 bg-white text-slate-600 text-xs rounded font-mono">
                   {issue.identifier}
                 </span>
               ))}
@@ -167,7 +167,7 @@ const NewOpportunityCard = ({ recommendation, onCreateOpportunity, onLinkToExist
               <select
                 value={selectedOpp || ''}
                 onChange={(e) => setSelectedOpp(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select an opportunity...</option>
                 {existingOpportunities.map(opp => (
@@ -178,13 +178,13 @@ const NewOpportunityCard = ({ recommendation, onCreateOpportunity, onLinkToExist
                 <button
                   onClick={handleLinkToExisting}
                   disabled={!selectedOpp}
-                  className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs font-medium rounded-lg transition-colors"
+                  className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-medium rounded-lg transition-colors"
                 >
                   Link Issues
                 </button>
                 <button
                   onClick={() => { setLinkMode(false); setSelectedOpp(null); }}
-                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-colors"
+                  className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -203,13 +203,13 @@ const NewOpportunityCard = ({ recommendation, onCreateOpportunity, onLinkToExist
               </button>
               <button
                 onClick={() => setLinkMode(true)}
-                className="px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600/50 text-blue-400 text-xs font-medium rounded-lg transition-colors border border-blue-600/50"
+                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-medium rounded-lg transition-colors border border-blue-200"
               >
                 Link to Existing
               </button>
               <button
                 onClick={() => onIgnore(recommendation.title)}
-                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-400 text-xs font-medium rounded-lg transition-colors"
+                className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-400 text-xs font-medium rounded-lg transition-colors"
               >
                 Ignore
               </button>
@@ -251,22 +251,22 @@ const CycleOpportunityCard = ({ cycle, onCreateOpportunity, onLinkToExisting, on
   };
 
   return (
-    <div className="bg-slate-800/50 border border-cyan-700/30 rounded-lg overflow-hidden">
+    <div className="bg-slate-50 border border-cyan-200 rounded-lg overflow-hidden">
       <div
-        className="p-3 cursor-pointer hover:bg-slate-800 transition-colors"
+        className="p-3 cursor-pointer hover:bg-slate-50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-cyan-900/30 text-cyan-400 border border-cyan-600/50">
+              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-cyan-50 text-cyan-600 border border-cyan-200">
                 {cycle.cycleName}
               </span>
               <span className="text-xs text-slate-500">
                 {(cycle.relatedIssues || []).length} issues
               </span>
             </div>
-            <h4 className="font-medium text-white truncate">{cycle.suggestedTitle}</h4>
+            <h4 className="font-medium text-slate-800 truncate">{cycle.suggestedTitle}</h4>
             <p className="text-xs text-slate-400 mt-1 line-clamp-2">{cycle.description}</p>
           </div>
           <svg className={`w-5 h-5 text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -276,12 +276,12 @@ const CycleOpportunityCard = ({ cycle, onCreateOpportunity, onLinkToExisting, on
       </div>
 
       {expanded && (
-        <div className="px-3 pb-3 border-t border-slate-700 pt-3 space-y-3">
+        <div className="px-3 pb-3 border-t border-slate-200 pt-3 space-y-3">
           <div>
             <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">Issues in Cycle ({(cycle.relatedIssues || []).length})</div>
             <div className="flex flex-wrap gap-1">
               {(cycle.relatedIssues || []).map(issue => (
-                <a key={issue} href={`https://linear.app/palazzo-ai/issue/${issue}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-slate-900 text-indigo-400 hover:text-indigo-300 hover:bg-slate-700 text-xs rounded font-mono transition-colors cursor-pointer">
+                <a key={issue} href={`https://linear.app/palazzo-ai/issue/${issue}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-white text-indigo-600 hover:text-indigo-500 hover:bg-slate-100 text-xs rounded font-mono transition-colors cursor-pointer">
                   {issue}
                 </a>
               ))}
@@ -301,7 +301,7 @@ const CycleOpportunityCard = ({ cycle, onCreateOpportunity, onLinkToExisting, on
               <select
                 value={selectedOpp || ''}
                 onChange={(e) => setSelectedOpp(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select an opportunity...</option>
                 {existingOpportunities.map(opp => (
@@ -312,13 +312,13 @@ const CycleOpportunityCard = ({ cycle, onCreateOpportunity, onLinkToExisting, on
                 <button
                   onClick={handleLinkToExisting}
                   disabled={!selectedOpp}
-                  className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs font-medium rounded-lg transition-colors"
+                  className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-medium rounded-lg transition-colors"
                 >
                   Link Issues
                 </button>
                 <button
                   onClick={() => { setLinkMode(false); setSelectedOpp(null); }}
-                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-colors"
+                  className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -337,13 +337,13 @@ const CycleOpportunityCard = ({ cycle, onCreateOpportunity, onLinkToExisting, on
               </button>
               <button
                 onClick={() => setLinkMode(true)}
-                className="px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600/50 text-blue-400 text-xs font-medium rounded-lg transition-colors border border-blue-600/50"
+                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-medium rounded-lg transition-colors border border-blue-200"
               >
                 Link to Existing
               </button>
               <button
                 onClick={() => onIgnore(cycle.cycleName)}
-                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-400 text-xs font-medium rounded-lg transition-colors"
+                className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-400 text-xs font-medium rounded-lg transition-colors"
               >
                 Ignore
               </button>
@@ -360,19 +360,19 @@ const ScopeChangeCard = ({ change, onAcknowledge, onFlagAtRisk, onLinkIssues }) 
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="bg-slate-800/50 border border-amber-700/30 rounded-lg overflow-hidden">
+    <div className="bg-slate-50 border border-amber-200 rounded-lg overflow-hidden">
       <div 
-        className="p-3 cursor-pointer hover:bg-slate-800 transition-colors"
+        className="p-3 cursor-pointer hover:bg-slate-50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-900/30 text-amber-400 border border-amber-600/50">
+              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-600 border border-amber-200">
                 +{change.newIssues?.length || 0} NEW ISSUES
               </span>
             </div>
-            <h4 className="font-medium text-white truncate">{change.opportunityTitle}</h4>
+            <h4 className="font-medium text-slate-800 truncate">{change.opportunityTitle}</h4>
             <p className="text-xs text-slate-400 mt-1">{change.reasoning}</p>
           </div>
           <svg className={`w-5 h-5 text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -382,12 +382,12 @@ const ScopeChangeCard = ({ change, onAcknowledge, onFlagAtRisk, onLinkIssues }) 
       </div>
 
       {expanded && (
-        <div className="px-3 pb-3 border-t border-slate-700 pt-3 space-y-3">
+        <div className="px-3 pb-3 border-t border-slate-200 pt-3 space-y-3">
           <div>
             <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">New Issues to Link</div>
             <div className="flex flex-wrap gap-1">
               {(change.newIssues || []).map(issue => (
-                <span key={issue.identifier} className="px-2 py-1 bg-amber-900/30 text-amber-300 text-xs rounded font-mono border border-amber-600/30">
+                <span key={issue.identifier} className="px-2 py-1 bg-amber-50 text-amber-600 text-xs rounded font-mono border border-amber-200">
                   {issue.identifier}
                 </span>
               ))}
@@ -403,13 +403,13 @@ const ScopeChangeCard = ({ change, onAcknowledge, onFlagAtRisk, onLinkIssues }) 
             </button>
             <button
               onClick={() => onFlagAtRisk(change.opportunityId, 'Scope expanded with new issues')}
-              className="px-3 py-1.5 bg-orange-600/30 hover:bg-orange-600/50 text-orange-400 text-xs font-medium rounded-lg transition-colors border border-orange-600/50"
+              className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-600 text-xs font-medium rounded-lg transition-colors border border-orange-200"
             >
               Flag At Risk
             </button>
             <button
               onClick={() => onAcknowledge(change.opportunityId)}
-              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-400 text-xs font-medium rounded-lg transition-colors"
+              className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-400 text-xs font-medium rounded-lg transition-colors"
             >
               Acknowledge
             </button>
@@ -500,9 +500,9 @@ const OrphanedIssueCard = ({
       <div className={`p-3 rounded-lg border transition-all duration-500 ${
         fadeOut ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
       } ${
-        actionResult.type === 'linked' ? 'bg-blue-900/20 border-blue-600/50' :
-        actionResult.type === 'created' ? 'bg-emerald-900/20 border-emerald-600/50' :
-        'bg-slate-800/50 border-slate-600'
+        actionResult.type === 'linked' ? 'bg-blue-50 border-blue-200' :
+        actionResult.type === 'created' ? 'bg-emerald-50 border-emerald-200' :
+        'bg-slate-50 border-slate-200'
       }`}>
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -539,7 +539,7 @@ const OrphanedIssueCard = ({
                 {actionResult.type === 'excluded' && '✓ Excluded'}
               </span>
             </div>
-            <div className="text-sm text-slate-300 truncate">
+            <div className="text-sm text-slate-600 truncate">
               {actionResult.type === 'linked' && `Linked to "${actionResult.target}"`}
               {actionResult.type === 'created' && `Created "${actionResult.target}"`}
               {actionResult.type === 'excluded' && 'Excluded from future syncs'}
@@ -548,7 +548,7 @@ const OrphanedIssueCard = ({
           {!fadeOut && (
             <button
               onClick={() => { setActionResult(null); setMode(null); setFadeOut(false); }}
-              className="text-xs text-slate-500 hover:text-slate-300 transition-colors px-2 py-1 rounded hover:bg-slate-700"
+              className="text-xs text-slate-500 hover:text-slate-600 transition-colors px-2 py-1 rounded hover:bg-slate-100"
               title="Undo"
             >
               Undo
@@ -560,16 +560,16 @@ const OrphanedIssueCard = ({
   }
 
   return (
-    <div className="bg-slate-800/50 border border-blue-700/30 rounded-lg overflow-hidden">
+    <div className="bg-slate-50 border border-blue-200 rounded-lg overflow-hidden">
       {/* Header - Always visible */}
       <div 
-        className="p-3 cursor-pointer hover:bg-slate-800 transition-colors"
+        className="p-3 cursor-pointer hover:bg-slate-50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-900 text-slate-300 border border-slate-600">
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-white text-slate-600 border border-slate-200">
                 {issue.identifier}
               </span>
               {areaInfo && (
@@ -589,7 +589,7 @@ const OrphanedIssueCard = ({
                 <span className="text-[10px] text-slate-500">{issue.team}</span>
               )}
             </div>
-            <h4 className="font-medium text-white text-sm">{issue.title}</h4>
+            <h4 className="font-medium text-slate-800 text-sm">{issue.title}</h4>
             {issue.reasoning && (
               <p className="text-xs text-slate-400 mt-1 line-clamp-1">{issue.reasoning}</p>
             )}
@@ -602,18 +602,18 @@ const OrphanedIssueCard = ({
 
       {/* Expanded Content */}
       {expanded && (
-        <div className="px-3 pb-3 border-t border-slate-700 pt-3 space-y-3">
+        <div className="px-3 pb-3 border-t border-slate-200 pt-3 space-y-3">
           {/* Reasoning */}
           {issue.reasoning && (
-            <div className="text-xs text-slate-400 italic bg-slate-900/50 p-2 rounded">
+            <div className="text-xs text-slate-400 italic bg-slate-50 p-2 rounded">
               {issue.reasoning}
             </div>
           )}
 
           {/* Mode: Create New Opportunity */}
           {mode === 'create' && (
-            <div className="space-y-3 bg-emerald-900/10 border border-emerald-700/30 rounded-lg p-3">
-              <div className="text-xs text-emerald-400 font-medium uppercase tracking-wide flex items-center gap-1">
+            <div className="space-y-3 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+              <div className="text-xs text-emerald-600 font-medium uppercase tracking-wide flex items-center gap-1">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
@@ -626,7 +626,7 @@ const OrphanedIssueCard = ({
                   type="text"
                   value={newOppForm.title}
                   onChange={(e) => setNewOppForm({ ...newOppForm, title: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="Opportunity title..."
                 />
               </div>
@@ -636,7 +636,7 @@ const OrphanedIssueCard = ({
                 <textarea
                   value={newOppForm.description}
                   onChange={(e) => setNewOppForm({ ...newOppForm, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 h-16 resize-none"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 h-16 resize-none"
                   placeholder="Brief description..."
                 />
               </div>
@@ -647,7 +647,7 @@ const OrphanedIssueCard = ({
                   <select
                     value={newOppForm.area}
                     onChange={(e) => setNewOppForm({ ...newOppForm, area: e.target.value })}
-                    className="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     {AREAS.map(area => (
                       <option key={area.id} value={area.id}>{area.name}</option>
@@ -659,7 +659,7 @@ const OrphanedIssueCard = ({
                   <select
                     value={newOppForm.month}
                     onChange={(e) => setNewOppForm({ ...newOppForm, month: e.target.value })}
-                    className="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     {MONTHS.map(month => (
                       <option key={month.id} value={month.id}>{month.name}</option>
@@ -674,7 +674,7 @@ const OrphanedIssueCard = ({
                   <select
                     value={newOppForm.initiative}
                     onChange={(e) => setNewOppForm({ ...newOppForm, initiative: e.target.value })}
-                    className="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     {INITIATIVES.map(init => (
                       <option key={init.id} value={init.id}>{init.name}</option>
@@ -686,7 +686,7 @@ const OrphanedIssueCard = ({
                   <select
                     value={newOppForm.milestoneId || ''}
                     onChange={(e) => setNewOppForm({ ...newOppForm, milestoneId: e.target.value || null })}
-                    className="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="">No milestone</option>
                     {(milestones || []).map(m => (
@@ -700,13 +700,13 @@ const OrphanedIssueCard = ({
                 <button
                   onClick={handleCreateOpportunity}
                   disabled={!newOppForm.title.trim()}
-                  className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs font-medium rounded-lg transition-colors"
+                  className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-medium rounded-lg transition-colors"
                 >
                   Create Opportunity
                 </button>
                 <button
                   onClick={() => setMode(null)}
-                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-colors"
+                  className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -716,8 +716,8 @@ const OrphanedIssueCard = ({
 
           {/* Mode: Link to Existing */}
           {mode === 'link' && (
-            <div className="space-y-3 bg-blue-900/10 border border-blue-700/30 rounded-lg p-3">
-              <div className="text-xs text-blue-400 font-medium uppercase tracking-wide flex items-center gap-1">
+            <div className="space-y-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="text-xs text-blue-600 font-medium uppercase tracking-wide flex items-center gap-1">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
@@ -727,7 +727,7 @@ const OrphanedIssueCard = ({
               <select
                 value={selectedOpp || ''}
                 onChange={(e) => setSelectedOpp(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select an opportunity...</option>
                 {existingOpportunities.map(opp => (
@@ -741,13 +741,13 @@ const OrphanedIssueCard = ({
                 <button
                   onClick={handleLinkToExisting}
                   disabled={!selectedOpp}
-                  className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs font-medium rounded-lg transition-colors"
+                  className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-medium rounded-lg transition-colors"
                 >
                   Link Issue
                 </button>
                 <button
                   onClick={() => { setMode(null); setSelectedOpp(null); }}
-                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-colors"
+                  className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -757,7 +757,7 @@ const OrphanedIssueCard = ({
 
           {/* Mode: Exclude */}
           {mode === 'exclude' && (
-            <div className="space-y-3 bg-slate-900/50 border border-slate-600 rounded-lg p-3">
+            <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
               <div className="text-xs text-slate-400 font-medium uppercase tracking-wide">
                 Exclude from Analysis
               </div>
@@ -766,7 +766,7 @@ const OrphanedIssueCard = ({
                 type="text"
                 value={excludeReason}
                 onChange={(e) => setExcludeReason(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-slate-500"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
                 placeholder="Reason (optional)..."
               />
 
@@ -779,7 +779,7 @@ const OrphanedIssueCard = ({
                 </button>
                 <button
                   onClick={() => { setMode(null); setExcludeReason(''); }}
-                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-colors"
+                  className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -801,13 +801,13 @@ const OrphanedIssueCard = ({
               </button>
               <button
                 onClick={() => setMode('link')}
-                className="px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600/50 text-blue-400 text-xs font-medium rounded-lg transition-colors border border-blue-600/50"
+                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-medium rounded-lg transition-colors border border-blue-200"
               >
                 Link to Existing
               </button>
               <button
                 onClick={() => setMode('exclude')}
-                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-400 text-xs font-medium rounded-lg transition-colors"
+                className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-400 text-xs font-medium rounded-lg transition-colors"
                 title="Exclude from future syncs"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -829,9 +829,9 @@ const MilestoneHealthCard = ({ health, onLinkIssue, opportunities }) => {
   const [selectedOpp, setSelectedOpp] = useState(null);
 
   const statusColors = {
-    healthy: 'text-emerald-400 bg-emerald-900/30',
-    at_risk: 'text-amber-400 bg-amber-900/30',
-    critical: 'text-red-400 bg-red-900/30'
+    healthy: 'text-emerald-600 bg-emerald-50',
+    at_risk: 'text-amber-600 bg-amber-50',
+    critical: 'text-red-600 bg-red-50'
   };
 
   const statusIcons = {
@@ -849,9 +849,9 @@ const MilestoneHealthCard = ({ health, onLinkIssue, opportunities }) => {
   };
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
+    <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
       <div 
-        className="p-3 cursor-pointer hover:bg-slate-800 transition-colors"
+        className="p-3 cursor-pointer hover:bg-slate-50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-start justify-between gap-3">
@@ -860,14 +860,14 @@ const MilestoneHealthCard = ({ health, onLinkIssue, opportunities }) => {
               <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${statusColors[health.status]}`}>
                 {statusIcons[health.status]}
               </span>
-              <h4 className="font-medium text-white">🎯 {health.milestoneTitle}</h4>
+              <h4 className="font-medium text-slate-800">🎯 {health.milestoneTitle}</h4>
             </div>
             {health.concerns?.length > 0 && (
               <p className="text-xs text-slate-400 mt-1">{health.concerns[0]}</p>
             )}
           </div>
           {health.unlinkedIssues?.length > 0 && (
-            <span className="px-2 py-0.5 bg-blue-900/30 text-blue-400 text-xs rounded-full">
+            <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full">
               {health.unlinkedIssues.length} unlinked
             </span>
           )}
@@ -875,7 +875,7 @@ const MilestoneHealthCard = ({ health, onLinkIssue, opportunities }) => {
       </div>
 
       {expanded && (
-        <div className="px-3 pb-3 border-t border-slate-700 pt-3 space-y-3">
+        <div className="px-3 pb-3 border-t border-slate-200 pt-3 space-y-3">
           {health.concerns?.length > 0 && (
             <div>
               <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">Concerns</div>
@@ -895,17 +895,17 @@ const MilestoneHealthCard = ({ health, onLinkIssue, opportunities }) => {
               <div className="text-xs text-slate-500 uppercase tracking-wide mb-2">Issues to Link</div>
               <div className="space-y-1">
                 {health.unlinkedIssues.map(issue => (
-                  <div key={issue.identifier} className="flex items-center justify-between gap-2 p-2 bg-slate-900 rounded">
+                  <div key={issue.identifier} className="flex items-center justify-between gap-2 p-2 bg-white rounded">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-xs font-mono text-slate-400">{issue.identifier}</span>
-                      <span className="text-xs text-slate-300 truncate">{issue.title}</span>
+                      <span className="text-xs text-slate-600 truncate">{issue.title}</span>
                     </div>
                     {linkingIssue === issue ? (
                       <div className="flex items-center gap-1">
                         <select
                           value={selectedOpp || ''}
                           onChange={(e) => setSelectedOpp(Number(e.target.value))}
-                          className="px-2 py-1 bg-slate-800 border border-slate-600 rounded text-xs text-white"
+                          className="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <option value="">Select...</option>
@@ -922,7 +922,7 @@ const MilestoneHealthCard = ({ health, onLinkIssue, opportunities }) => {
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setLinkingIssue(null); }}
-                          className="px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded"
+                          className="px-2 py-1 bg-slate-100 text-slate-500 text-xs rounded"
                         >
                           ✕
                         </button>
@@ -1191,13 +1191,13 @@ export default function LinearSyncModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
-        className="bg-slate-900 border border-slate-700 rounded-xl max-w-4xl w-full shadow-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white border border-slate-200 rounded-xl max-w-4xl w-full shadow-xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-indigo-900/50 to-purple-900/50">
+        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1205,7 +1205,7 @@ export default function LinearSyncModal({
               </svg>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Linear Sync</h2>
+              <h2 className="text-lg font-semibold text-slate-800">Linear Sync</h2>
               <p className="text-xs text-slate-400">
                 {lastSyncAt 
                   ? `Last synced ${new Date(lastSyncAt).toLocaleString()}`
@@ -1216,7 +1216,7 @@ export default function LinearSyncModal({
           </div>
           <button 
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors"
+            className="text-slate-400 hover:text-slate-800 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1227,7 +1227,7 @@ export default function LinearSyncModal({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* API Key Input */}
-          <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
             <label className="block text-xs text-slate-400 uppercase tracking-wide mb-2">
               Linear API Key
             </label>
@@ -1237,11 +1237,11 @@ export default function LinearSyncModal({
                 value={keyInput}
                 onChange={e => setKeyInput(e.target.value)}
                 placeholder="lin_api_..."
-                className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <button
                 onClick={saveApiKey}
-                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors"
+                className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-white text-sm rounded-lg transition-colors"
               >
                 Save
               </button>
@@ -1255,7 +1255,7 @@ export default function LinearSyncModal({
           <button
             onClick={handleSync}
             disabled={loading || !linearApiKey}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
@@ -1274,7 +1274,7 @@ export default function LinearSyncModal({
 
           {/* Error */}
           {error && (
-            <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 text-red-400 text-sm">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">
               {error}
             </div>
           )}

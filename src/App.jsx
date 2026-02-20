@@ -556,24 +556,24 @@ export default function PalazzoTimeline() {
     };
 
     return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onCancel}>
-        <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <div className="p-4 border-b border-slate-800 sticky top-0 bg-slate-900">
-            <h2 className="text-lg font-semibold text-white">{isNew ? 'Create Opportunity' : 'Edit Opportunity'}</h2>
+      <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4" onClick={onCancel}>
+        <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="p-4 border-b border-slate-200 sticky top-0 bg-white">
+            <h2 className="text-lg font-semibold text-slate-900">{isNew ? 'Create Opportunity' : 'Edit Opportunity'}</h2>
           </div>
-          
+
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
             <div>
               <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Title *</label>
               <input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 placeholder="Enter opportunity title..." autoFocus />
             </div>
 
             <div>
               <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Description</label>
               <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 resize-none"
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 h-20 resize-none"
                 placeholder="Describe the opportunity..." />
             </div>
 
@@ -581,14 +581,14 @@ export default function PalazzoTimeline() {
               <div>
                 <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Area</label>
                 <select value={form.area} onChange={e => setForm({ ...form, area: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
                   {areas.map(area => <option key={area.id} value={area.id}>{area.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Month</label>
                 <select value={form.month} onChange={e => setForm({ ...form, month: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
                   {months.map(month => <option key={month.id} value={month.id}>{month.name}</option>)}
                 </select>
               </div>
@@ -597,7 +597,7 @@ export default function PalazzoTimeline() {
             <div>
               <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Initiative</label>
               <select value={form.initiative} onChange={e => setForm({ ...form, initiative: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
                 {initiatives.map(init => <option key={init.id} value={init.id}>{init.name}</option>)}
               </select>
             </div>
@@ -605,34 +605,34 @@ export default function PalazzoTimeline() {
             <div>
               <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Feeds Into Milestone</label>
               <select value={form.milestoneId || ''} onChange={e => setForm({ ...form, milestoneId: e.target.value || null })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
                 <option value="">No milestone</option>
-                {milestones.map(m => <option key={m.id} value={m.id}>🎯 {m.title} ({getMonthName(m.month)})</option>)}
+                {milestones.map(m => <option key={m.id} value={m.id}>{m.title} ({getMonthName(m.month)})</option>)}
               </select>
             </div>
 
             <div>
               <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Linear Issues (comma-separated)</label>
               <input type="text" value={issuesText} onChange={e => setIssuesText(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 placeholder="PAL-123, PAL-456" />
             </div>
 
-            <div className="border-t border-slate-700 pt-4 mt-4">
+            <div className="border-t border-slate-200 pt-4 mt-4">
               <div className="text-xs text-slate-400 uppercase tracking-wide mb-3">Status & Risk</div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Status</label>
                   <select value={form.status || 'not_started'} onChange={e => setForm({ ...form, status: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
                     {Object.entries(STATUSES).map(([key, { label }]) => <option key={key} value={key}>{label}</option>)}
                   </select>
                 </div>
                 <div className="flex items-end">
-                  <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-800 transition-colors">
+                  <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-50 transition-colors">
                     <input type="checkbox" checked={form.atRisk || false} onChange={e => setForm({ ...form, atRisk: e.target.checked })}
-                      className="w-4 h-4 rounded border-slate-600 text-orange-500 focus:ring-orange-500 focus:ring-offset-slate-900" />
-                    <span className="text-sm text-orange-400 flex items-center gap-1">⚠ At Risk</span>
+                      className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500 focus:ring-offset-white" />
+                    <span className="text-sm text-orange-500 flex items-center gap-1">⚠ At Risk</span>
                   </label>
                 </div>
               </div>
@@ -640,15 +640,15 @@ export default function PalazzoTimeline() {
                 <div className="mt-3">
                   <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Risk Reason</label>
                   <input type="text" value={form.atRiskReason || ''} onChange={e => setForm({ ...form, atRiskReason: e.target.value })}
-                    className="w-full bg-slate-800 border border-orange-700/50 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full bg-white border border-orange-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                     placeholder="Why is this at risk?" />
                 </div>
               )}
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={onCancel} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-lg transition-colors">Cancel</button>
-              <button type="submit" disabled={!form.title.trim()} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm rounded-lg transition-colors">
+              <button type="button" onClick={onCancel} className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm rounded-lg transition-colors">Cancel</button>
+              <button type="submit" disabled={!form.title.trim()} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-100 disabled:text-slate-400 text-white text-sm rounded-lg transition-colors">
                 {isNew ? 'Create' : 'Save Changes'}
               </button>
             </div>
@@ -668,24 +668,24 @@ export default function PalazzoTimeline() {
     };
 
     return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onCancel}>
-        <div className="bg-slate-900 border border-yellow-700/50 rounded-xl max-w-lg w-full shadow-2xl" onClick={e => e.stopPropagation()}>
-          <div className="p-4 border-b border-slate-800 bg-yellow-900/20">
-            <h2 className="text-lg font-semibold text-yellow-400 flex items-center gap-2">🎯 {isNew ? 'Create Milestone' : 'Edit Milestone'}</h2>
+      <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4" onClick={onCancel}>
+        <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
+          <div className="p-4 border-b border-slate-200 bg-[#FFFBEB]">
+            <h2 className="text-lg font-semibold text-[#92400E] flex items-center gap-2">{isNew ? 'Create Milestone' : 'Edit Milestone'}</h2>
           </div>
-          
+
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
             <div>
               <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Milestone Title *</label>
               <input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 placeholder="e.g., Serhant Pilot Launch" autoFocus />
             </div>
 
             <div>
               <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Description</label>
               <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 h-20 resize-none"
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 h-20 resize-none"
                 placeholder="What does this milestone represent?" />
             </div>
 
@@ -693,22 +693,22 @@ export default function PalazzoTimeline() {
               <div>
                 <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Area</label>
                 <select value={form.area} onChange={e => setForm({ ...form, area: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
                   {areas.map(area => <option key={area.id} value={area.id}>{area.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Target Month</label>
                 <select value={form.month} onChange={e => setForm({ ...form, month: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
                   {months.map(month => <option key={month.id} value={month.id}>{month.name}</option>)}
                 </select>
               </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={onCancel} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-lg transition-colors">Cancel</button>
-              <button type="submit" disabled={!form.title.trim()} className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm rounded-lg transition-colors">
+              <button type="button" onClick={onCancel} className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm rounded-lg transition-colors">Cancel</button>
+              <button type="submit" disabled={!form.title.trim()} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-100 disabled:text-slate-400 text-white text-sm rounded-lg transition-colors">
                 {isNew ? 'Create Milestone' : 'Save Changes'}
               </button>
             </div>
@@ -723,9 +723,9 @@ export default function PalazzoTimeline() {
   // ========== LOADING STATE ==========
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[#F4F5F7] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-slate-700 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-slate-200 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-400">Loading Pulseboard...</p>
         </div>
       </div>
@@ -734,28 +734,28 @@ export default function PalazzoTimeline() {
 
   // ========== MAIN RENDER ==========
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 p-4">
+    <div className="min-h-screen bg-[#F4F5F7] text-slate-800 p-4">
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-sm font-medium ${
-          notification.type === 'success' ? 'bg-emerald-600 text-white' :
-          notification.type === 'warning' ? 'bg-amber-600 text-white' : 'bg-slate-700 text-white'
+        <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg border text-sm font-medium ${
+          notification.type === 'success' ? 'bg-white border-l-4 border-l-emerald-500 border-slate-200 text-slate-800' :
+          notification.type === 'warning' ? 'bg-white border-l-4 border-l-amber-500 border-slate-200 text-slate-800' : 'bg-white border-l-4 border-l-slate-400 border-slate-200 text-slate-800'
         }`}>{notification.message}</div>
       )}
 
       {/* Global Overallocation Warning */}
       {overallocatedMembers.length > 0 && viewMode !== 'capacity' && (
-        <div className="mb-4 px-4 py-3 bg-red-900/30 border border-red-700 rounded-lg flex items-center gap-3">
+        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
           <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
           <div className="flex-1">
-            <span className="text-red-400 font-medium">Capacity Warning:</span>
-            <span className="text-red-300 ml-2">
+            <span className="text-red-700 font-medium">Capacity Warning:</span>
+            <span className="text-red-700 ml-2">
               {overallocatedMembers.map(m => m.name).join(', ')} {overallocatedMembers.length === 1 ? 'is' : 'are'} overallocated for {months.find(m => m.id === selectedSprint)?.name}
             </span>
           </div>
-          <button onClick={() => setViewMode('capacity')} className="px-3 py-1 bg-red-700 hover:bg-red-600 text-white text-xs rounded-lg">
+          <button onClick={() => setViewMode('capacity')} className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded-lg">
             View Capacity
           </button>
         </div>
@@ -772,7 +772,7 @@ export default function PalazzoTimeline() {
               </svg>
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-white">Pulseboard</h1>
+              <h1 className="text-lg font-semibold text-slate-900">Pulseboard</h1>
               <p className="text-slate-500 text-xs">Palazzo Product Roadmap</p>
             </div>
           </div>
@@ -784,32 +784,32 @@ export default function PalazzoTimeline() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
             </button>
-            <button onClick={() => setTeamPanelOpen(true)} className="p-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg transition-colors" title="Team Management">
+            <button onClick={() => setTeamPanelOpen(true)} className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors shadow-sm" title="Team Management">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             </button>
-            <button onClick={() => setShowDataModal(true)} className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg transition-colors" title="Data Management">
+            <button onClick={() => setShowDataModal(true)} className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors shadow-sm" title="Data Management">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
               </svg>
             </button>
-            <button onClick={undo} disabled={undoStack.length === 0} className="p-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-400 rounded-lg transition-colors" title={`Undo (${undoStack.length})`}>
+            <button onClick={undo} disabled={undoStack.length === 0} className="p-2 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-30 text-slate-600 rounded-lg transition-colors shadow-sm" title={`Undo (${undoStack.length})`}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
             </button>
             
-            <div className="w-px h-6 bg-slate-700 mx-1"></div>
-            
+            <div className="w-px h-6 bg-slate-200 mx-1"></div>
+
             {/* Create Actions */}
-            <button onClick={() => startCreateMilestone('showcase', 'mar26')} className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5">
+            <button onClick={() => startCreateMilestone('showcase', 'mar26')} className="px-3 py-1.5 bg-slate-50 border border-slate-200 hover:bg-white text-slate-600 text-sm rounded-lg transition-colors flex items-center gap-1.5">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               Milestone
             </button>
-            <button onClick={() => startCreateOpportunity('visualizer', 'dec25')} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5">
+            <button onClick={() => startCreateOpportunity('visualizer', 'dec25')} className="px-3 py-1.5 bg-slate-50 border border-slate-200 hover:bg-white text-slate-600 text-sm rounded-lg transition-colors flex items-center gap-1.5">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
@@ -819,27 +819,26 @@ export default function PalazzoTimeline() {
         </div>
 
         {/* Row 2: View Tabs */}
-        <div className="flex items-center justify-between gap-4 border-b border-slate-800">
+        <div className="flex items-center justify-between gap-4 border-b border-slate-200">
           <div className="flex">
             {[
-              { key: 'all', label: 'Timeline', icon: '📅' },
-              { key: 'milestones', label: 'Milestones', icon: '🎯' },
-              { key: 'opportunities', label: 'Opportunities', icon: '💡' },
-              { key: 'gantt', label: 'Gantt', icon: '📊' },
-              { key: 'prioritize', label: 'Prioritize', icon: '⚖️' },
-              { key: 'capacity', label: 'Capacity', icon: '📊' },
-              { key: 'timeline', label: 'Team View', icon: '👥' }
+              { key: 'all', label: 'Timeline' },
+              { key: 'milestones', label: 'Milestones' },
+              { key: 'opportunities', label: 'Opportunities' },
+              { key: 'gantt', label: 'Gantt' },
+              { key: 'prioritize', label: 'Prioritize' },
+              { key: 'capacity', label: 'Capacity' },
+              { key: 'timeline', label: 'Team View' }
             ].map(mode => (
               <button
                 key={mode.key}
                 onClick={() => setViewMode(mode.key)}
                 className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                  viewMode === mode.key 
-                    ? 'text-white border-indigo-500 bg-slate-800/50' 
-                    : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/30'
+                  viewMode === mode.key
+                    ? 'text-slate-900 border-indigo-500'
+                    : 'text-slate-400 border-transparent hover:text-slate-600'
                 }`}
               >
-                <span className="mr-1.5">{mode.icon}</span>
                 {mode.label}
               </button>
             ))}
@@ -886,9 +885,9 @@ export default function PalazzoTimeline() {
             />
 
             {hasActiveFilters && (
-              <button 
+              <button
                 onClick={clearAllFilters}
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
                 title="Clear all filters"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -908,22 +907,22 @@ export default function PalazzoTimeline() {
             {filterInitiative.map(id => {
               const init = initiatives.find(i => i.id === id);
               return init && (
-                <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 rounded-full text-xs">
+                <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 shadow-sm rounded-full text-xs text-slate-600">
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: init.color }}></span>
                   {init.name}
-                  <button onClick={() => setFilterInitiative(prev => prev.filter(i => i !== id))} className="ml-1 text-slate-400 hover:text-white">×</button>
+                  <button onClick={() => setFilterInitiative(prev => prev.filter(i => i !== id))} className="ml-1 text-slate-400 hover:text-slate-600">×</button>
                 </span>
               );
             })}
-            
+
             {/* Area chips */}
             {filterArea.map(id => {
               const area = areas.find(a => a.id === id);
               return area && (
-                <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 rounded-full text-xs">
+                <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 shadow-sm rounded-full text-xs text-slate-600">
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: area.color }}></span>
                   {area.name}
-                  <button onClick={() => setFilterArea(prev => prev.filter(a => a !== id))} className="ml-1 text-slate-400 hover:text-white">×</button>
+                  <button onClick={() => setFilterArea(prev => prev.filter(a => a !== id))} className="ml-1 text-slate-400 hover:text-slate-600">×</button>
                 </span>
               );
             })}
@@ -946,17 +945,17 @@ export default function PalazzoTimeline() {
               const isUnassigned = id === 'unassigned';
               const member = teamMembers.find(m => m.id === id);
               return (
-                <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-800 rounded-full text-xs text-slate-300">
+                <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 shadow-sm rounded-full text-xs text-slate-600">
                   {isUnassigned ? '⚠ Unassigned' : member?.name}
-                  <button onClick={() => setFilterAssignee(prev => prev.filter(a => a !== id))} className="ml-1 text-slate-400 hover:text-white">×</button>
+                  <button onClick={() => setFilterAssignee(prev => prev.filter(a => a !== id))} className="ml-1 text-slate-400 hover:text-slate-600">×</button>
                 </span>
               );
             })}
-            
+
             {/* Milestone chip (single-select) */}
             {filterMilestone && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-900/30 border border-yellow-600/30 rounded-full text-xs text-yellow-400">
-                🎯 {milestones.find(m => m.id === filterMilestone)?.title}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-full text-xs text-[#92400E]">
+                {milestones.find(m => m.id === filterMilestone)?.title}
                 <button onClick={() => setFilterMilestone(null)} className="ml-1 hover:opacity-70">×</button>
               </span>
             )}
@@ -1031,21 +1030,22 @@ export default function PalazzoTimeline() {
 
       {/* Main Timeline Grid */}
       {viewMode !== 'capacity' && viewMode !== 'timeline' && viewMode !== 'prioritize' && viewMode !== 'gantt' && (
-        <div className="overflow-x-auto border border-slate-800 rounded-lg bg-slate-900">
+        <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white">
           <table className="w-full min-w-[1400px] border-collapse">
             <thead>
               <tr>
-                <th className="sticky left-0 z-20 bg-slate-900 border-b border-r border-slate-800 p-2 w-28"></th>
+                <th className="sticky left-0 z-20 bg-[#ECEEF1] border-b border-r border-gray-200/50 p-2 w-28"></th>
                 {quarters.map(quarter => (
-                  <th key={quarter} colSpan={getMonthsForQuarter(quarter).length} className="bg-slate-800/50 border-b border-slate-800 p-2 text-xs font-medium text-blue-400 text-center">
+                  <th key={quarter} colSpan={getMonthsForQuarter(quarter).length} className="bg-[#ECEEF1] border-b border-gray-200/50 p-2 text-xs font-medium text-indigo-600 text-center">
                     {quarter}
                   </th>
                 ))}
               </tr>
               <tr>
-                <th className="sticky left-0 z-20 bg-slate-900 border-b border-r border-slate-800 p-2 text-xs font-medium text-slate-500 text-left">AREA</th>
+                <th className="sticky left-0 z-20 bg-[#ECEEF1] border-b border-r border-gray-200/50 p-2 text-xs font-medium text-slate-500 text-left">AREA</th>
                 {months.map(month => (
-                  <th key={month.id} className={`border-b border-slate-800 p-2 text-xs font-medium text-center min-w-[130px] ${month.current ? 'bg-emerald-950/30 text-emerald-400 border-b-2 border-b-emerald-500' : 'text-slate-400'}`}>
+                  <th key={month.id} className={`border-b border-gray-200/50 p-2 text-xs font-medium text-center min-w-[130px] ${month.current ? 'bg-[#EFF8F4] text-emerald-600 border-b-2 border-b-emerald-500' : 'bg-[#ECEEF1] text-slate-400'}`}>
+                    {month.current && <span className="inline-block px-1.5 py-0.5 bg-emerald-100 text-emerald-600 text-[9px] font-bold rounded mr-1">NOW</span>}
                     {month.name}
                   </th>
                 ))}
@@ -1055,7 +1055,7 @@ export default function PalazzoTimeline() {
               {areas.map(area => (
                 <tr key={area.id}>
                   {/* Area row click handler - UPDATED for multi-select toggle */}
-                  <td className="sticky left-0 z-10 bg-slate-900 border-r border-b border-slate-800 p-2 font-medium text-sm cursor-pointer hover:bg-slate-800"
+                  <td className="sticky left-0 z-10 bg-[#ECEEF1] border-r border-b border-slate-200 p-2 font-medium text-sm cursor-pointer hover:bg-slate-100"
                     style={{ color: area.color }}
                     onClick={() => {
                       if (filterArea.includes(area.id)) {
@@ -1077,7 +1077,7 @@ export default function PalazzoTimeline() {
                     
                     return (
                       <td key={month.id}
-                        className={`border-b border-slate-800 p-1.5 align-top transition-all ${month.current ? 'bg-emerald-950/10' : ''} ${isDropTarget ? 'bg-blue-900/30 ring-2 ring-inset ring-blue-500' : ''}`}
+                        className={`border-b border-slate-200 p-1.5 align-top transition-all ${month.current ? 'bg-[#EFF8F4]' : ''} ${isDropTarget ? 'bg-blue-50 ring-2 ring-inset ring-blue-400' : ''}`}
                         onDragOver={(e) => handleDragOver(e, area.id, month.id)}
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, area.id, month.id)}
@@ -1090,13 +1090,13 @@ export default function PalazzoTimeline() {
                             return (
                               <div key={m.id} draggable onDragStart={(e) => handleDragStart(e, m, 'milestone')} onDragEnd={handleDragEnd}
                                 onClick={() => setSelectedMilestone(m)}
-                                className={`p-2 rounded text-[11px] cursor-grab active:cursor-grabbing bg-yellow-900/30 border border-yellow-600/50 hover:border-yellow-500 transition-all ${draggedItem?.id === m.id && dragType === 'milestone' ? 'opacity-50' : ''} ${progress.hasRisk ? 'ring-1 ring-orange-500' : ''}`}>
-                                <div className="flex items-center gap-1 text-yellow-400 font-semibold">
+                                className={`p-2 rounded text-[11px] cursor-grab active:cursor-grabbing bg-[#FFFBEB] border border-[#FDE68A] hover:border-amber-400 rounded-lg shadow-[0_1px_2px_rgba(217,119,6,0.06)] transition-all ${draggedItem?.id === m.id && dragType === 'milestone' ? 'opacity-50' : ''} ${progress.hasRisk ? 'ring-1 ring-orange-500' : ''}`}>
+                                <div className="flex items-center gap-1 text-[#92400E] font-semibold">
                                   {progress.hasRisk && <span className="text-orange-500">⚠</span>}
                                   <span>🎯</span><span className="flex-1">{m.title}</span>
                                 </div>
                                 <div className="flex items-center gap-2 mt-1">
-                                  <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
+                                  <div className="flex-1 h-1 bg-slate-200 rounded-full overflow-hidden">
                                     <div className="h-full bg-emerald-500 transition-all" style={{ width: `${progressPct}%` }} />
                                   </div>
                                   <span className="text-[10px] text-yellow-600">{progress.text}</span>
@@ -1152,13 +1152,13 @@ export default function PalazzoTimeline() {
       <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500">
         <div><span className="text-yellow-500 font-medium">{filteredMilestones.length}</span> milestones</div>
         <div><span className="text-slate-400 font-medium">{filteredOpportunities.length}</span> opportunities</div>
-        <div className="border-l border-slate-700 pl-4 flex gap-3">
+        <div className="border-l border-slate-200 pl-4 flex gap-3">
           <span style={{ color: STATUSES.not_started.color }}>{opportunities.filter(o => o.status === 'not_started').length} not started</span>
           <span style={{ color: STATUSES.in_progress.color }}>{opportunities.filter(o => o.status === 'in_progress').length} in progress</span>
           <span style={{ color: STATUSES.done.color }}>{opportunities.filter(o => o.status === 'done').length} done</span>
           <span style={{ color: STATUSES.blocked.color }}>{opportunities.filter(o => o.status === 'blocked').length} blocked</span>
         </div>
-        <div className="border-l border-slate-700 pl-4">
+        <div className="border-l border-slate-200 pl-4">
           <span className="text-orange-500">{opportunities.filter(o => o.atRisk).length} at risk</span>
         </div>
         <div><span className="text-slate-400 font-medium">{undoStack.length}</span> undo steps</div>
@@ -1166,9 +1166,9 @@ export default function PalazzoTimeline() {
 
       {/* Opportunity Detail Modal */}
       {selectedOpportunity && !editingOpportunity && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setSelectedOpportunity(null)}>
-          <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-lg w-full shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-slate-800">
+        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4" onClick={() => setSelectedOpportunity(null)}>
+          <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-200">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   {selectedOpportunity.milestoneId && (
@@ -1176,9 +1176,9 @@ export default function PalazzoTimeline() {
                       → {milestones.find(m => m.id === selectedOpportunity.milestoneId)?.title}
                     </span>
                   )}
-                  <h2 className="text-lg font-semibold text-white">{selectedOpportunity.title}</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">{selectedOpportunity.title}</h2>
                 </div>
-                <button onClick={() => setSelectedOpportunity(null)} className="text-slate-500 hover:text-white text-xl">×</button>
+                <button onClick={() => setSelectedOpportunity(null)} className="text-slate-500 hover:text-slate-900 text-xl">×</button>
               </div>
             </div>
             
@@ -1220,14 +1220,14 @@ export default function PalazzoTimeline() {
                   <div className="text-slate-500 text-xs uppercase tracking-wide mb-2">Linear Issues</div>
                   <div className="flex flex-wrap gap-1">
                     {selectedOpportunity.issues.map(issue => (
-                      <a key={issue} href={`https://linear.app/palazzo-ai/issue/${issue}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-slate-800 text-indigo-400 hover:text-indigo-300 hover:bg-slate-700 text-xs rounded font-mono transition-colors cursor-pointer">{issue}</a>
+                      <a key={issue} href={`https://linear.app/palazzo-ai/issue/${issue}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-slate-50 text-indigo-600 hover:text-indigo-500 hover:bg-slate-100 text-xs rounded font-mono transition-colors cursor-pointer">{issue}</a>
                     ))}
                   </div>
                 </div>
               )}
 
               {/* Dependencies Section */}
-              <div className="border-t border-slate-700 pt-4 mt-4">
+              <div className="border-t border-slate-200 pt-4 mt-4">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide">Dependencies</h4>
                   <button
@@ -1270,12 +1270,12 @@ export default function PalazzoTimeline() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-800 flex justify-between">
+            <div className="p-4 border-t border-slate-200 flex justify-between">
               <div className="flex gap-2">
-                <button onClick={() => deleteOpportunity(selectedOpportunity.id)} className="px-3 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 text-sm rounded-lg">Delete</button>
-                <button onClick={() => duplicateOpportunity(selectedOpportunity)} className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm rounded-lg">Duplicate</button>
+                <button onClick={() => deleteOpportunity(selectedOpportunity.id)} className="px-3 py-2 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-sm rounded-lg">Delete</button>
+                <button onClick={() => duplicateOpportunity(selectedOpportunity)} className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm rounded-lg">Duplicate</button>
               </div>
-              <button onClick={() => { setEditingOpportunity(selectedOpportunity); setIsCreatingOpp(false); }} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg">Edit</button>
+              <button onClick={() => { setEditingOpportunity(selectedOpportunity); setIsCreatingOpp(false); }} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">Edit</button>
             </div>
           </div>
         </div>
@@ -1283,12 +1283,12 @@ export default function PalazzoTimeline() {
 
       {/* Milestone Detail Modal */}
       {selectedMilestone && !editingMilestone && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setSelectedMilestone(null)}>
-          <div className="bg-slate-900 border border-yellow-700/50 rounded-xl max-w-lg w-full shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-slate-800 bg-yellow-900/20">
+        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4" onClick={() => setSelectedMilestone(null)}>
+          <div className="bg-white border border-[#FDE68A] rounded-xl max-w-lg w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-200 bg-[#FFFBEB]">
               <div className="flex items-start justify-between gap-4">
                 <h2 className="text-lg font-semibold text-yellow-400 flex items-center gap-2">🎯 {selectedMilestone.title}</h2>
-                <button onClick={() => setSelectedMilestone(null)} className="text-slate-500 hover:text-white text-xl">×</button>
+                <button onClick={() => setSelectedMilestone(null)} className="text-slate-500 hover:text-slate-900 text-xl">×</button>
               </div>
             </div>
             
@@ -1313,7 +1313,7 @@ export default function PalazzoTimeline() {
                 <div className="text-slate-500 text-xs uppercase tracking-wide mb-2">Contributing Opportunities ({getOpportunitiesForMilestone(selectedMilestone.id).length})</div>
                 <div className="space-y-1 max-h-40 overflow-y-auto">
                   {getOpportunitiesForMilestone(selectedMilestone.id).map(opp => (
-                    <div key={opp.id} className="p-2 bg-slate-800 rounded text-xs cursor-pointer hover:bg-slate-700"
+                    <div key={opp.id} className="p-2 bg-slate-50 rounded text-xs cursor-pointer hover:bg-slate-100"
                       onClick={() => { setSelectedMilestone(null); setSelectedOpportunity(opp); }}>
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getInitiativeColor(opp.initiative) }}></span>
@@ -1329,8 +1329,8 @@ export default function PalazzoTimeline() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-800 flex justify-between">
-              <button onClick={() => deleteMilestone(selectedMilestone.id)} className="px-3 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 text-sm rounded-lg">Delete</button>
+            <div className="p-4 border-t border-slate-200 flex justify-between">
+              <button onClick={() => deleteMilestone(selectedMilestone.id)} className="px-3 py-2 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-sm rounded-lg">Delete</button>
               <div className="flex gap-2">
                 <button onClick={() => {
                   setSelectedMilestone(null);
@@ -1350,7 +1350,7 @@ export default function PalazzoTimeline() {
                   </svg>
                   Plan
                 </button>
-                <button onClick={() => { setEditingMilestone(selectedMilestone); setIsCreatingMilestone(false); }} className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white text-sm rounded-lg">Edit</button>
+                <button onClick={() => { setEditingMilestone(selectedMilestone); setIsCreatingMilestone(false); }} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm rounded-lg">Edit</button>
               </div>
             </div>
           </div>
@@ -1419,11 +1419,11 @@ export default function PalazzoTimeline() {
 
       {/* Data Management Modal */}
       {showDataModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowDataModal(false)}>
-          <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">📁 Data Management</h2>
-              <button onClick={() => setShowDataModal(false)} className="text-slate-500 hover:text-white text-xl">×</button>
+        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4" onClick={() => setShowDataModal(false)}>
+          <div className="bg-white border border-slate-200 rounded-xl max-w-2xl w-full shadow-xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">📁 Data Management</h2>
+              <button onClick={() => setShowDataModal(false)} className="text-slate-500 hover:text-slate-900 text-xl">×</button>
             </div>
             
             <div className="p-4 space-y-4 overflow-y-auto max-h-[70vh]">
@@ -1432,7 +1432,7 @@ export default function PalazzoTimeline() {
                 <p className="text-xs text-slate-500">Download or copy your timeline data.</p>
                 <div className="flex gap-2">
                   <button onClick={exportData} className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg transition-colors">⬇ Download JSON</button>
-                  <button onClick={copyToClipboard} className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors">📋 Copy to Clipboard</button>
+                  <button onClick={copyToClipboard} className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm rounded-lg transition-colors">📋 Copy to Clipboard</button>
                 </div>
               </div>
 
@@ -1440,21 +1440,21 @@ export default function PalazzoTimeline() {
                 <h3 className="text-sm font-medium text-slate-300">Import Data</h3>
                 <p className="text-xs text-slate-500">Paste exported JSON to restore a saved state.</p>
                 <textarea value={importText} onChange={e => setImportText(e.target.value)}
-                  className="w-full h-32 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full h-32 bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder='Paste JSON here...' />
                 <button onClick={importData} disabled={!importText.trim()}
-                  className="px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm rounded-lg transition-colors">
+                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm rounded-lg transition-colors">
                   ⬆ Import Data
                 </button>
               </div>
 
-              <div className="space-y-2 pt-4 border-t border-slate-800">
-                <h3 className="text-sm font-medium text-red-400">Danger Zone</h3>
+              <div className="space-y-2 pt-4 border-t border-slate-200">
+                <h3 className="text-sm font-medium text-red-600">Danger Zone</h3>
                 <p className="text-xs text-slate-500">Reset to the original default data. This cannot be undone.</p>
-                <button onClick={resetToDefault} className="px-3 py-2 bg-red-900/50 hover:bg-red-900 text-red-400 text-sm rounded-lg transition-colors">⚠ Reset to Defaults</button>
+                <button onClick={resetToDefault} className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm rounded-lg transition-colors">⚠ Reset to Defaults</button>
               </div>
 
-              <div className="pt-4 border-t border-slate-800 text-xs text-slate-500 space-y-1">
+              <div className="pt-4 border-t border-slate-200 text-xs text-slate-500 space-y-1">
                 <div>Current data: {opportunities.length} opportunities, {milestones.length} milestones</div>
                 <div>Default data: {initialOpportunities.length} opportunities, {initialMilestones.length} milestones</div>
               </div>

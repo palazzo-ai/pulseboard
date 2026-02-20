@@ -100,7 +100,7 @@ export default function AIAdvisorPanel({
         elements.push(
           <ul key={`list-${elements.length}`} className="space-y-1 mb-4">
             {currentList.map((item, i) => (
-              <li key={i} className="flex gap-2 text-slate-300 text-sm">
+              <li key={i} className="flex gap-2 text-slate-600 text-sm">
                 <span className="text-slate-500 flex-shrink-0">•</span>
                 <span>{item}</span>
               </li>
@@ -118,21 +118,21 @@ export default function AIAdvisorPanel({
       if (trimmed.startsWith('## ')) {
         flushList();
         elements.push(
-          <h2 key={i} className="text-lg font-semibold text-white mt-6 mb-3 pb-2 border-b border-slate-700">
+          <h2 key={i} className="text-lg font-semibold text-slate-900 mt-6 mb-3 pb-2 border-b border-slate-200">
             {trimmed.replace('## ', '')}
           </h2>
         );
       } else if (trimmed.startsWith('# ')) {
         flushList();
         elements.push(
-          <h1 key={i} className="text-xl font-bold text-white mt-4 mb-3">
+          <h1 key={i} className="text-xl font-bold text-slate-900 mt-4 mb-3">
             {trimmed.replace('# ', '')}
           </h1>
         );
       } else if (trimmed.startsWith('### ')) {
         flushList();
         elements.push(
-          <h3 key={i} className="text-base font-semibold text-slate-200 mt-4 mb-2">
+          <h3 key={i} className="text-base font-semibold text-slate-700 mt-4 mb-2">
             {trimmed.replace('### ', '')}
           </h3>
         );
@@ -141,7 +141,7 @@ export default function AIAdvisorPanel({
       else if (trimmed.startsWith('**') && trimmed.endsWith('**') && !trimmed.includes(': ')) {
         flushList();
         elements.push(
-          <p key={i} className="font-semibold text-slate-200 mt-4 mb-2">
+          <p key={i} className="font-semibold text-slate-700 mt-4 mb-2">
             {trimmed.replace(/\*\*/g, '')}
           </p>
         );
@@ -150,7 +150,7 @@ export default function AIAdvisorPanel({
       else if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
         const content = trimmed.replace(/^[-*]\s/, '').replace(/^\d+\.\s/, '');
         // Handle bold within list items
-        const formatted = content.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-white">$1</strong>');
+        const formatted = content.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-slate-900">$1</strong>');
         currentList.push(<span dangerouslySetInnerHTML={{ __html: formatted }} />);
       }
       // Regular paragraphs
@@ -158,10 +158,10 @@ export default function AIAdvisorPanel({
         flushList();
         // Handle bold and inline formatting
         const formatted = trimmed
-          .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-white">$1</strong>')
-          .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-slate-800 rounded text-indigo-300 text-xs">$1</code>');
+          .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-slate-900">$1</strong>')
+          .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-slate-50 rounded text-indigo-600 text-xs">$1</code>');
         elements.push(
-          <p key={i} className="text-slate-300 text-sm mb-3 leading-relaxed" 
+          <p key={i} className="text-slate-600 text-sm mb-3 leading-relaxed" 
              dangerouslySetInnerHTML={{ __html: formatted }} />
         );
       }
@@ -176,13 +176,13 @@ export default function AIAdvisorPanel({
   const selectedTypeInfo = ANALYSIS_TYPES.find(t => t.id === selectedType);
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
-        className="bg-slate-900 border border-slate-700 rounded-xl max-w-4xl w-full shadow-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white border border-slate-200 rounded-xl max-w-4xl w-full shadow-xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 border-b border-slate-800 bg-gradient-to-r from-purple-900/50 to-indigo-900/50">
+        <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-purple-50 to-indigo-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
@@ -192,11 +192,11 @@ export default function AIAdvisorPanel({
                 </svg>
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">AI Roadmap Advisor</h2>
+                <h2 className="text-lg font-semibold text-slate-900">AI Roadmap Advisor</h2>
                 <p className="text-xs text-slate-400">Powered by Claude • Analyzes your roadmap and suggests improvements</p>
               </div>
             </div>
-            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-900 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -205,7 +205,7 @@ export default function AIAdvisorPanel({
         </div>
 
         {/* Analysis Type Selection */}
-        <div className="p-4 border-b border-slate-800 bg-slate-800/30">
+        <div className="p-4 border-b border-slate-200 bg-slate-50">
           <div className="flex flex-wrap gap-2">
             {ANALYSIS_TYPES.map(type => (
               <button
@@ -214,7 +214,7 @@ export default function AIAdvisorPanel({
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                   selectedType === type.id
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 <span>{type.icon}</span>
@@ -232,25 +232,25 @@ export default function AIAdvisorPanel({
           {/* Stats Bar */}
           {!analysis && !loading && (
             <div className="grid grid-cols-5 gap-3 mb-6">
-              <div className="bg-slate-800/50 rounded-lg p-3 text-center">
-                <div className="text-2xl font-bold text-white">{opportunities.length}</div>
+              <div className="bg-slate-50 rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold text-slate-900">{opportunities.length}</div>
                 <div className="text-xs text-slate-500">Opportunities</div>
               </div>
-              <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+              <div className="bg-slate-50 rounded-lg p-3 text-center">
                 <div className="text-2xl font-bold text-yellow-400">{milestones.length}</div>
                 <div className="text-xs text-slate-500">Milestones</div>
               </div>
-              <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+              <div className="bg-slate-50 rounded-lg p-3 text-center">
                 <div className="text-2xl font-bold text-emerald-400">{teamMembers.length}</div>
                 <div className="text-xs text-slate-500">Team Members</div>
               </div>
-              <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+              <div className="bg-slate-50 rounded-lg p-3 text-center">
                 <div className="text-2xl font-bold text-orange-400">
                   {opportunities.filter(o => o.atRisk).length}
                 </div>
                 <div className="text-xs text-slate-500">At Risk</div>
               </div>
-              <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+              <div className="bg-slate-50 rounded-lg p-3 text-center">
                 <div className="text-2xl font-bold text-slate-400">
                   {opportunities.filter(o => !assignments[o.id] || assignments[o.id].length === 0).length}
                 </div>
@@ -263,7 +263,7 @@ export default function AIAdvisorPanel({
           {loading && (
             <div className="flex flex-col items-center justify-center py-16">
               <div className="relative">
-                <div className="w-16 h-16 border-4 border-slate-700 border-t-indigo-500 rounded-full animate-spin"></div>
+                <div className="w-16 h-16 border-4 border-slate-200 border-t-indigo-500 rounded-full animate-spin"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-2xl">🤖</span>
                 </div>
@@ -275,16 +275,16 @@ export default function AIAdvisorPanel({
 
           {/* Error State */}
           {error && (
-            <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-2 text-red-400">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-2 text-red-600">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span className="font-medium">Analysis Failed</span>
               </div>
-              <p className="text-red-300 text-sm mt-2">{error}</p>
-              <p className="text-red-400/70 text-xs mt-2">
+              <p className="text-red-600 text-sm mt-2">{error}</p>
+              <p className="text-red-500 text-xs mt-2">
                 Make sure ANTHROPIC_API_KEY is set in your Vercel environment variables.
               </p>
             </div>
@@ -292,7 +292,7 @@ export default function AIAdvisorPanel({
 
           {/* Analysis Results */}
           {analysis && !loading && (
-            <div className="prose prose-invert max-w-none">
+            <div className="prose max-w-none">
               {renderAnalysis(analysis)}
             </div>
           )}
@@ -301,7 +301,7 @@ export default function AIAdvisorPanel({
           {!analysis && !loading && !error && (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">🎯</div>
-              <h3 className="text-lg font-semibold text-white mb-2">Ready to Analyze</h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Ready to Analyze</h3>
               <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">
                 Select an analysis type above and click "Run Analysis" to get AI-powered 
                 insights about your roadmap, priorities, gaps, and risks.
@@ -316,7 +316,7 @@ export default function AIAdvisorPanel({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-800 flex items-center justify-between bg-slate-800/30">
+        <div className="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="text-xs text-slate-500">
             {analysis && stats && (
               <span>
@@ -331,7 +331,7 @@ export default function AIAdvisorPanel({
                 onClick={() => {
                   navigator.clipboard.writeText(analysis);
                 }}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm rounded-lg transition-colors flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -343,7 +343,7 @@ export default function AIAdvisorPanel({
             <button
               onClick={runAnalysis}
               disabled={loading}
-              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
             >
               {loading ? (
                 <>
