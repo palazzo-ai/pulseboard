@@ -204,6 +204,9 @@ export default function GanttView({
   const [editingDateFor, setEditingDateFor] = useState(null); // issue being date-edited
   const [groupBy, setGroupBy] = useState("area"); // "area" | "initiative" | "none"
   const [collapsedLanes, setCollapsedLanes] = useState(new Set());
+  const [collapsedUnscheduled, setCollapsedUnscheduled] = useState({});
+  const [placingItem, setPlacingItem] = useState(null);
+  const [placingCursorX, setPlacingCursorX] = useState(null);
   const scrollRef = useRef(null);
 
   // Linear state
@@ -386,10 +389,13 @@ export default function GanttView({
     // Helper: push opportunities then milestones within a lane
     // Opportunities linked to a milestone appear above it, then the diamond, then unlinked opps
     const pushLaneContent = (groupOpps, groupMilestones, laneId) => {
+      const scheduled = groupOpps.filter(o => o.startDate && o.endDate);
+      const unscheduled = groupOpps.filter(o => !o.startDate || !o.endDate);
+
       const linkedToMs = new Set();
       groupMilestones.forEach(ms => {
-        // Opportunities linked to this milestone
-        const linked = groupOpps.filter(o => o.milestoneId === ms.id);
+        // Opportunities linked to this milestone (only scheduled ones get bars)
+        const linked = scheduled.filter(o => o.milestoneId === ms.id);
         linked.forEach(opp => {
           linkedToMs.add(opp.id);
           layout.push({ type: "opportunity", item: opp, y, height: ROW_HEIGHT, laneId });
@@ -400,11 +406,33 @@ export default function GanttView({
         layout.push({ ...row, y, height: ROW_HEIGHT });
         y += ROW_HEIGHT + ROW_GAP;
       });
-      // Remaining opportunities not linked to any milestone
-      groupOpps.filter(o => !linkedToMs.has(o.id)).forEach(opp => {
+      // Remaining scheduled opportunities not linked to any milestone
+      scheduled.filter(o => !linkedToMs.has(o.id)).forEach(opp => {
         layout.push({ type: "opportunity", item: opp, y, height: ROW_HEIGHT, laneId });
         y += ROW_HEIGHT + ROW_GAP;
       });
+
+      // Unscheduled section
+      if (unscheduled.length > 0) {
+        layout.push({
+          type: "unscheduled-header",
+          item: { id: `unsched-${laneId}`, laneId, count: unscheduled.length },
+          y, height: ROW_HEIGHT,
+        });
+        y += ROW_HEIGHT + ROW_GAP;
+
+        // Default: expanded if <= 5, collapsed if > 5
+        const isCollapsed = collapsedUnscheduled[laneId] !== undefined
+          ? collapsedUnscheduled[laneId]
+          : unscheduled.length > 5;
+
+        if (!isCollapsed) {
+          unscheduled.forEach(opp => {
+            layout.push({ type: "unscheduled", item: opp, y, height: ROW_HEIGHT, laneId });
+            y += ROW_HEIGHT + ROW_GAP;
+          });
+        }
+      }
     };
 
     if (groupBy !== "none") {
@@ -459,7 +487,7 @@ export default function GanttView({
     }
 
     return { rows: layout, totalHeight: y + 40 };
-  }, [opportunities, milestones, filterArea, filterStatus, groupBy, collapsedLanes]);
+  }, [opportunities, milestones, filterArea, filterStatus, groupBy, collapsedLanes, collapsedUnscheduled]);
 
   const issueRows = useMemo(() => {
     if (!linearIssues) return { rows: [], totalHeight: 100 };
@@ -515,6 +543,14 @@ export default function GanttView({
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollLeft = Math.max(0, todayOffset + LEFT_PANEL_WIDTH - 300);
   }, [todayOffset]);
+
+  // Escape key cancels placement mode
+  useEffect(() => {
+    if (!placingItem) return;
+    const handler = (e) => { if (e.key === 'Escape') setPlacingItem(null); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [placingItem]);
 
   // Focus mode: compute which items are related to the focused milestone
   const focusData = useMemo(() => {
@@ -807,6 +843,72 @@ export default function GanttView({
                       );
                     }
 
+                    // Unscheduled header row
+                    if (row.type === "unscheduled-header") {
+                      const isCollapsed = collapsedUnscheduled[item.laneId] !== undefined
+                        ? collapsedUnscheduled[item.laneId]
+                        : item.count > 5;
+                      return (
+                        <div key={`row-unsched-${item.laneId}`}
+                          className="flex items-center gap-2 px-3 border-b border-dashed border-[#E2E8F0] cursor-pointer hover:bg-[#F8FAFC]"
+                          style={{ height: row.height + ROW_GAP, paddingLeft: 24 }}
+                          onClick={() => setCollapsedUnscheduled(prev => ({
+                            ...prev,
+                            [item.laneId]: isCollapsed ? false : true,
+                          }))}
+                        >
+                          <button className="text-[#94A3B8] w-4 flex-shrink-0 text-xs">
+                            {isCollapsed ? "▸" : "▾"}
+                          </button>
+                          <span className="text-[11px] text-[#94A3B8] italic">Unscheduled</span>
+                          <span className="text-[9px] text-[#94A3B8] bg-[#F1F5F9] rounded-full px-1.5 py-0.5">{item.count}</span>
+                        </div>
+                      );
+                    }
+
+                    // Unscheduled item row
+                    if (row.type === "unscheduled") {
+                      const isPlacing = placingItem?.id === item.id;
+                      return (
+                        <div key={`row-unsched-item-${item.id}`} className="relative">
+                          <div
+                            className={`flex items-center gap-2 px-3 border-b border-[#E5E7EB] hover:bg-[#F8FAFC] cursor-pointer transition-colors ${
+                              isPlacing ? "!bg-[#EFF6FF] ring-1 ring-inset ring-[#2563EB]" : "bg-[#FAFBFC]"
+                            }`}
+                            style={{ height: row.height + ROW_GAP, paddingLeft: 36 }}
+                            onClick={() => setSelectedItem(item)}
+                          >
+                            <span className="w-4 flex-shrink-0" />
+                            <span className="w-2 h-2 rounded-full flex-shrink-0 bg-[#CBD5E1]" />
+                            <span className="truncate flex-1 text-xs text-[#94A3B8]">{item.title}</span>
+
+                            {/* "+ dates" button */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditingDateFor(item.id); }}
+                              className="px-1.5 py-0.5 text-[9px] bg-[#4a7dff20] text-[#4a7dff] rounded hover:bg-[#4a7dff30] transition-colors flex-shrink-0"
+                              title="Set dates">
+                              + dates
+                            </button>
+
+                            {/* "Place" button */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setPlacingItem(isPlacing ? null : item); }}
+                              className={`px-1.5 py-0.5 text-[9px] rounded transition-colors flex-shrink-0 ${
+                                isPlacing ? 'bg-[#2563EB] text-white' : 'bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]'
+                              }`}
+                              title="Click on timeline to place">
+                              place
+                            </button>
+                          </div>
+
+                          {/* Reuse existing InlineDateEditor when editing */}
+                          {editingDateFor === item.id && (
+                            <InlineDateEditor item={item} onSave={saveDateOverride} onCancel={() => setEditingDateFor(null)} />
+                          )}
+                        </div>
+                      );
+                    }
+
                     const isParent = row.type === "opportunity" || row.type === "parent";
                     const hasChildren = isParent && (
                       row.type === "opportunity" ? item.issues?.length > 0 : item.childIds?.length > 0
@@ -883,8 +985,36 @@ export default function GanttView({
                 </div>
               </div>
 
+              {/* Chart area wrapper */}
+              <div className="relative" style={{ width: totalWidth, flexShrink: 0 }}>
+              {/* Placing mode banner */}
+              {placingItem && (
+                <div className="sticky top-0 z-30 bg-[#EFF6FF] border-b border-[#2563EB]/20 px-4 py-1.5 flex items-center gap-2 text-xs">
+                  <span className="text-[#2563EB] font-medium">Click on the timeline to place "{placingItem.title}"</span>
+                  <button onClick={() => setPlacingItem(null)} className="text-[#64748B] hover:text-[#334155]">Esc to cancel</button>
+                </div>
+              )}
               {/* Chart SVG */}
-              <svg width={totalWidth} height={currentRows.totalHeight} className="select-none" style={{ display: 'block', flexShrink: 0 }}>
+              <svg width={totalWidth} height={currentRows.totalHeight} className="select-none" style={{ display: 'block' }}
+                onClick={(e) => {
+                  if (!placingItem) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const daysFromStart = Math.round(x / dayWidth);
+                  const startDate = formatDate(addDays(timelineStart, daysFromStart));
+                  const endDate = formatDate(addDays(timelineStart, daysFromStart + 14));
+                  saveDateOverride(placingItem, startDate, endDate);
+                  setPlacingItem(null);
+                  setPlacingCursorX(null);
+                }}
+                onMouseMove={(e) => {
+                  if (!placingItem) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setPlacingCursorX(e.clientX - rect.left);
+                }}
+                onMouseLeave={() => { if (placingItem) setPlacingCursorX(null); }}
+                style={{ cursor: placingItem ? 'crosshair' : undefined }}
+              >
                 {/* Month column grid lines */}
                 {monthColumns.map((col, i) => (
                   i > 0 ? (
@@ -895,7 +1025,7 @@ export default function GanttView({
 
                 {/* Row backgrounds */}
                 {currentRows.rows.map((row, i) => {
-                  const isCritRow = focusData && row.type !== "swimlane-header" && row.type !== "milestone" && focusData.criticalIds.has(row.item.id);
+                  const isCritRow = focusData && row.type !== "swimlane-header" && row.type !== "milestone" && row.type !== "unscheduled-header" && row.type !== "unscheduled" && focusData.criticalIds.has(row.item.id);
                   return (
                     <g key={`bg-${i}`}>
                       {row.type === "swimlane-header" ? (
@@ -906,6 +1036,17 @@ export default function GanttView({
                             fill={row.item.color} opacity={0.5} />
                           <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height}
                             stroke={row.item.color} strokeWidth={0.5} opacity={0.2} />
+                        </>
+                      ) : row.type === "unscheduled-header" ? (
+                        <>
+                          <rect x={0} y={row.y} width={totalWidth} height={row.height} fill="#F8FAFC" />
+                          <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height}
+                            stroke="#E2E8F0" strokeWidth={0.5} strokeDasharray="4 3" />
+                        </>
+                      ) : row.type === "unscheduled" ? (
+                        <>
+                          <rect x={0} y={row.y} width={totalWidth} height={row.height} fill="#FAFBFC" />
+                          <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height} stroke="#E5E7EB" strokeWidth={0.5} />
                         </>
                       ) : (
                         <>
@@ -995,7 +1136,7 @@ export default function GanttView({
                 })}
 
                 {/* Opportunity & issue bars */}
-                {currentRows.rows.filter(r => r.type !== "milestone" && r.type !== "swimlane-header").map((row) => {
+                {currentRows.rows.filter(r => r.type !== "milestone" && r.type !== "swimlane-header" && r.type !== "unscheduled-header" && r.type !== "unscheduled").map((row) => {
                   const item = row.item;
                   if (!item.startDate || !item.endDate) return null;
                   const isParent = row.type === "opportunity" || row.type === "parent";
@@ -1013,7 +1154,33 @@ export default function GanttView({
                       onDragEnd={handleBarDragEnd} onSelect={setSelectedItem} isSelected={selectedItem?.id === item.id} />
                   );
                 })}
+
+                {/* Unscheduled item dashed placeholders */}
+                {currentRows.rows.filter(r => r.type === "unscheduled").map((row) => {
+                  const monthDate = parseMonthId(row.item.month);
+                  if (!monthDate) return null;
+                  const x = daysBetween(timelineStart, monthDate) * dayWidth;
+                  const monthWidth = 30 * dayWidth;
+                  return (
+                    <g key={`unsched-${row.item.id}`} opacity={0.3}>
+                      <line x1={x} y1={row.y + ROW_HEIGHT / 2} x2={x + monthWidth} y2={row.y + ROW_HEIGHT / 2}
+                        stroke="#94A3B8" strokeWidth={1} strokeDasharray="4 3" />
+                      <circle cx={x} cy={row.y + ROW_HEIGHT / 2} r={2} fill="#94A3B8" />
+                    </g>
+                  );
+                })}
+
+                {/* Click-to-place cursor guide and preview */}
+                {placingItem && placingCursorX != null && (
+                  <g>
+                    <line x1={placingCursorX} y1={0} x2={placingCursorX} y2={currentRows.totalHeight}
+                      stroke="#2563EB" strokeWidth={1} strokeDasharray="4 3" opacity={0.5} />
+                    <rect x={placingCursorX} y={0} width={14 * dayWidth} height={currentRows.totalHeight}
+                      fill="#2563EB" opacity={0.06} />
+                  </g>
+                )}
               </svg>
+              </div>
             </div>
           </div>
         </div>
