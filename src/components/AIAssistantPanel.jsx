@@ -265,6 +265,7 @@ export default function AIAssistantPanel({
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showCapabilities, setShowCapabilities] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -352,11 +353,15 @@ export default function AIAssistantPanel({
     sendMessage(prompt);
   };
 
-  const quickActions = [
-    { label: 'Schedule dateless', prompt: 'Schedule all opportunities that are missing start/end dates.' },
-    { label: 'Sync Linear', prompt: 'Sync with Linear and show me status recommendations.' },
-    { label: 'Risk report', prompt: 'Give me a risk report for the roadmap.' },
-    { label: "What's blocked?", prompt: "What opportunities are blocked or at risk?" },
+  const capabilities = [
+    { icon: '&#128197;', label: 'Set dates', prompt: 'Schedule all opportunities that are missing start/end dates.', desc: 'Assign or update start/end dates' },
+    { icon: '&#9881;', label: 'Update status', prompt: 'What opportunities should change status based on their current progress?', desc: 'Change status or flag at-risk' },
+    { icon: '+', label: 'Create', prompt: 'I need to create a new opportunity. Help me fill in the details.', desc: 'Add a new opportunity' },
+    { icon: '&#8618;', label: 'Move', prompt: 'What items should we consider moving to different months?', desc: 'Reschedule to a different month/area' },
+    { icon: '&#128202;', label: 'Summary', prompt: 'Give me an executive summary of the roadmap for this quarter.', desc: 'Stakeholder-ready reports' },
+    { icon: '&#9889;', label: 'Sync Linear', prompt: 'Sync with Linear and show me status recommendations.', desc: 'Pull latest issue statuses' },
+    { icon: '&#128279;', label: 'Dependencies', prompt: "Analyze the dependency graph and identify the critical path.", desc: 'Critical path & bottlenecks' },
+    { icon: '&#9888;', label: 'Risks', prompt: 'What opportunities are blocked or at risk?', desc: 'Find blockers & risks' },
   ];
 
   return (
@@ -389,14 +394,31 @@ export default function AIAssistantPanel({
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-          {messages.length === 0 && !loading && (
-            <div className="text-center py-8">
-              <div className="text-slate-600 text-xs mb-3">Ask me anything about your roadmap</div>
-              <div className="space-y-1.5">
-                {quickActions.map((qa) => (
-                  <button key={qa.label} onClick={() => handleQuickAction(qa.prompt)}
-                    className="block w-full text-left px-3 py-2 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 rounded-lg text-xs text-slate-400 hover:text-white transition-colors">
-                    {qa.label}
+          {/* Empty state / capabilities grid */}
+          {(messages.length === 0 || showCapabilities) && !loading && (
+            <div className="py-2">
+              {messages.length > 0 && (
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-widest">Capabilities</span>
+                  <button onClick={() => setShowCapabilities(false)}
+                    className="text-slate-600 hover:text-slate-400 text-xs">&times;</button>
+                </div>
+              )}
+              {messages.length === 0 && (
+                <div className="text-center mb-3">
+                  <div className="text-slate-500 text-xs">What can I help you with?</div>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-1.5">
+                {capabilities.map((cap) => (
+                  <button key={cap.label} onClick={() => { handleQuickAction(cap.prompt); setShowCapabilities(false); }}
+                    className="flex items-start gap-2 px-2.5 py-2 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/30 hover:border-slate-600 rounded-lg text-left transition-colors group">
+                    <span className="text-slate-500 group-hover:text-slate-300 text-sm flex-shrink-0 mt-0.5 w-4 text-center"
+                      dangerouslySetInnerHTML={{ __html: cap.icon }} />
+                    <div className="min-w-0">
+                      <div className="text-[11px] text-slate-300 font-medium truncate">{cap.label}</div>
+                      <div className="text-[9px] text-slate-600 group-hover:text-slate-500 truncate">{cap.desc}</div>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -445,22 +467,16 @@ export default function AIAssistantPanel({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Quick actions (when conversation is active) */}
-        {messages.length > 0 && (
-          <div className="px-4 py-1.5 flex gap-1.5 flex-wrap border-t border-slate-800">
-            {quickActions.map((qa) => (
-              <button key={qa.label} onClick={() => handleQuickAction(qa.prompt)}
-                disabled={loading}
-                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700/50 rounded-full text-[10px] text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-50">
-                {qa.label}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Input */}
         <form onSubmit={handleSubmit} className="px-4 py-3 border-t border-slate-700/50 flex-shrink-0">
           <div className="flex gap-2">
+            {messages.length > 0 && !showCapabilities && (
+              <button type="button" onClick={() => setShowCapabilities(true)}
+                className="px-2 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-500 hover:text-slate-300 transition-colors text-xs flex-shrink-0"
+                title="Show capabilities">
+                /?
+              </button>
+            )}
             <input
               ref={inputRef}
               type="text"
