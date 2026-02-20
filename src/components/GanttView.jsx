@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../supabase';
-import { areas, initiatives, months } from '../utils/helpers';
+import { areas, initiatives, months, parseMonthId } from '../utils/helpers';
 
 // ============ CONSTANTS ============
 const STATUS_CONFIG = {
@@ -210,9 +210,12 @@ export default function GanttView({
       ...(linearIssues?.subIssues || []),
     ];
     items.forEach(i => { if (i.startDate) dates.push(parseDate(i.startDate)); });
+    if (viewMode === "opportunities") {
+      milestones.forEach(m => { const d = parseMonthId(m.month); if (d) dates.push(d); });
+    }
     if (dates.length === 0) return addDays(TODAY, -30);
     return addDays(new Date(Math.min(...dates)), -14);
-  }, [viewMode, opportunities, linearIssues]);
+  }, [viewMode, opportunities, milestones, linearIssues]);
 
   const timelineEnd = useMemo(() => {
     const dates = [];
@@ -221,9 +224,12 @@ export default function GanttView({
       ...(linearIssues?.subIssues || []),
     ];
     items.forEach(i => { if (i.endDate) dates.push(parseDate(i.endDate)); });
+    if (viewMode === "opportunities") {
+      milestones.forEach(m => { const d = parseMonthId(m.month); if (d) dates.push(d); });
+    }
     if (dates.length === 0) return addDays(TODAY, 120);
     return addDays(new Date(Math.max(...dates)), 30);
-  }, [viewMode, opportunities, linearIssues]);
+  }, [viewMode, opportunities, milestones, linearIssues]);
 
   const totalDays = daysBetween(timelineStart, timelineEnd);
   const dayWidth = 4 * zoom;
@@ -347,12 +353,34 @@ export default function GanttView({
     });
     const layout = [];
     let y = HEADER_HEIGHT;
+
+    // Milestone rows first
+    const sortedMilestones = [...milestones].sort((a, b) => {
+      const da = parseMonthId(a.month);
+      const db = parseMonthId(b.month);
+      return (da || 0) - (db || 0);
+    });
+    sortedMilestones.forEach(ms => {
+      const msDate = parseMonthId(ms.month);
+      layout.push({
+        type: "milestone",
+        item: { ...ms, startDate: msDate ? formatDate(msDate) : null, endDate: msDate ? formatDate(msDate) : null },
+        y,
+        height: ROW_HEIGHT,
+      });
+      y += ROW_HEIGHT + ROW_GAP;
+    });
+
+    if (milestones.length > 0 && filtered.length > 0) {
+      y += 8; // separator gap
+    }
+
     filtered.forEach(opp => {
       layout.push({ type: "opportunity", item: opp, y, height: ROW_HEIGHT });
       y += ROW_HEIGHT + ROW_GAP;
     });
     return { rows: layout, totalHeight: y + 40 };
-  }, [opportunities, filterArea, filterStatus]);
+  }, [opportunities, milestones, filterArea, filterStatus]);
 
   const issueRows = useMemo(() => {
     if (!linearIssues) return { rows: [], totalHeight: 100 };
@@ -530,6 +558,26 @@ export default function GanttView({
 
             {currentRows.rows.map((row) => {
               const item = row.item;
+
+              // Milestone row
+              if (row.type === "milestone") {
+                const areaInfo = areas.find(a => a.id === item.area);
+                const monthName = months.find(m => m.id === item.month)?.name || item.month;
+                return (
+                  <div key={`row-ms-${item.id}`}
+                    className={`flex items-center gap-2 px-3 border-b border-[#151a26] hover:bg-[#111520] cursor-pointer transition-colors ${
+                      selectedItem?.id === item.id ? "bg-[#131825]" : ""
+                    }`}
+                    style={{ height: row.height + ROW_GAP, paddingLeft: 8 }}
+                    onClick={() => setSelectedItem(item)}
+                  >
+                    <span className="text-yellow-400 text-xs flex-shrink-0" style={{ transform: "rotate(45deg)", display: "inline-block", width: 10, height: 10, lineHeight: "10px", textAlign: "center" }}>◆</span>
+                    <span className="truncate flex-1 text-xs text-yellow-300 font-medium">{item.title}</span>
+                    <span className="text-[9px] text-[#4a5568] flex-shrink-0">{monthName}</span>
+                  </div>
+                );
+              }
+
               const isParent = row.type === "opportunity" || row.type === "parent";
               const hasChildren = isParent && (
                 row.type === "opportunity" ? item.issues?.length > 0 : item.childIds?.length > 0
@@ -620,8 +668,8 @@ export default function GanttView({
             {currentRows.rows.map((row, i) => (
               <g key={`bg-${i}`}>
                 <rect x={0} y={row.y} width={totalWidth} height={row.height}
-                  fill={selectedItem?.id === row.item.id ? "#131825" : (row.type === "issue" || row.type === "child") ? "#0a0d13" : "#0c0f16"} />
-                <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height} stroke="#151a26" strokeWidth={0.5} />
+                  fill={selectedItem?.id === row.item.id ? "#131825" : row.type === "milestone" ? "#12100a" : (row.type === "issue" || row.type === "child") ? "#0a0d13" : "#0c0f16"} />
+                <line x1={0} y1={row.y + row.height} x2={totalWidth} y2={row.y + row.height} stroke={row.type === "milestone" ? "#2a2210" : "#151a26"} strokeWidth={0.5} />
               </g>
             ))}
 
@@ -633,7 +681,37 @@ export default function GanttView({
 
             {dependencyArrows.map((a, i) => <DependencyArrow key={`dep-${i}`} {...a} />)}
 
-            {currentRows.rows.map((row) => {
+            {/* Milestone diamonds */}
+            {currentRows.rows.filter(r => r.type === "milestone").map((row) => {
+              const item = row.item;
+              if (!item.startDate) return null;
+              const msDate = parseDate(item.startDate);
+              if (!msDate) return null;
+              const xPos = daysBetween(timelineStart, msDate) * dayWidth;
+              const cy = row.y + row.height / 2;
+              const size = 10;
+              const isSelected = selectedItem?.id === item.id;
+              return (
+                <g key={`ms-${item.id}`} style={{ cursor: "pointer" }} onClick={() => setSelectedItem(item)}>
+                  {/* Dashed vertical line */}
+                  <line x1={xPos} y1={row.y + 2} x2={xPos} y2={row.y + row.height - 2}
+                    stroke="#eab308" strokeWidth={1} strokeDasharray="2 3" opacity={0.3} />
+                  {/* Diamond */}
+                  <polygon
+                    points={`${xPos},${cy - size} ${xPos + size},${cy} ${xPos},${cy + size} ${xPos - size},${cy}`}
+                    fill="#eab308" opacity={isSelected ? 0.9 : 0.7}
+                    stroke={isSelected ? "#fff" : "#eab308"} strokeWidth={isSelected ? 1.5 : 0.5} />
+                  {/* Label */}
+                  <text x={xPos + size + 6} y={cy + 1} fill="#eab308" fontSize={10} fontWeight={500}
+                    dominantBaseline="middle" opacity={0.8} style={{ pointerEvents: "none" }}>
+                    {item.title}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Opportunity & issue bars */}
+            {currentRows.rows.filter(r => r.type !== "milestone").map((row) => {
               const item = row.item;
               if (!item.startDate || !item.endDate) return null;
               const isParent = row.type === "opportunity" || row.type === "parent";
@@ -657,6 +735,60 @@ export default function GanttView({
                 <button onClick={() => setSelectedItem(null)} className="text-[#4a5568] hover:text-white text-xs ml-2">✕</button>
               </div>
 
+              {/* === MILESTONE DETAILS === */}
+              {milestones.some(m => m.id === selectedItem.id) && (() => {
+                const areaInfo = areas.find(a => a.id === selectedItem.area);
+                const monthName = months.find(m => m.id === selectedItem.month)?.name;
+                const linkedOpps = opportunities.filter(o => o.milestoneId === selectedItem.id);
+                return (
+                  <>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-yellow-400 text-sm">◆</span>
+                      <span className="text-[10px] text-yellow-400 uppercase tracking-widest font-medium">Milestone</span>
+                    </div>
+
+                    {areaInfo && (
+                      <div className="mb-3">
+                        <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1">Area</label>
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px]"
+                          style={{ backgroundColor: `${areaInfo.color}20`, color: areaInfo.color }}>
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: areaInfo.color }} />
+                          {areaInfo.name}
+                        </span>
+                      </div>
+                    )}
+
+                    {monthName && (
+                      <div className="mb-3">
+                        <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1">Target Month</label>
+                        <span className="text-xs text-[#8896ab]">{monthName}</span>
+                      </div>
+                    )}
+
+                    {selectedItem.description && (
+                      <div className="mb-3">
+                        <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Description</label>
+                        <p className="text-[11px] text-[#8896ab] leading-relaxed">{selectedItem.description}</p>
+                      </div>
+                    )}
+
+                    {linkedOpps.length > 0 && (
+                      <div className="mb-3">
+                        <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Linked Opportunities ({linkedOpps.length})</label>
+                        <div className="space-y-1">
+                          {linkedOpps.map(opp => (
+                            <div key={opp.id} className="flex items-center gap-2 px-2 py-1 bg-[#111520] rounded text-[11px]">
+                              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: STATUS_CONFIG[opp.status]?.color }} />
+                              <span className="text-[#c8d4e6] truncate">{opp.title}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
               {/* Linear issue link */}
               {selectedItem.identifier && (
                 <a href={selectedItem.url || `https://linear.app/palazzo-ai/issue/${selectedItem.identifier}`} target="_blank" rel="noopener noreferrer"
@@ -664,7 +796,7 @@ export default function GanttView({
               )}
 
               {/* === OPPORTUNITY DETAILS === */}
-              {!selectedItem.identifier && (
+              {!selectedItem.identifier && !milestones.some(m => m.id === selectedItem.id) && (
                 <>
                   {/* Area & Initiative */}
                   <div className="grid grid-cols-2 gap-2 mb-4">
@@ -713,85 +845,90 @@ export default function GanttView({
                 </>
               )}
 
-              {/* Status */}
-              <div className="mb-4">
-                <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Status</label>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_CONFIG[selectedItem.status]?.color }} />
-                  <span className="text-xs text-[#8896ab]">{selectedItem.stateName || STATUS_CONFIG[selectedItem.status]?.label}</span>
-                </div>
-              </div>
-
-              {/* Dates — editable */}
-              <div className="mb-4">
-                <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">
-                  Dates
-                  {selectedItem.hasPulseboardDates && <span className="text-[#4a7dff] ml-1">(Pulseboard)</span>}
-                </label>
-                {selectedItem.startDate && selectedItem.endDate ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-[9px] text-[#4a5568] block">Start</span>
-                      <input type="date" value={selectedItem.startDate}
-                        onChange={(e) => saveDateOverride(selectedItem, e.target.value, selectedItem.endDate)}
-                        className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
-                    </div>
-                    <div>
-                      <span className="text-[9px] text-[#4a5568] block">End</span>
-                      <input type="date" value={selectedItem.endDate}
-                        onChange={(e) => saveDateOverride(selectedItem, selectedItem.startDate, e.target.value)}
-                        className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+              {/* Status, Dates, Duration (not for milestones) */}
+              {!milestones.some(m => m.id === selectedItem.id) && (
+                <>
+                  {/* Status */}
+                  <div className="mb-4">
+                    <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Status</label>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_CONFIG[selectedItem.status]?.color }} />
+                      <span className="text-xs text-[#8896ab]">{selectedItem.stateName || STATUS_CONFIG[selectedItem.status]?.label}</span>
                     </div>
                   </div>
-                ) : editingDateFor === selectedItem.id ? (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <span className="text-[9px] text-[#4a5568] block">Start</span>
-                        <input type="date" id="panel-start-date" defaultValue={formatDate(TODAY)}
-                          className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-[#4a5568] block">End</span>
-                        <input type="date" id="panel-end-date" defaultValue={formatDate(addDays(TODAY, 14))}
-                          className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => {
-                        const s = document.getElementById('panel-start-date')?.value;
-                        const e = document.getElementById('panel-end-date')?.value;
-                        if (s && e) saveDateOverride(selectedItem, s, e);
-                      }}
-                        className="flex-1 px-3 py-1.5 bg-[#4a7dff] hover:bg-[#5a8dff] text-white text-[11px] font-medium rounded transition-colors">
-                        Save
-                      </button>
-                      <button onClick={() => setEditingDateFor(null)}
-                        className="px-3 py-1.5 bg-[#1e2433] hover:bg-[#252d3f] text-[#8896ab] text-[11px] rounded transition-colors">
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button onClick={() => setEditingDateFor(selectedItem.id)}
-                    className="px-3 py-1.5 bg-[#4a7dff20] text-[#4a7dff] text-[11px] rounded hover:bg-[#4a7dff30] transition-colors">
-                    + Set dates
-                  </button>
-                )}
-              </div>
 
-              {/* Duration */}
-              {selectedItem.startDate && selectedItem.endDate && (
-                <div className="mb-4 px-3 py-2 bg-[#111520] rounded-md">
-                  <span className="text-[10px] text-[#4a5568] uppercase tracking-widest">Duration</span>
-                  <span className="text-sm text-white ml-2 font-medium">
-                    {daysBetween(parseDate(selectedItem.startDate), parseDate(selectedItem.endDate))} days
-                  </span>
-                </div>
+                  {/* Dates — editable */}
+                  <div className="mb-4">
+                    <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">
+                      Dates
+                      {selectedItem.hasPulseboardDates && <span className="text-[#4a7dff] ml-1">(Pulseboard)</span>}
+                    </label>
+                    {selectedItem.startDate && selectedItem.endDate ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-[9px] text-[#4a5568] block">Start</span>
+                          <input type="date" value={selectedItem.startDate}
+                            onChange={(e) => saveDateOverride(selectedItem, e.target.value, selectedItem.endDate)}
+                            className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-[#4a5568] block">End</span>
+                          <input type="date" value={selectedItem.endDate}
+                            onChange={(e) => saveDateOverride(selectedItem, selectedItem.startDate, e.target.value)}
+                            className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+                        </div>
+                      </div>
+                    ) : editingDateFor === selectedItem.id ? (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-[9px] text-[#4a5568] block">Start</span>
+                            <input type="date" id="panel-start-date" defaultValue={formatDate(TODAY)}
+                              className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-[#4a5568] block">End</span>
+                            <input type="date" id="panel-end-date" defaultValue={formatDate(addDays(TODAY, 14))}
+                              className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => {
+                            const s = document.getElementById('panel-start-date')?.value;
+                            const e = document.getElementById('panel-end-date')?.value;
+                            if (s && e) saveDateOverride(selectedItem, s, e);
+                          }}
+                            className="flex-1 px-3 py-1.5 bg-[#4a7dff] hover:bg-[#5a8dff] text-white text-[11px] font-medium rounded transition-colors">
+                            Save
+                          </button>
+                          <button onClick={() => setEditingDateFor(null)}
+                            className="px-3 py-1.5 bg-[#1e2433] hover:bg-[#252d3f] text-[#8896ab] text-[11px] rounded transition-colors">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => setEditingDateFor(selectedItem.id)}
+                        className="px-3 py-1.5 bg-[#4a7dff20] text-[#4a7dff] text-[11px] rounded hover:bg-[#4a7dff30] transition-colors">
+                        + Set dates
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Duration */}
+                  {selectedItem.startDate && selectedItem.endDate && (
+                    <div className="mb-4 px-3 py-2 bg-[#111520] rounded-md">
+                      <span className="text-[10px] text-[#4a5568] uppercase tracking-widest">Duration</span>
+                      <span className="text-sm text-white ml-2 font-medium">
+                        {daysBetween(parseDate(selectedItem.startDate), parseDate(selectedItem.endDate))} days
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* === OPPORTUNITY-SPECIFIC FIELDS === */}
-              {!selectedItem.identifier && (
+              {!selectedItem.identifier && !milestones.some(m => m.id === selectedItem.id) && (
                 <>
                   {/* At Risk */}
                   {selectedItem.atRisk && (
