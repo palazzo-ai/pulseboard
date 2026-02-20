@@ -358,76 +358,96 @@ export default function GanttView({
     const layout = [];
     let y = HEADER_HEIGHT;
 
-    // Milestone rows first
+    // Pre-sort milestones by date
     const sortedMilestones = [...milestones].sort((a, b) => {
       const da = parseMonthId(a.month);
       const db = parseMonthId(b.month);
       return (da || 0) - (db || 0);
     });
-    sortedMilestones.forEach(ms => {
+
+    // Helper: build milestone row object
+    const makeMsRow = (ms, laneId) => {
       const msDate = parseMonthId(ms.month);
-      layout.push({
+      return {
         type: "milestone",
         item: { ...ms, startDate: msDate ? formatDate(msDate) : null, endDate: msDate ? formatDate(msDate) : null },
-        y,
-        height: ROW_HEIGHT,
-      });
-      y += ROW_HEIGHT + ROW_GAP;
-    });
+        laneId,
+      };
+    };
 
-    if (milestones.length > 0 && filtered.length > 0) {
-      y += 8; // separator gap
-    }
+    // Helper: push opportunities then milestones within a lane
+    // Opportunities linked to a milestone appear above it, then the diamond, then unlinked opps
+    const pushLaneContent = (groupOpps, groupMilestones, laneId) => {
+      const linkedToMs = new Set();
+      groupMilestones.forEach(ms => {
+        // Opportunities linked to this milestone
+        const linked = groupOpps.filter(o => o.milestoneId === ms.id);
+        linked.forEach(opp => {
+          linkedToMs.add(opp.id);
+          layout.push({ type: "opportunity", item: opp, y, height: ROW_HEIGHT, laneId });
+          y += ROW_HEIGHT + ROW_GAP;
+        });
+        // Milestone diamond row
+        const row = makeMsRow(ms, laneId);
+        layout.push({ ...row, y, height: ROW_HEIGHT });
+        y += ROW_HEIGHT + ROW_GAP;
+      });
+      // Remaining opportunities not linked to any milestone
+      groupOpps.filter(o => !linkedToMs.has(o.id)).forEach(opp => {
+        layout.push({ type: "opportunity", item: opp, y, height: ROW_HEIGHT, laneId });
+        y += ROW_HEIGHT + ROW_GAP;
+      });
+    };
 
     if (groupBy !== "none") {
-      // Group by area or initiative
       const groups = groupBy === "area" ? areas : initiatives;
       groups.forEach(group => {
         const groupOpps = filtered.filter(o => o[groupBy] === group.id);
-        if (groupOpps.length === 0) return;
+        // Milestones in this group (match by area for area grouping; for initiative grouping, include milestones whose area matches any opp's area in this group)
+        const groupMs = groupBy === "area"
+          ? sortedMilestones.filter(ms => ms.area === group.id)
+          : sortedMilestones.filter(ms => groupOpps.some(o => o.milestoneId === ms.id));
+
+        if (groupOpps.length === 0 && groupMs.length === 0) return;
 
         const isCollapsed = collapsedLanes.has(group.id);
+        const totalCount = groupOpps.length + groupMs.length;
         layout.push({
           type: "swimlane-header",
-          item: { id: `lane-${group.id}`, title: group.name, laneId: group.id, color: group.color, count: groupOpps.length },
+          item: { id: `lane-${group.id}`, title: group.name, laneId: group.id, color: group.color, count: totalCount },
           y,
           height: SWIMLANE_HEIGHT,
         });
         y += SWIMLANE_HEIGHT + ROW_GAP;
 
         if (!isCollapsed) {
-          groupOpps.forEach(opp => {
-            layout.push({ type: "opportunity", item: opp, y, height: ROW_HEIGHT, laneId: group.id });
-            y += ROW_HEIGHT + ROW_GAP;
-          });
+          pushLaneContent(groupOpps, groupMs, group.id);
         }
       });
 
       // Ungrouped opportunities (no area/initiative set)
       const ungrouped = filtered.filter(o => !o[groupBy]);
-      if (ungrouped.length > 0) {
+      const ungroupedMs = groupBy === "area"
+        ? sortedMilestones.filter(ms => !ms.area)
+        : sortedMilestones.filter(ms => ungrouped.some(o => o.milestoneId === ms.id));
+
+      if (ungrouped.length > 0 || ungroupedMs.length > 0) {
         const isCollapsed = collapsedLanes.has("ungrouped");
         layout.push({
           type: "swimlane-header",
-          item: { id: "lane-ungrouped", title: "Ungrouped", laneId: "ungrouped", color: "#4a5568", count: ungrouped.length },
+          item: { id: "lane-ungrouped", title: "Ungrouped", laneId: "ungrouped", color: "#4a5568", count: ungrouped.length + ungroupedMs.length },
           y,
           height: SWIMLANE_HEIGHT,
         });
         y += SWIMLANE_HEIGHT + ROW_GAP;
 
         if (!isCollapsed) {
-          ungrouped.forEach(opp => {
-            layout.push({ type: "opportunity", item: opp, y, height: ROW_HEIGHT, laneId: "ungrouped" });
-            y += ROW_HEIGHT + ROW_GAP;
-          });
+          pushLaneContent(ungrouped, ungroupedMs, "ungrouped");
         }
       }
     } else {
-      // Flat list (no grouping)
-      filtered.forEach(opp => {
-        layout.push({ type: "opportunity", item: opp, y, height: ROW_HEIGHT });
-        y += ROW_HEIGHT + ROW_GAP;
-      });
+      // Flat list — still interleave milestones with their linked opportunities
+      pushLaneContent(filtered, sortedMilestones, undefined);
     }
 
     return { rows: layout, totalHeight: y + 40 };
@@ -806,7 +826,7 @@ export default function GanttView({
             })}
 
             {/* Opportunity & issue bars */}
-            {currentRows.rows.filter(r => r.type !== "milestone").map((row) => {
+            {currentRows.rows.filter(r => r.type !== "milestone" && r.type !== "swimlane-header").map((row) => {
               const item = row.item;
               if (!item.startDate || !item.endDate) return null;
               const isParent = row.type === "opportunity" || row.type === "parent";
