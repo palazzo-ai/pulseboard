@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../supabase';
+import { areas, initiatives, months } from '../utils/helpers';
 
 // ============ CONSTANTS ============
 const STATUS_CONFIG = {
@@ -649,16 +650,67 @@ export default function GanttView({
 
         {/* Detail panel */}
         {selectedItem && (
-          <div className="flex-shrink-0 border-l border-[#1a1f2e] overflow-y-auto bg-[#0d1018]" style={{ width: 280 }}>
+          <div className="flex-shrink-0 border-l border-[#1a1f2e] overflow-y-auto bg-[#0d1018]" style={{ width: 300 }}>
             <div className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-white truncate flex-1">{selectedItem.title}</h3>
                 <button onClick={() => setSelectedItem(null)} className="text-[#4a5568] hover:text-white text-xs ml-2">✕</button>
               </div>
 
+              {/* Linear issue link */}
               {selectedItem.identifier && (
-                <a href={selectedItem.url} target="_blank" rel="noopener noreferrer"
+                <a href={selectedItem.url || `https://linear.app/palazzo-ai/issue/${selectedItem.identifier}`} target="_blank" rel="noopener noreferrer"
                   className="text-[11px] text-[#4a7dff] hover:underline mb-3 block">{selectedItem.identifier} ↗</a>
+              )}
+
+              {/* === OPPORTUNITY DETAILS === */}
+              {!selectedItem.identifier && (
+                <>
+                  {/* Area & Initiative */}
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {selectedItem.area && (() => {
+                      const area = areas.find(a => a.id === selectedItem.area);
+                      return area ? (
+                        <div>
+                          <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1">Area</label>
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px]"
+                            style={{ backgroundColor: `${area.color}20`, color: area.color }}>
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: area.color }} />
+                            {area.name}
+                          </span>
+                        </div>
+                      ) : null;
+                    })()}
+                    {selectedItem.initiative && (() => {
+                      const init = initiatives.find(i => i.id === selectedItem.initiative);
+                      return init ? (
+                        <div>
+                          <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1">Initiative</label>
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px]"
+                            style={{ backgroundColor: `${init.color}20`, color: init.color }}>
+                            {init.name}
+                          </span>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+
+                  {/* Month */}
+                  {selectedItem.month && (
+                    <div className="mb-4">
+                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1">Month</label>
+                      <span className="text-xs text-[#8896ab]">{months.find(m => m.id === selectedItem.month)?.name || selectedItem.month}</span>
+                    </div>
+                  )}
+
+                  {/* Description */}
+                  {selectedItem.description && (
+                    <div className="mb-4">
+                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Description</label>
+                      <p className="text-[11px] text-[#8896ab] leading-relaxed">{selectedItem.description}</p>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Status */}
@@ -691,6 +743,35 @@ export default function GanttView({
                         className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
                     </div>
                   </div>
+                ) : editingDateFor === selectedItem.id ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-[9px] text-[#4a5568] block">Start</span>
+                        <input type="date" id="panel-start-date" defaultValue={formatDate(TODAY)}
+                          className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-[#4a5568] block">End</span>
+                        <input type="date" id="panel-end-date" defaultValue={formatDate(addDays(TODAY, 14))}
+                          className="w-full bg-[#0f1219] border border-[#2a3040] rounded px-2 py-1 text-[11px] text-[#c8d4e6] focus:border-[#4a7dff] focus:outline-none" />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => {
+                        const s = document.getElementById('panel-start-date')?.value;
+                        const e = document.getElementById('panel-end-date')?.value;
+                        if (s && e) saveDateOverride(selectedItem, s, e);
+                      }}
+                        className="flex-1 px-3 py-1.5 bg-[#4a7dff] hover:bg-[#5a8dff] text-white text-[11px] font-medium rounded transition-colors">
+                        Save
+                      </button>
+                      <button onClick={() => setEditingDateFor(null)}
+                        className="px-3 py-1.5 bg-[#1e2433] hover:bg-[#252d3f] text-[#8896ab] text-[11px] rounded transition-colors">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <button onClick={() => setEditingDateFor(selectedItem.id)}
                     className="px-3 py-1.5 bg-[#4a7dff20] text-[#4a7dff] text-[11px] rounded hover:bg-[#4a7dff30] transition-colors">
@@ -709,44 +790,131 @@ export default function GanttView({
                 </div>
               )}
 
-              {/* Assignee */}
-              {selectedItem.assignee && (
-                <div className="mb-4">
-                  <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Assignee</label>
-                  <span className="text-xs text-[#8896ab]">{selectedItem.assignee.name}</span>
-                </div>
+              {/* === OPPORTUNITY-SPECIFIC FIELDS === */}
+              {!selectedItem.identifier && (
+                <>
+                  {/* At Risk */}
+                  {selectedItem.atRisk && (
+                    <div className="mb-4 px-3 py-2 bg-[#1a0f0f] border border-[#4a2020] rounded-md">
+                      <div className="flex items-center gap-1.5 text-orange-400 text-[11px] font-medium mb-0.5">
+                        <span>⚠</span> At Risk
+                      </div>
+                      {selectedItem.atRiskReason && (
+                        <p className="text-[10px] text-[#8896ab]">{selectedItem.atRiskReason}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Linked Issues */}
+                  {selectedItem.issues?.length > 0 && (
+                    <div className="mb-4">
+                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Linear Issues ({selectedItem.issues.length})</label>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedItem.issues.map(issue => (
+                          <a key={issue} href={`https://linear.app/palazzo-ai/issue/${issue}`} target="_blank" rel="noopener noreferrer"
+                            className="px-2 py-0.5 bg-[#1a1f2e] text-[#4a7dff] hover:text-[#6b9bff] hover:bg-[#1e2538] text-[10px] rounded font-mono transition-colors">
+                            {issue}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Impact & Effort */}
+                  {(selectedItem.impactScore != null || selectedItem.effortScore != null) && (
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      <div className="px-2 py-1.5 bg-[#111520] rounded">
+                        <span className="text-[9px] text-[#4a5568] uppercase tracking-widest block">Impact</span>
+                        <span className="text-sm text-white font-medium">{selectedItem.impactScore ?? '—'}</span>
+                      </div>
+                      <div className="px-2 py-1.5 bg-[#111520] rounded">
+                        <span className="text-[9px] text-[#4a5568] uppercase tracking-widest block">Effort</span>
+                        <span className="text-sm text-white font-medium">{selectedItem.effortScore ?? '—'}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dependencies */}
+                  {(selectedItem.blocks?.length > 0 || selectedItem.blockedBy?.length > 0) && (
+                    <div className="mb-4">
+                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Dependencies</label>
+                      {selectedItem.blockedBy?.length > 0 && (
+                        <div className="mb-1">
+                          <span className="text-[9px] text-red-400">Blocked by: </span>
+                          {selectedItem.blockedBy.map(id => {
+                            const dep = opportunities.find(o => o.id === id);
+                            return <span key={id} className="text-[10px] text-[#8896ab]">{dep?.title || `#${id}`}{' '}</span>;
+                          })}
+                        </div>
+                      )}
+                      {selectedItem.blocks?.length > 0 && (
+                        <div>
+                          <span className="text-[9px] text-emerald-400">Blocks: </span>
+                          {selectedItem.blocks.map(id => {
+                            const dep = opportunities.find(o => o.id === id);
+                            return <span key={id} className="text-[10px] text-[#8896ab]">{dep?.title || `#${id}`}{' '}</span>;
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Milestone */}
+                  {selectedItem.milestoneId && (() => {
+                    const ms = milestones.find(m => m.id === selectedItem.milestoneId);
+                    return ms ? (
+                      <div className="mb-4">
+                        <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1">Milestone</label>
+                        <span className="text-xs text-yellow-400">{ms.title}</span>
+                      </div>
+                    ) : null;
+                  })()}
+                </>
               )}
 
-              {/* Project */}
-              {selectedItem.project && (
-                <div className="mb-4">
-                  <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Project</label>
-                  <span className="text-xs text-[#8896ab]">{selectedItem.project.name}</span>
-                </div>
-              )}
+              {/* === LINEAR ISSUE-SPECIFIC FIELDS === */}
+              {selectedItem.identifier && (
+                <>
+                  {/* Assignee */}
+                  {selectedItem.assignee && (
+                    <div className="mb-4">
+                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Assignee</label>
+                      <span className="text-xs text-[#8896ab]">{selectedItem.assignee.name}</span>
+                    </div>
+                  )}
 
-              {/* Labels */}
-              {selectedItem.labels?.length > 0 && (
-                <div className="mb-4">
-                  <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Labels</label>
-                  <div className="flex flex-wrap gap-1">
-                    {selectedItem.labels.map((l, i) => (
-                      <span key={i} className="px-2 py-0.5 rounded text-[10px] bg-[#1a1f2e] text-[#8896ab]">{l.name}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
+                  {/* Project */}
+                  {selectedItem.project && (
+                    <div className="mb-4">
+                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Project</label>
+                      <span className="text-xs text-[#8896ab]">{selectedItem.project.name}</span>
+                    </div>
+                  )}
 
-              {/* Sub-issues */}
-              {selectedItem.childIds?.length > 0 && (
-                <div className="mb-4">
-                  <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Sub-issues ({selectedItem.childIds.length})</label>
-                  <div className="space-y-1">
-                    {selectedItem.childIdentifiers?.map((id, i) => (
-                      <div key={i} className="text-[11px] text-[#6b7a94] font-mono">{id}</div>
-                    ))}
-                  </div>
-                </div>
+                  {/* Labels */}
+                  {selectedItem.labels?.length > 0 && (
+                    <div className="mb-4">
+                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Labels</label>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedItem.labels.map((l, i) => (
+                          <span key={i} className="px-2 py-0.5 rounded text-[10px] bg-[#1a1f2e] text-[#8896ab]">{l.name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-issues */}
+                  {selectedItem.childIds?.length > 0 && (
+                    <div className="mb-4">
+                      <label className="text-[10px] text-[#4a5568] uppercase tracking-widest block mb-1.5">Sub-issues ({selectedItem.childIds.length})</label>
+                      <div className="space-y-1">
+                        {selectedItem.childIdentifiers?.map((id, i) => (
+                          <div key={i} className="text-[11px] text-[#6b7a94] font-mono">{id}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
