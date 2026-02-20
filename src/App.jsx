@@ -194,6 +194,7 @@ export default function PalazzoTimeline() {
 
   // ========== SAVE OPERATIONS ==========
   const saveOpportunity = async (opp) => {
+    setOpportunities(prev => prev.map(o => o.id === opp.id ? opp : o));
     try {
       const { error } = await supabase.from('opportunities').upsert(opportunityToDb(opp));
       if (error) throw error;
