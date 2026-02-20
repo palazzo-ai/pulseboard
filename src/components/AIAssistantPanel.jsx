@@ -777,6 +777,77 @@ function stripPlanBlock(text) {
   return text.replace(/```milestone_plan\s*[\s\S]*?```/g, '').trim();
 }
 
+// Simple markdown renderer for assistant chat messages
+function renderMarkdown(text) {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+  const elements = [];
+  let currentList = [];
+
+  const formatInline = (str) => {
+    // Bold, italic, inline code
+    return str
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
+      .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-slate-200/60 rounded text-[10px] font-mono">$1</code>');
+  };
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      elements.push(
+        <ul key={`list-${elements.length}`} className="my-1 ml-3 space-y-0.5">
+          {currentList.map((item, i) => (
+            <li key={i} className="flex gap-1.5">
+              <span className="text-slate-400 flex-shrink-0">•</span>
+              <span dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
+            </li>
+          ))}
+        </ul>
+      );
+      currentList = [];
+    }
+  };
+
+  lines.forEach((line, i) => {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('### ')) {
+      flushList();
+      elements.push(
+        <p key={i} className="font-semibold mt-2 mb-0.5">{trimmed.slice(4)}</p>
+      );
+    } else if (trimmed.startsWith('## ')) {
+      flushList();
+      elements.push(
+        <p key={i} className="font-semibold mt-2 mb-0.5">{trimmed.slice(3)}</p>
+      );
+    } else if (trimmed.startsWith('# ')) {
+      flushList();
+      elements.push(
+        <p key={i} className="font-bold mt-2 mb-0.5">{trimmed.slice(2)}</p>
+      );
+    } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\.\s/.test(trimmed)) {
+      const content = trimmed.replace(/^[-*]\s/, '').replace(/^\d+\.\s/, '');
+      currentList.push(content);
+    } else if (trimmed.length === 0) {
+      flushList();
+      // Only add spacing if we have prior content
+      if (elements.length > 0) {
+        elements.push(<div key={`br-${i}`} className="h-1.5" />);
+      }
+    } else {
+      flushList();
+      elements.push(
+        <p key={i} className="my-0.5" dangerouslySetInnerHTML={{ __html: formatInline(trimmed) }} />
+      );
+    }
+  });
+
+  flushList();
+  return elements;
+}
+
 // ============ MAIN PANEL ============
 export default function AIAssistantPanel({
   isOpen,
@@ -965,7 +1036,10 @@ export default function AIAssistantPanel({
                         ? 'bg-indigo-600 text-white rounded-br-sm'
                         : 'bg-slate-50 text-slate-700 rounded-bl-sm'
                     }`}>
-                      <span className="whitespace-pre-wrap">{displayContent}</span>
+                      {msg.role === 'assistant'
+                        ? renderMarkdown(displayContent)
+                        : <span className="whitespace-pre-wrap">{displayContent}</span>
+                      }
                     </div>
                   </div>
                 )}
