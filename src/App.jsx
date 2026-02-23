@@ -62,6 +62,7 @@ export default function PalazzoTimeline() {
   
   // AI Assistant state
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [dependencyEditorOpp, setDependencyEditorOpp] = useState(null);
   const [focusMilestoneId, setFocusMilestoneId] = useState(null);
 
@@ -797,6 +798,11 @@ export default function PalazzoTimeline() {
           
           <div className="flex items-center gap-2">
             {/* Primary Actions */}
+            <button onClick={() => setInfoOpen(prev => !prev)} className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors shadow-sm" title="How to use Pulseboard">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
             <button onClick={() => setAssistantOpen(true)} className="p-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-lg transition-colors shadow-lg shadow-violet-500/20" title="AI Assistant">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
@@ -1469,6 +1475,53 @@ export default function PalazzoTimeline() {
           getAreaName={getAreaName}
           getInitiativeColor={getInitiativeColor}
         />
+      )}
+
+      {/* How to Use Info Panel */}
+      {infoOpen && (
+        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4" onClick={() => setInfoOpen(false)}>
+          <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full shadow-xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">How to Use Pulseboard</h2>
+              <button onClick={() => setInfoOpen(false)} className="text-slate-500 hover:text-slate-900 text-xl">&times;</button>
+            </div>
+            <div className="p-5 space-y-5 overflow-y-auto max-h-[70vh] text-sm text-slate-700 leading-relaxed">
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-1.5">What is an Opportunity?</h3>
+                <p>An <strong>opportunity</strong> is a discrete unit of product work — a feature, improvement, integration, or initiative that delivers value. Each opportunity has an owner area, belongs to a strategic initiative, and can be scored by impact and effort to help with prioritization.</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-1.5">Views</h3>
+                <ul className="space-y-1.5 list-none pl-0">
+                  <li><strong>Timeline</strong> — Month-by-month grid of all opportunities and milestones. Drag cards between months and areas to reschedule.</li>
+                  <li><strong>Gantt</strong> — Date-range bars for each opportunity. Drag bars or their edges to adjust start/end dates. Place unscheduled items from the gutter.</li>
+                  <li><strong>Prioritize</strong> — Impact vs Effort matrix. Drag unranked items from the sidebar onto the canvas to score them. Use "Start Over" to reset all scores.</li>
+                  <li><strong>Capacity</strong> — Team workload view showing who is assigned to what and where bandwidth is available.</li>
+                  <li><strong>Team View</strong> — Per-person timeline lanes showing each member's assigned work.</li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-1.5">Key Concepts</h3>
+                <ul className="space-y-1.5 list-none pl-0">
+                  <li><strong>Milestones</strong> — Major delivery dates or partner commitments that opportunities roll up to. Shown as diamonds on the Gantt chart.</li>
+                  <li><strong>Initiatives</strong> — Strategic themes (e.g., "Launch Partners", "AI Excellence") that group related opportunities. Each has a color shown as the left border on cards.</li>
+                  <li><strong>Areas</strong> — Product areas (e.g., Visualizer, Spaces, Vinci) representing different parts of the platform.</li>
+                  <li><strong>At Risk</strong> — Flag on opportunities that are in danger of slipping. Shown with an orange warning indicator.</li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-1.5">Tips</h3>
+                <ul className="space-y-1.5 list-none pl-0">
+                  <li>Use the <strong>AI Assistant</strong> (sparkle button) to ask questions about your roadmap, get summaries, or identify risks.</li>
+                  <li>Use <strong>AI Score All</strong> in the Prioritize view to auto-score unranked opportunities.</li>
+                  <li>Click any opportunity card to see its details, edit fields, and manage team assignments.</li>
+                  <li>Use filters in the toolbar to narrow down by initiative, area, or status.</li>
+                  <li>All changes are saved automatically and support undo.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Data Management Modal */}
