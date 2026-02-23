@@ -7,7 +7,8 @@ import {
 import { 
   getInitiativeColor, getAreaColor, getAreaName, getInitiativeName, getMonthName,
   getQuarters, getMonthsForQuarter, ensureStatusFields,
-  dbToOpportunity, opportunityToDb, dbToMilestone, milestoneToDb 
+  dbToOpportunity, opportunityToDb, dbToMilestone, milestoneToDb,
+  generateMonthId, parseMonthId
 } from './utils/helpers';
 import {
   TeamMemberBadge, AssignmentBadges, AssignTeamMemberModal,
@@ -371,6 +372,21 @@ export default function PalazzoTimeline() {
       saveToUndo();
       if (dragType === 'opportunity') {
         const updatedOpp = { ...draggedItem, area: areaId, month: monthId };
+        // Sync Gantt dates when month changes
+        const newMonthDate = parseMonthId(monthId);
+        if (newMonthDate) {
+          if (draggedItem.startDate && draggedItem.endDate) {
+            const oldStart = new Date(draggedItem.startDate + 'T00:00:00');
+            const oldEnd = new Date(draggedItem.endDate + 'T00:00:00');
+            const durationDays = Math.round((oldEnd - oldStart) / (1000 * 60 * 60 * 24));
+            const newEnd = new Date(newMonthDate);
+            newEnd.setDate(newEnd.getDate() + durationDays);
+            updatedOpp.startDate = newMonthDate.toISOString().split('T')[0];
+            updatedOpp.endDate = newEnd.toISOString().split('T')[0];
+          } else if (!draggedItem.startDate) {
+            updatedOpp.startDate = newMonthDate.toISOString().split('T')[0];
+          }
+        }
         setOpportunities(prev => prev.map(opp => opp.id === draggedItem.id ? updatedOpp : opp));
         saveOpportunity(updatedOpp);
         showNotification(`Moved "${draggedItem.title}"`, 'success');
@@ -1137,6 +1153,10 @@ export default function PalazzoTimeline() {
                           {/* Opportunities */}
                           {(timelineFilter === 'all' || timelineFilter === 'opportunities') && cellOpps.map(opp => {
                             const linkedMilestone = opp.milestoneId ? milestones.find(m => m.id === opp.milestoneId) : null;
+                            const startMonth = opp.startDate ? generateMonthId(new Date(opp.startDate + 'T00:00:00')) : null;
+                            const endMonth = opp.endDate ? generateMonthId(new Date(opp.endDate + 'T00:00:00')) : null;
+                            const isMultiMonth = startMonth && endMonth && startMonth !== endMonth;
+                            const endMonthLabel = isMultiMonth ? getMonthName(endMonth)?.replace(/ '/, " '") : null;
                             return (
                               <div key={opp.id} draggable onDragStart={(e) => handleDragStart(e, opp, 'opportunity')} onDragEnd={handleDragEnd}
                                 onClick={() => setSelectedOpportunity(opp)}
@@ -1145,6 +1165,11 @@ export default function PalazzoTimeline() {
                                 <div className="flex items-center gap-1">
                                   {opp.atRisk && <span className="text-orange-500" title={opp.atRiskReason || 'At Risk'}>⚠</span>}
                                   <span className="font-medium text-[#1E293B] leading-tight flex-1">{opp.title}</span>
+                                  {isMultiMonth && (
+                                    <span className="text-[8px] text-slate-400 bg-slate-100 px-1 py-0.5 rounded whitespace-nowrap flex-shrink-0" title={`Spans to ${endMonthLabel}`}>
+                                      {'\u2192'} {endMonthLabel}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-0.5">
                                   <StatusBadge status={opp.status} size="xs" onStatusChange={(newStatus) => quickStatusChange(opp.id, newStatus)} />

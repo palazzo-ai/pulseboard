@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../supabase';
-import { areas, initiatives, months, parseMonthId } from '../utils/helpers';
+import { areas, initiatives, months, parseMonthId, generateMonthId } from '../utils/helpers';
 
 // ============ CONSTANTS ============
 const STATUS_CONFIG = {
@@ -304,7 +304,8 @@ export default function GanttView({
     try {
       // Opportunities: save via onSaveOpportunity (updates opportunities table)
       if (!item.identifier && item.id && onSaveOpportunity) {
-        await onSaveOpportunity({ ...item, startDate, endDate });
+        const month = startDate ? generateMonthId(new Date(startDate + 'T00:00:00')) : item.month;
+        await onSaveOpportunity({ ...item, startDate, endDate, month });
         setEditingDateFor(null);
         showNotification?.(`Dates saved for ${item.title}`, 'success');
         return;
