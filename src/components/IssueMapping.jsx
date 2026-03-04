@@ -154,6 +154,7 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
   const [moveModalIssue, setMoveModalIssue] = useState(null);
   const [quickLinkIssue, setQuickLinkIssue] = useState(null);
   const [dragIssue, setDragIssue] = useState(null);
+  const [dragProject, setDragProject] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [oppSearch, setOppSearch] = useState('');
   const [selectedOppId, setSelectedOppId] = useState(null);
@@ -377,6 +378,29 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
     setSelectedIssues(new Set());
   }, [selectedIssues, issueToOpp, opportunities, onSaveOpportunity, showNotification]);
 
+  const linkProjectToOpp = useCallback((projectName, targetOppId) => {
+    const projectIssues = allIssues.filter(i => (i.project || 'No Project') === projectName);
+    if (projectIssues.length === 0) return;
+    // Unlink from old opps
+    const affectedOpps = new Map();
+    projectIssues.forEach(issue => {
+      const currentOppId = issue.opportunityId;
+      if (currentOppId && currentOppId !== targetOppId) {
+        if (!affectedOpps.has(currentOppId)) {
+          affectedOpps.set(currentOppId, { ...opportunities.find(o => o.id === currentOppId) });
+        }
+        const opp = affectedOpps.get(currentOppId);
+        opp.issues = opp.issues.filter(i => i !== issue.identifier);
+      }
+    });
+    affectedOpps.forEach(opp => onSaveOpportunity(opp));
+    const targetOpp = opportunities.find(o => o.id === targetOppId);
+    if (!targetOpp) return;
+    const newIds = projectIssues.map(i => i.identifier);
+    onSaveOpportunity({ ...targetOpp, issues: [...new Set([...(targetOpp.issues || []), ...newIds])] });
+    showNotification?.(`Linked ${projectIssues.length} issues from "${projectName}" → ${targetOpp.title}`);
+  }, [allIssues, opportunities, onSaveOpportunity, showNotification]);
+
   const toggleSelect = (id) => {
     setSelectedIssues(prev => {
       const n = new Set(prev);
@@ -509,7 +533,10 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
         onDrop={(e) => {
           e.preventDefault();
           setDropTarget(null);
-          if (dragIssue) {
+          if (dragProject) {
+            linkProjectToOpp(dragProject, opp.id);
+            setDragProject(null);
+          } else if (dragIssue) {
             const currentOpp = issueToOpp[dragIssue];
             if (currentOpp && currentOpp !== opp.id) {
               const oldOpp = opportunities.find(o => o.id === currentOpp);
@@ -789,18 +816,25 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
               groupedFilteredIssues.map(({ project, issues }) => {
                 const isProjectExpanded = expandedProjects.has(project);
                 return (
-                  <div key={project}>
-                    <button onClick={() => toggleProject(project)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-left bg-slate-50/80 border-b border-slate-200 hover:bg-slate-100/80 transition-colors sticky top-0 z-10">
-                      <svg className={`w-2.5 h-2.5 text-slate-400 transition-transform flex-shrink-0 ${isProjectExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                      <svg className="w-3 h-3 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                      </svg>
-                      <span className="text-xs font-semibold text-slate-600 flex-1">{project}</span>
+                  <div key={project} className={dragProject === project ? 'opacity-40' : ''}>
+                    <div
+                      draggable
+                      onDragStart={(e) => { setDragProject(project); e.dataTransfer.effectAllowed = 'move'; }}
+                      onDragEnd={() => setDragProject(null)}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 bg-slate-50/80 border-b border-slate-200 hover:bg-slate-100/80 transition-colors sticky top-0 z-10 cursor-grab active:cursor-grabbing group"
+                    >
+                      <span className="text-slate-300 group-hover:text-slate-400 flex-shrink-0 text-[10px] leading-none select-none" style={{ letterSpacing: '1px' }}>⠿</span>
+                      <button onClick={() => toggleProject(project)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                        <svg className={`w-2.5 h-2.5 text-slate-400 transition-transform flex-shrink-0 ${isProjectExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <svg className="w-3 h-3 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                        <span className="text-xs font-semibold text-slate-600 flex-1">{project}</span>
+                      </button>
                       <span className="text-[10px] text-slate-400">{issues.length}</span>
-                    </button>
+                    </div>
                     {isProjectExpanded && issues.map(issue => (
                       <IssueRow key={issue.identifier} issue={issue} showOpp={filterMapping !== 'mapped'}
                         isSuggested={suggestedIssueIds.has(issue.identifier)} />
