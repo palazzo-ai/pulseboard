@@ -1228,6 +1228,7 @@ export default function PalazzoTimeline() {
           areas={areas}
           clients={clients}
           showNotification={showNotification}
+          onSaveOpportunity={saveOpportunity}
         />
       )}
 

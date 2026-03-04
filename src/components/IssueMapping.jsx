@@ -14,6 +14,12 @@ const PRIORITY_COLORS = { 1: '#DC2626', 2: '#D97706', 3: '#2563EB', 4: '#9CA3AF'
 
 const STOP_WORDS = new Set(['the','a','an','and','or','for','to','in','of','with','on','at','by','is','it','as','from']);
 
+/** Given an identifier, return [identifier, ...childIdentifiers] */
+const resolveWithChildren = (identifier, allIssues) => {
+  const issue = allIssues?.find(i => i.identifier === identifier);
+  return [identifier, ...(issue?.children || [])];
+};
+
 const mapStatus = (state) => {
   if (!state) return 'not_started';
   const type = (state.type || '').toLowerCase();
@@ -346,37 +352,44 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
   }, [issueToOpp, opportunities, onSaveOpportunity, showNotification]);
 
   const linkIssue = useCallback((identifier, targetOppId) => {
+    const allIds = resolveWithChildren(identifier, allLinearIssues);
     const currentOppId = issueToOpp[identifier];
     if (currentOppId) {
       const oldOpp = opportunities.find(o => o.id === currentOppId);
-      if (oldOpp) onSaveOpportunity({ ...oldOpp, issues: oldOpp.issues.filter(i => i !== identifier) });
+      if (oldOpp) onSaveOpportunity({ ...oldOpp, issues: oldOpp.issues.filter(i => !allIds.includes(i)) });
     }
     const targetOpp = opportunities.find(o => o.id === targetOppId);
     if (!targetOpp) return;
-    onSaveOpportunity({ ...targetOpp, issues: [...new Set([...(targetOpp.issues || []), identifier])] });
-    showNotification?.(`Linked ${identifier} → ${targetOpp.title}`);
-  }, [issueToOpp, opportunities, onSaveOpportunity, showNotification]);
+    onSaveOpportunity({ ...targetOpp, issues: [...new Set([...(targetOpp.issues || []), ...allIds])] });
+    const subCount = allIds.length - 1;
+    showNotification?.(`Linked ${identifier}${subCount > 0 ? ` + ${subCount} sub-issue${subCount > 1 ? 's' : ''}` : ''} → ${targetOpp.title}`);
+  }, [issueToOpp, opportunities, onSaveOpportunity, showNotification, allLinearIssues]);
 
   const bulkLink = useCallback((oppId) => {
     if (selectedIssues.size === 0) return;
-    const affectedOpps = new Map();
+    // Resolve all selected + their children
+    const allResolvedIds = new Set();
     selectedIssues.forEach(identifier => {
+      resolveWithChildren(identifier, allLinearIssues).forEach(id => allResolvedIds.add(id));
+    });
+    const affectedOpps = new Map();
+    allResolvedIds.forEach(identifier => {
       const currentOppId = issueToOpp[identifier];
       if (currentOppId && currentOppId !== oppId) {
         if (!affectedOpps.has(currentOppId)) {
           affectedOpps.set(currentOppId, { ...opportunities.find(o => o.id === currentOppId) });
         }
         const opp = affectedOpps.get(currentOppId);
-        opp.issues = opp.issues.filter(i => !selectedIssues.has(i));
+        opp.issues = opp.issues.filter(i => !allResolvedIds.has(i));
       }
     });
     affectedOpps.forEach(opp => onSaveOpportunity(opp));
     const targetOpp = opportunities.find(o => o.id === oppId);
     if (!targetOpp) return;
-    onSaveOpportunity({ ...targetOpp, issues: [...new Set([...(targetOpp.issues || []), ...selectedIssues])] });
-    showNotification?.(`Linked ${selectedIssues.size} issues → ${targetOpp.title}`);
+    onSaveOpportunity({ ...targetOpp, issues: [...new Set([...(targetOpp.issues || []), ...allResolvedIds])] });
+    showNotification?.(`Linked ${allResolvedIds.size} issues → ${targetOpp.title}`);
     setSelectedIssues(new Set());
-  }, [selectedIssues, issueToOpp, opportunities, onSaveOpportunity, showNotification]);
+  }, [selectedIssues, issueToOpp, opportunities, onSaveOpportunity, showNotification, allLinearIssues]);
 
   const linkProjectToOpp = useCallback((projectName, targetOppId) => {
     const projectIssues = allIssues.filter(i => (i.project || 'No Project') === projectName);
@@ -539,10 +552,12 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
           } else if (dragIssue) {
             const currentOpp = issueToOpp[dragIssue];
             if (currentOpp && currentOpp !== opp.id) {
+              const allIds = resolveWithChildren(dragIssue, allLinearIssues);
               const oldOpp = opportunities.find(o => o.id === currentOpp);
-              if (oldOpp) onSaveOpportunity({ ...oldOpp, issues: oldOpp.issues.filter(i => i !== dragIssue) });
-              onSaveOpportunity({ ...opp, issues: [...new Set([...(opp.issues || []), dragIssue])] });
-              showNotification?.(`Moved ${dragIssue} → ${opp.title}`);
+              if (oldOpp) onSaveOpportunity({ ...oldOpp, issues: oldOpp.issues.filter(i => !allIds.includes(i)) });
+              onSaveOpportunity({ ...opp, issues: [...new Set([...(opp.issues || []), ...allIds])] });
+              const subCount = allIds.length - 1;
+              showNotification?.(`Moved ${dragIssue}${subCount > 0 ? ` + ${subCount} sub-issue${subCount > 1 ? 's' : ''}` : ''} → ${opp.title}`);
             } else if (!currentOpp) {
               linkIssue(dragIssue, opp.id);
             }

@@ -28,6 +28,8 @@ export default async function handler(req, res) {
               project { name }
               team { name key }
               labels { nodes { name } }
+              parent { id identifier title }
+              children { nodes { id identifier title } }
               updatedAt
             }
           }
@@ -64,6 +66,8 @@ export default async function handler(req, res) {
       project: issue.project?.name || null,
       team: issue.team ? { name: issue.team.name, key: issue.team.key } : null,
       labels: (issue.labels?.nodes || []).map(l => l.name),
+      parentIdentifier: issue.parent?.identifier || null,
+      children: (issue.children?.nodes || []).map(c => c.identifier),
       url: `https://linear.app/palazzo-ai/issue/${issue.identifier}`,
     }));
 

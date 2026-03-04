@@ -128,7 +128,7 @@ const ReadinessBadge = ({ status }) => {
 };
 
 // ========== MAIN COMPONENT ==========
-export default function LaunchReadiness({ opportunities, milestones, areas, clients = [], showNotification }) {
+export default function LaunchReadiness({ opportunities, milestones, areas, clients = [], showNotification, onSaveOpportunity }) {
   const [issueData, setIssueData] = useState(null);
   const [linearLoading, setLinearLoading] = useState(false);
   const [lastFetched, setLastFetched] = useState(null);
@@ -556,6 +556,23 @@ export default function LaunchReadiness({ opportunities, milestones, areas, clie
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                                   </svg>
                                                 </a>
+                                                {/* Remove */}
+                                                {onSaveOpportunity && (
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      const updatedOpp = { ...opp, issues: (opp.issues || []).filter(i => i !== identifier) };
+                                                      onSaveOpportunity(updatedOpp);
+                                                      showNotification?.(`Removed ${identifier} from ${opp.title}`);
+                                                    }}
+                                                    className="text-slate-300 hover:text-red-500 shrink-0 transition-colors"
+                                                    title="Remove from launch">
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                      <line x1="18" y1="6" x2="6" y2="18" strokeWidth={2} strokeLinecap="round" />
+                                                      <line x1="6" y1="6" x2="18" y2="18" strokeWidth={2} strokeLinecap="round" />
+                                                    </svg>
+                                                  </button>
+                                                )}
                                               </div>
                                             );
                                           })}
