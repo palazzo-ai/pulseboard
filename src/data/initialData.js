@@ -22,20 +22,20 @@ export const STORAGE_KEY = 'palazzo_timeline_data';
 
 // Initial milestones for database seeding
 export const initialMilestones = [
-  { id: 'm1', title: 'HomeZone Go-Live', month: 'dec25', area: 'showcase', description: 'Production launch for HomeZone retail partner' },
-  { id: 'm14', title: 'Vinci Conversational Launch', month: 'jan26', area: 'vinci', description: 'Talkative Vinci ready for Showcase customer website embeds' },
-  { id: 'm2', title: 'Embed Platform v1', month: 'jan26', area: 'platform', description: 'Universal widget infrastructure ready for partners' },
-  { id: 'm3', title: 'Studio MVP', month: 'jan26', area: 'studio', description: 'Brand content creation engine available for pilot customers' },
-  { id: 'm4', title: 'Serhant Pilot Launch', month: 'feb26', area: 'spaces', description: 'Real estate staging platform live with Serhant' },
-  { id: 'm5', title: 'Maxa Beta', month: 'feb26', area: 'platform', description: 'Embedded staging available in Maxa editor for beta users' },
-  { id: 'm6', title: 'Wonder Embedded Launch', month: 'feb26', area: 'showcase', description: 'Embed buttons live on Wonder client PDPs' },
-  { id: 'm7', title: 'Storis Integration v1', month: 'mar26', area: 'showcase', description: 'POS/ERP integration complete for furniture retailers' },
-  { id: 'm8', title: 'Studio Commerce Engine', month: 'mar26', area: 'studio', description: 'Publishing and shoppable image features live' },
-  { id: 'm9', title: 'Maxa Production', month: 'apr26', area: 'platform', description: 'Full production rollout for Maxa integration' },
-  { id: 'm10', title: 'Partner Portal Launch', month: 'may26', area: 'platform', description: 'Self-service portal for embed partners' },
-  { id: 'm11', title: 'Studio Scale Acceleration', month: 'jul26', area: 'studio', description: 'Batch pipelines and AI QA available for enterprise' },
-  { id: 'm12', title: 'Sales Intelligence Platform', month: 'oct26', area: 'showcase', description: 'Conversation coaching platform live' },
-  { id: 'm13', title: 'Public API v1.0', month: 'dec26', area: 'platform', description: 'Versioned public API for external developers' }
+  { id: 'm1', title: 'HomeZone Go-Live', month: 'dec25', area: 'showcase', client: 'homezone', description: 'Production launch for HomeZone retail partner' },
+  { id: 'm14', title: 'Vinci Conversational Launch', month: 'jan26', area: 'vinci', client: null, description: 'Talkative Vinci ready for Showcase customer website embeds' },
+  { id: 'm2', title: 'Embed Platform v1', month: 'jan26', area: 'platform', client: null, description: 'Universal widget infrastructure ready for partners' },
+  { id: 'm3', title: 'Studio MVP', month: 'jan26', area: 'studio', client: null, description: 'Brand content creation engine available for pilot customers' },
+  { id: 'm4', title: 'Serhant Pilot Launch', month: 'feb26', area: 'spaces', client: 'serhant', description: 'Real estate staging platform live with Serhant' },
+  { id: 'm5', title: 'Maxa Beta', month: 'feb26', area: 'platform', client: 'maxa', description: 'Embedded staging available in Maxa editor for beta users' },
+  { id: 'm6', title: 'Wonder Embedded Launch', month: 'feb26', area: 'showcase', client: 'wonder', description: 'Embed buttons live on Wonder client PDPs' },
+  { id: 'm7', title: 'Storis Integration v1', month: 'mar26', area: 'showcase', client: 'storis', description: 'POS/ERP integration complete for furniture retailers' },
+  { id: 'm8', title: 'Studio Commerce Engine', month: 'mar26', area: 'studio', client: null, description: 'Publishing and shoppable image features live' },
+  { id: 'm9', title: 'Maxa Production', month: 'apr26', area: 'platform', client: 'maxa', description: 'Full production rollout for Maxa integration' },
+  { id: 'm10', title: 'Partner Portal Launch', month: 'may26', area: 'platform', client: null, description: 'Self-service portal for embed partners' },
+  { id: 'm11', title: 'Studio Scale Acceleration', month: 'jul26', area: 'studio', client: null, description: 'Batch pipelines and AI QA available for enterprise' },
+  { id: 'm12', title: 'Sales Intelligence Platform', month: 'oct26', area: 'showcase', client: null, description: 'Conversation coaching platform live' },
+  { id: 'm13', title: 'Public API v1.0', month: 'dec26', area: 'platform', client: null, description: 'Versioned public API for external developers' }
 ];
 
 // Initial opportunities for database seeding

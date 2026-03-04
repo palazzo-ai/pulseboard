@@ -208,6 +208,15 @@ export const getQuarters = () => [...new Set(months.map(m => m.quarter))];
 
 export const getMonthsForQuarter = (quarter) => months.filter(m => m.quarter === quarter);
 
+// ========== CLIENTS ==========
+export const CLIENTS = [
+  { id: 'homezone', name: 'HomeZone', color: '#2563EB', logo: 'HZ' },
+  { id: 'serhant', name: 'Serhant', color: '#7C3AED', logo: 'SR' },
+  { id: 'wonder', name: 'Wonder', color: '#059669', logo: 'WD' },
+  { id: 'maxa', name: 'Maxa', color: '#D97706', logo: 'MX' },
+  { id: 'storis', name: 'Storis', color: '#DC2626', logo: 'ST' },
+];
+
 // ========== DATA CONVERSION ==========
 
 // Ensure opportunity has all required fields (for backward compatibility)
@@ -280,7 +289,8 @@ export const dbToMilestone = (row) => ({
   area: row.area,
   month: row.month,
   description: row.description || '',
-  targetDate: row.target_date || null
+  targetDate: row.target_date || null,
+  client: row.client || null,
 });
 
 export const milestoneToDb = (m) => ({
@@ -290,6 +300,7 @@ export const milestoneToDb = (m) => ({
   month: m.month,
   description: m.description || '',
   target_date: m.targetDate || null,
+  client: m.client || null,
   updated_at: new Date().toISOString()
 });
 

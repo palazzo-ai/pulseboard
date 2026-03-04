@@ -4,11 +4,11 @@ import {
   STATUSES, areas, initiatives, months, 
   initialMilestones, initialOpportunities, STORAGE_KEY 
 } from './data/initialData';
-import { 
+import {
   getInitiativeColor, getAreaColor, getAreaName, getInitiativeName, getMonthName,
   getQuarters, getMonthsForQuarter, ensureStatusFields,
   dbToOpportunity, opportunityToDb, dbToMilestone, milestoneToDb,
-  generateMonthId, parseMonthId
+  generateMonthId, parseMonthId, CLIENTS
 } from './utils/helpers';
 import {
   TeamMemberBadge, AssignmentBadges, AssignTeamMemberModal,
@@ -17,6 +17,7 @@ import {
   DependencyEditor, MultiSelectFilter, AIScoringModal
 } from './components';
 import GanttView from './components/GanttView';
+import LaunchReadiness from './components/LaunchReadiness';
 import AIAssistantPanel from './components/AIAssistantPanel';
 
 export default function PalazzoTimeline() {
@@ -479,7 +480,7 @@ export default function PalazzoTimeline() {
 
   const startCreateMilestone = (areaId, monthId) => {
     setIsCreatingMilestone(true);
-    setEditingMilestone({ id: `m${Date.now()}`, title: '', area: areaId, month: monthId, description: '' });
+    setEditingMilestone({ id: `m${Date.now()}`, title: '', area: areaId, month: monthId, description: '', client: null });
   };
 
   const openAssignModal = (opp) => {
@@ -725,6 +726,15 @@ export default function PalazzoTimeline() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Client / Partner</label>
+              <select value={form.client || ''} onChange={e => setForm({ ...form, client: e.target.value || null })}
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
+                <option value="">None (Internal)</option>
+                {CLIENTS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={onCancel} className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm rounded-lg transition-colors">Cancel</button>
               <button type="submit" disabled={!form.title.trim()} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-100 disabled:text-slate-400 text-white text-sm rounded-lg transition-colors">
@@ -849,6 +859,7 @@ export default function PalazzoTimeline() {
               { key: 'all', label: 'Timeline' },
               { key: 'gantt', label: 'Gantt' },
               { key: 'prioritize', label: 'Prioritize' },
+              { key: 'launches', label: 'Launches' },
               { key: 'capacity', label: 'Capacity' },
               { key: 'timeline', label: 'Team View' }
             ].map(mode => (
@@ -1022,6 +1033,16 @@ export default function PalazzoTimeline() {
             onFocusMilestone={(id) => setFocusMilestoneId(id)}
           />
         </div>
+      )}
+
+      {/* Launch Readiness View */}
+      {viewMode === 'launches' && (
+        <LaunchReadiness
+          opportunities={opportunities}
+          milestones={milestones}
+          areas={areas}
+          showNotification={showNotification}
+        />
       )}
 
       {/* Capacity Dashboard View */}
