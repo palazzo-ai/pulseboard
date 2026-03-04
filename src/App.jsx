@@ -8,7 +8,7 @@ import {
   getInitiativeColor, getAreaColor, getAreaName, getInitiativeName, getMonthName,
   getQuarters, getMonthsForQuarter, ensureStatusFields,
   dbToOpportunity, opportunityToDb, dbToMilestone, milestoneToDb,
-  generateMonthId, parseMonthId, CLIENTS
+  generateMonthId, parseMonthId, CLIENTS, CLIENT_COLORS, generateClientLogo
 } from './utils/helpers';
 import {
   TeamMemberBadge, AssignmentBadges, AssignTeamMemberModal,
@@ -24,6 +24,7 @@ export default function PalazzoTimeline() {
   // Core data state
   const [opportunities, setOpportunities] = useState([]);
   const [milestones, setMilestones] = useState([]);
+  const [clients, setClients] = useState(CLIENTS);
   const [loading, setLoading] = useState(true);
   
   // Selection and editing state
@@ -82,6 +83,7 @@ export default function PalazzoTimeline() {
     loadData();
     loadTeamMembers();
     loadAllAssignments();
+    loadClients();
   }, []);
 
   const loadData = async () => {
@@ -136,6 +138,37 @@ export default function PalazzoTimeline() {
       });
       setAssignments(grouped);
     } catch (err) { console.log('Failed to load assignments:', err); }
+  };
+
+  const loadClients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('clients').select('*').order('name');
+      if (error) { console.log('clients table not found, using defaults:', error.message); return; }
+      if (data && data.length > 0) {
+        setClients(data.map(row => ({ id: row.id, name: row.name, color: row.color, logo: row.logo })));
+      }
+    } catch (err) { console.log('Failed to load clients:', err); }
+  };
+
+  const saveClient = async (client) => {
+    try {
+      const { error } = await supabase.from('clients').upsert({
+        id: client.id,
+        name: client.name,
+        color: client.color,
+        logo: client.logo,
+      });
+      if (error) throw error;
+      setClients(prev => {
+        const exists = prev.find(c => c.id === client.id);
+        if (exists) return prev.map(c => c.id === client.id ? client : c);
+        return [...prev, client];
+      });
+    } catch (error) {
+      console.error('Error saving client:', error);
+      showNotification('Failed to save client to database', 'warning');
+    }
   };
 
   // ========== DEPENDENCY HANDLERS ==========
@@ -680,12 +713,40 @@ export default function PalazzoTimeline() {
 
   const MilestoneForm = ({ milestone, onSave, onCancel, isNew }) => {
     const [form, setForm] = useState(milestone);
+    const [addingClient, setAddingClient] = useState(false);
+    const [newClientName, setNewClientName] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
       e.preventDefault();
       if (!form.title.trim()) return;
-      onSave(form);
+      // If adding a new client inline, save it first
+      if (addingClient && newClientName.trim()) {
+        const client = {
+          id: newClientName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+          name: newClientName.trim(),
+          color: CLIENT_COLORS[clients.length % CLIENT_COLORS.length],
+          logo: generateClientLogo(newClientName.trim()),
+        };
+        await saveClient(client);
+        onSave({ ...form, client: client.id });
+      } else {
+        onSave(form);
+      }
     };
+
+    const handleClientChange = (value) => {
+      if (value === '__new__') {
+        setAddingClient(true);
+        setForm({ ...form, client: null });
+      } else {
+        setAddingClient(false);
+        setNewClientName('');
+        setForm({ ...form, client: value || null });
+      }
+    };
+
+    const newClientLogo = newClientName.trim() ? generateClientLogo(newClientName.trim()) : '??';
+    const newClientColor = CLIENT_COLORS[clients.length % CLIENT_COLORS.length];
 
     return (
       <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4" onClick={onCancel}>
@@ -728,16 +789,38 @@ export default function PalazzoTimeline() {
 
             <div>
               <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Client / Partner</label>
-              <select value={form.client || ''} onChange={e => setForm({ ...form, client: e.target.value || null })}
-                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
-                <option value="">None (Internal)</option>
-                {CLIENTS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              {!addingClient ? (
+                <select value={form.client || ''} onChange={e => handleClientChange(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
+                  <option value="">None (Internal)</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <option value="__new__">+ Add new client...</option>
+                </select>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+                      style={{ backgroundColor: newClientColor }}>
+                      {newClientLogo}
+                    </div>
+                    <input type="text" value={newClientName} onChange={e => setNewClientName(e.target.value)}
+                      className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                      placeholder="Client name" autoFocus />
+                    <button type="button" onClick={() => { setAddingClient(false); setNewClientName(''); }}
+                      className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400">Logo and color are auto-assigned. Press Save to create the client.</p>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={onCancel} className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm rounded-lg transition-colors">Cancel</button>
-              <button type="submit" disabled={!form.title.trim()} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-100 disabled:text-slate-400 text-white text-sm rounded-lg transition-colors">
+              <button type="submit" disabled={!form.title.trim() || (addingClient && !newClientName.trim())} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-100 disabled:text-slate-400 text-white text-sm rounded-lg transition-colors">
                 {isNew ? 'Create Milestone' : 'Save Changes'}
               </button>
             </div>
@@ -1041,6 +1124,7 @@ export default function PalazzoTimeline() {
           opportunities={opportunities}
           milestones={milestones}
           areas={areas}
+          clients={clients}
           showNotification={showNotification}
         />
       )}

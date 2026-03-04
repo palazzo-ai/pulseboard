@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { CLIENTS, getAreaColor, getAreaName, getMonthName, parseMonthId } from '../utils/helpers';
+import { getAreaColor, getAreaName, getMonthName, parseMonthId } from '../utils/helpers';
 
 // ========== STATUS MAPPING ==========
 const mapStatus = (state) => {
@@ -128,7 +128,7 @@ const ReadinessBadge = ({ status }) => {
 };
 
 // ========== MAIN COMPONENT ==========
-export default function LaunchReadiness({ opportunities, milestones, areas, showNotification }) {
+export default function LaunchReadiness({ opportunities, milestones, areas, clients = [], showNotification }) {
   const [issueData, setIssueData] = useState(null);
   const [linearLoading, setLinearLoading] = useState(false);
   const [lastFetched, setLastFetched] = useState(null);
@@ -247,7 +247,7 @@ export default function LaunchReadiness({ opportunities, milestones, areas, show
   const groupedData = useMemo(() => {
     const clientIds = [...new Set(clientMilestones.map(m => m.client))];
     return clientIds.map(clientId => {
-      const client = CLIENTS.find(c => c.id === clientId) || { id: clientId, name: clientId, color: '#6B7280', logo: '??' };
+      const client = clients.find(c => c.id === clientId) || { id: clientId, name: clientId, color: '#6B7280', logo: '??' };
       const cms = clientMilestones.filter(m => m.client === clientId);
       const readiness = getClientReadiness(clientId);
       const stats = getClientIssueStats(clientId);
@@ -346,7 +346,7 @@ export default function LaunchReadiness({ opportunities, milestones, areas, show
           <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
             className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
             <option value="all">All Clients</option>
-            {CLIENTS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <select value={filterReadiness} onChange={e => setFilterReadiness(e.target.value)}
             className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">

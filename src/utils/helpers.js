@@ -217,6 +217,21 @@ export const CLIENTS = [
   { id: 'storis', name: 'Storis', color: '#DC2626', logo: 'ST' },
 ];
 
+export const CLIENT_COLORS = [
+  '#2563EB','#7C3AED','#059669','#D97706','#DC2626',
+  '#0891B2','#DB2777','#6366F1','#EA580C','#4F46E5'
+];
+
+/** Generate a 2-letter logo from a client name (first letters of first two words, or first two letters) */
+export const generateClientLogo = (name) => {
+  if (!name) return '??';
+  const words = name.trim().split(/\s+/);
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
+
 // ========== DATA CONVERSION ==========
 
 // Ensure opportunity has all required fields (for backward compatibility)
