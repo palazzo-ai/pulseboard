@@ -157,6 +157,8 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
   const [dropTarget, setDropTarget] = useState(null);
   const [oppSearch, setOppSearch] = useState('');
   const [selectedOppId, setSelectedOppId] = useState(null);
+  const [expandedProjects, setExpandedProjects] = useState(new Set(['__all__']));
+  const [filterProject, setFilterProject] = useState('all');
   const searchRef = useRef(null);
 
   // Fetch all Linear issues on mount
@@ -252,6 +254,9 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
     }
     if (filterMapping === 'mapped') list = list.filter(i => i.opportunityId);
     if (filterMapping === 'orphaned') list = list.filter(i => !i.opportunityId);
+    if (filterProject !== 'all') {
+      list = list.filter(i => (i.project || 'No Project') === filterProject);
+    }
     // Sort: suggested first, then orphaned, then by priority
     list = [...list].sort((a, b) => {
       const aSugg = suggestedIssueIds.has(a.identifier) ? 0 : 1;
@@ -265,6 +270,38 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
   }, [allIssues, searchQuery, filterTeam, filterMapping, suggestedIssueIds]);
 
   const teams = useMemo(() => [...new Set(allIssues.map(i => i.teamName).filter(Boolean))].sort(), [allIssues]);
+  const projects = useMemo(() => [...new Set(allIssues.map(i => i.project || 'No Project'))].sort((a, b) => {
+    if (a === 'No Project') return 1;
+    if (b === 'No Project') return -1;
+    return a.localeCompare(b);
+  }), [allIssues]);
+
+  // Initialize expandedProjects with all projects when they first load
+  useEffect(() => {
+    if (projects.length > 0 && expandedProjects.has('__all__')) {
+      setExpandedProjects(new Set(projects));
+    }
+  }, [projects]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const groupedFilteredIssues = useMemo(() => {
+    const groups = [];
+    const byProject = {};
+    filteredIssues.forEach(issue => {
+      const proj = issue.project || 'No Project';
+      if (!byProject[proj]) byProject[proj] = [];
+      byProject[proj].push(issue);
+    });
+    // Sort project names, "No Project" last
+    const sortedKeys = Object.keys(byProject).sort((a, b) => {
+      if (a === 'No Project') return 1;
+      if (b === 'No Project') return -1;
+      return a.localeCompare(b);
+    });
+    sortedKeys.forEach(proj => {
+      groups.push({ project: proj, issues: byProject[proj] });
+    });
+    return groups;
+  }, [filteredIssues]);
 
   const stats = useMemo(() => ({
     total: allIssues.length,
@@ -356,6 +393,10 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
 
   const toggleArea = (areaId) => {
     setExpandedAreas(prev => { const n = new Set(prev); n.has(areaId) ? n.delete(areaId) : n.add(areaId); return n; });
+  };
+
+  const toggleProject = (proj) => {
+    setExpandedProjects(prev => { const n = new Set(prev); n.has(proj) ? n.delete(proj) : n.add(proj); return n; });
   };
 
   // Keyboard shortcuts
@@ -660,6 +701,11 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
           <option value="all">All Teams</option>
           {teams.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
+        <select value={filterProject} onChange={e => setFilterProject(e.target.value)}
+          className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20">
+          <option value="all">All Projects</option>
+          {projects.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
       </div>
 
       {/* Two-panel layout */}
@@ -740,10 +786,28 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
                 {searchQuery ? 'No issues match your search' : 'No issues to show'}
               </div>
             ) : (
-              filteredIssues.map(issue => (
-                <IssueRow key={issue.identifier} issue={issue} showOpp={filterMapping !== 'mapped'}
-                  isSuggested={suggestedIssueIds.has(issue.identifier)} />
-              ))
+              groupedFilteredIssues.map(({ project, issues }) => {
+                const isProjectExpanded = expandedProjects.has(project);
+                return (
+                  <div key={project}>
+                    <button onClick={() => toggleProject(project)}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-left bg-slate-50/80 border-b border-slate-200 hover:bg-slate-100/80 transition-colors sticky top-0 z-10">
+                      <svg className={`w-2.5 h-2.5 text-slate-400 transition-transform flex-shrink-0 ${isProjectExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <svg className="w-3 h-3 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                      </svg>
+                      <span className="text-xs font-semibold text-slate-600 flex-1">{project}</span>
+                      <span className="text-[10px] text-slate-400">{issues.length}</span>
+                    </button>
+                    {isProjectExpanded && issues.map(issue => (
+                      <IssueRow key={issue.identifier} issue={issue} showOpp={filterMapping !== 'mapped'}
+                        isSuggested={suggestedIssueIds.has(issue.identifier)} />
+                    ))}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
