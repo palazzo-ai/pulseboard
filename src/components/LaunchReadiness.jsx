@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { CLIENTS, getAreaColor, getAreaName, getMonthName } from '../utils/helpers';
+import { CLIENTS, getAreaColor, getAreaName, getMonthName, parseMonthId } from '../utils/helpers';
 
 // ========== STATUS MAPPING ==========
 const mapStatus = (state) => {
@@ -28,6 +28,52 @@ const PRIORITY_ICONS = {
   3: { label: 'Medium', icon: '!', color: '#2563EB' },
   4: { label: 'Low', icon: '·', color: '#9CA3AF' },
 };
+
+// ========== DATE HELPERS ==========
+/** Get the effective target date for a milestone — use targetDate if set, else last day of month */
+const getMilestoneDate = (milestone) => {
+  if (milestone.targetDate) return new Date(milestone.targetDate);
+  const monthDate = parseMonthId(milestone.month);
+  if (!monthDate) return null;
+  // Last day of that month
+  return new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+};
+
+/** Format a date as "Mar 15, 2026" */
+const formatDate = (date) => {
+  if (!date) return null;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+/** Get countdown text and color relative to today */
+const getCountdown = (date) => {
+  if (!date) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  const diffMs = target - now;
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    const abs = Math.abs(diffDays);
+    return { text: `${abs}d overdue`, color: '#DC2626', urgent: true };
+  }
+  if (diffDays === 0) return { text: 'Due today', color: '#DC2626', urgent: true };
+  if (diffDays <= 7) return { text: `${diffDays}d left`, color: '#DC2626', urgent: true };
+  if (diffDays <= 30) return { text: `${diffDays}d left`, color: '#D97706', urgent: false };
+  return { text: `${diffDays}d left`, color: '#6B7280', urgent: false };
+};
+
+// ========== PROGRESS BAR LEGEND ==========
+const BarLegend = () => (
+  <div className="flex items-center gap-3 text-[10px] text-slate-500">
+    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />Done</span>
+    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />In Progress</span>
+    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" />Blocked</span>
+    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-200 inline-block" />Todo</span>
+  </div>
+);
 
 // ========== PROGRESS RING ==========
 const ProgressRing = ({ percent, size = 40, strokeWidth = 4, color = '#16A34A' }) => {
@@ -294,27 +340,34 @@ export default function LaunchReadiness({ opportunities, milestones, areas, show
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3">
-        <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
-          className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
-          <option value="all">All Clients</option>
-          {CLIENTS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select value={filterReadiness} onChange={e => setFilterReadiness(e.target.value)}
-          className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
-          <option value="all">All Statuses</option>
-          <option value="launched">Launched</option>
-          <option value="on_track">On Track</option>
-          <option value="needs_attention">Needs Attention</option>
-          <option value="at_risk">At Risk</option>
-        </select>
+      {/* Filters & Legend */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
+            className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
+            <option value="all">All Clients</option>
+            {CLIENTS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select value={filterReadiness} onChange={e => setFilterReadiness(e.target.value)}
+            className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
+            <option value="all">All Statuses</option>
+            <option value="launched">Launched</option>
+            <option value="on_track">On Track</option>
+            <option value="needs_attention">Needs Attention</option>
+            <option value="at_risk">At Risk</option>
+          </select>
+        </div>
+        <BarLegend />
       </div>
 
       {/* Client List */}
       <div className="space-y-3">
         {filteredData.map(({ client, milestones: cms, readiness, stats }) => {
           const isExpanded = expandedClients.has(client.id);
+          // Find the nearest upcoming target date across this client's milestones
+          const clientDates = cms.map(m => getMilestoneDate(m)).filter(Boolean).sort((a, b) => a - b);
+          const nextDate = clientDates.find(d => d >= new Date()) || clientDates[clientDates.length - 1];
+          const clientCountdown = nextDate ? getCountdown(nextDate) : null;
           return (
             <div key={client.id} className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
               {/* Client Header */}
@@ -334,9 +387,15 @@ export default function LaunchReadiness({ opportunities, milestones, areas, show
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-slate-800">{client.name}</span>
                     <ReadinessBadge status={readiness} />
+                    {clientCountdown && (
+                      <span className="text-[10px] font-semibold" style={{ color: clientCountdown.color }}>
+                        {clientCountdown.text}
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-slate-500 mt-0.5">
                     {cms.length} milestone{cms.length !== 1 ? 's' : ''} · {stats.done}/{stats.total} issues done
+                    {nextDate && <span className="text-slate-400"> · Next: {formatDate(nextDate)}</span>}
                   </div>
                 </div>
                 {/* Progress ring */}
@@ -361,6 +420,8 @@ export default function LaunchReadiness({ opportunities, milestones, areas, show
                     mOpps.forEach(o => { if (o.issues?.length) mIssueIds.push(...o.issues); });
                     const mStats = getIssueStats([...new Set(mIssueIds)]);
                     const isMExpanded = expandedMilestones.has(milestone.id);
+                    const mDate = getMilestoneDate(milestone);
+                    const mCountdown = mReadiness !== 'launched' ? getCountdown(mDate) : null;
 
                     return (
                       <div key={milestone.id} className="border-b border-slate-50 last:border-b-0">
@@ -378,7 +439,12 @@ export default function LaunchReadiness({ opportunities, milestones, areas, show
                                 style={{ color: getAreaColor(milestone.area), borderColor: getAreaColor(milestone.area) + '40', backgroundColor: getAreaColor(milestone.area) + '10' }}>
                                 {getAreaName(milestone.area)}
                               </span>
-                              <span className="text-[10px] text-slate-400">{getMonthName(milestone.month)}</span>
+                              <span className="text-[10px] text-slate-400">{mDate ? formatDate(mDate) : getMonthName(milestone.month)}</span>
+                              {mCountdown && (
+                                <span className="text-[10px] font-semibold" style={{ color: mCountdown.color }}>
+                                  {mCountdown.text}
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 mt-1.5">
                               <div className="flex-1 max-w-[200px]">
