@@ -46,6 +46,13 @@ LINEAR WRITE OPERATIONS:
 - For sub-issues, break work down into concrete implementation tasks (design, implement, test, etc.)
 - For comments, include relevant context like milestone deadlines, dependencies, and priority reasoning
 
+AUTO-MAPPING LINEAR PROJECTS:
+- When the user mentions connecting Linear projects, importing a launch plan, auto-mapping issues, or syncing a project to a milestone, use the auto_map_linear_projects tool
+- This tool fetches all Linear projects and their issues, then matches them to Pulseboard milestones and opportunities by name similarity
+- If the user specifies a milestone or client name, pass the milestoneId to focus the matching
+- The tool returns proposed mappings for user confirmation — describe what was found before showing the card
+- If there are unmapped issues (issues in the Linear project that didn't match any opportunity), tell the user and suggest creating new opportunities for them
+
 PROACTIVE LINEAR SUGGESTIONS:
 - When you complete a roadmap action, suggest the natural Linear follow-up if one exists. Don't just wait for the user to ask.
 - After planning a milestone (plan_milestone): suggest creating Linear issues for opportunities that don't have linked issues yet
@@ -468,6 +475,18 @@ When you call plan_milestone and receive the context data back, you MUST analyze
         required: ["moves"],
       },
     },
+    {
+      name: "auto_map_linear_projects",
+      description: "Fetch all Linear projects and their issues, then match them to Pulseboard milestones and opportunities by name/title similarity. Use when the user wants to automatically connect their Linear launch plan to a milestone, import a project's issues, or sync Linear projects with the roadmap. Returns proposed issue mappings for user confirmation.",
+      input_schema: {
+        type: "object",
+        properties: {
+          linearApiKey: { type: "string", description: "The user's Linear API key" },
+          milestoneId: { type: "string", description: "Optional: focus on a specific milestone ID. If omitted, matches across all milestones with clients." },
+        },
+        required: ["linearApiKey"],
+      },
+    },
   ];
 
   // Process a tool call and return result
@@ -751,6 +770,166 @@ When you call plan_milestone and receive the context data back, you MUST analyze
     };
   }
 
+  // Fetch Linear projects with their issues for auto-mapping
+  async function fetchLinearProjectsWithIssues(linearApiKey) {
+    const response = await fetch("https://api.linear.app/graphql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: linearApiKey,
+        "apollo-require-preflight": "true",
+      },
+      body: JSON.stringify({
+        query: `query {
+          projects(first: 50) {
+            nodes {
+              id name
+              issues(first: 250) {
+                nodes {
+                  id identifier title
+                  state { name type }
+                  children { nodes { identifier } }
+                }
+              }
+            }
+          }
+        }`,
+      }),
+    });
+
+    const data = await response.json();
+    if (data.errors) {
+      throw new Error(`Linear API error: ${data.errors.map((e) => e.message).join(", ")}`);
+    }
+
+    return (data.data?.projects?.nodes || []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      issues: (p.issues?.nodes || []).map((i) => ({
+        identifier: i.identifier,
+        title: i.title,
+        state: i.state?.name,
+        stateType: i.state?.type,
+        children: (i.children?.nodes || []).map((c) => c.identifier),
+      })),
+    }));
+  }
+
+  // Match Linear projects to milestones and opportunities
+  function buildProjectMappings(linearProjects, state, focusMilestoneId) {
+    const milestones = state.milestones || [];
+    const opportunities = state.opportunities || [];
+
+    // Helper: extract meaningful words from a string
+    const getWords = (str) =>
+      (str || "").toLowerCase().split(/[\s\-_/]+/).filter((w) => w.length > 2);
+
+    // Helper: compute word overlap score between two strings
+    const matchScore = (a, b) => {
+      const wordsA = getWords(a);
+      const wordsB = getWords(b);
+      if (wordsA.length === 0 || wordsB.length === 0) return 0;
+      const overlap = wordsA.filter((w) => wordsB.some((wb) => wb.includes(w) || w.includes(wb)));
+      return overlap.length / Math.max(wordsA.length, wordsB.length);
+    };
+
+    // Determine which milestones to match against
+    const targetMilestones = focusMilestoneId
+      ? milestones.filter((m) => m.id === focusMilestoneId)
+      : milestones.filter((m) => m.client); // only milestones with clients
+
+    const mappings = [];
+
+    for (const project of linearProjects) {
+      if (project.issues.length === 0) continue;
+
+      // Find the best-matching milestone
+      let bestMilestone = null;
+      let bestScore = 0;
+
+      for (const ms of targetMilestones) {
+        const score = matchScore(project.name, ms.title);
+        if (score > bestScore) {
+          bestScore = score;
+          bestMilestone = ms;
+        }
+      }
+
+      // Require at least some match (or accept any if focused on a specific milestone)
+      if (!bestMilestone || (bestScore < 0.2 && !focusMilestoneId)) continue;
+
+      // Find opportunities linked to this milestone
+      const linkedOpps = opportunities.filter((o) => o.milestoneId === bestMilestone.id);
+      if (linkedOpps.length === 0) continue;
+
+      // Collect all issue identifiers (including children)
+      const allIdentifiers = [];
+      for (const issue of project.issues) {
+        allIdentifiers.push(issue.identifier);
+        for (const childId of issue.children) {
+          allIdentifiers.push(childId);
+        }
+      }
+
+      const opportunityMappings = [];
+      const assignedIssues = new Set();
+
+      if (linkedOpps.length === 1) {
+        // Single opp: all issues go there
+        opportunityMappings.push({
+          opportunityId: linkedOpps[0].id,
+          opportunityTitle: linkedOpps[0].title,
+          issueIdentifiers: allIdentifiers,
+        });
+        allIdentifiers.forEach((id) => assignedIssues.add(id));
+      } else {
+        // Multiple opps: distribute by keyword matching
+        for (const opp of linkedOpps) {
+          const oppWords = getWords(opp.title);
+          const matched = [];
+
+          for (const issue of project.issues) {
+            const issueWords = getWords(issue.title);
+            const overlap = oppWords.filter((w) =>
+              issueWords.some((iw) => iw.includes(w) || w.includes(iw))
+            );
+            if (overlap.length > 0 && !assignedIssues.has(issue.identifier)) {
+              matched.push(issue.identifier);
+              assignedIssues.add(issue.identifier);
+              // Also include children
+              for (const childId of issue.children) {
+                matched.push(childId);
+                assignedIssues.add(childId);
+              }
+            }
+          }
+
+          if (matched.length > 0) {
+            opportunityMappings.push({
+              opportunityId: opp.id,
+              opportunityTitle: opp.title,
+              issueIdentifiers: matched,
+            });
+          }
+        }
+      }
+
+      const unmapped = allIdentifiers.filter((id) => !assignedIssues.has(id));
+
+      mappings.push({
+        projectName: project.name,
+        projectId: project.id,
+        milestoneTitle: bestMilestone.title,
+        milestoneId: bestMilestone.id,
+        totalIssues: allIdentifiers.length,
+        opportunityMappings,
+        unmappedIssues: unmapped,
+      });
+    }
+
+    return mappings;
+  }
+
   try {
     const anthropic = new Anthropic();
     let conversationMessages = [...messages];
@@ -780,7 +959,7 @@ When you call plan_milestone and receive the context data back, you MUST analyze
         for (const toolUse of toolUseBlocks) {
           let result;
 
-          // Handle sync_linear specially (needs async fetch)
+          // Handle async tools specially (need fetch)
           if (toolUse.name === "sync_linear") {
             const linearApiKey = toolUse.input.linearApiKey;
             if (!linearApiKey) {
@@ -804,6 +983,33 @@ When you call plan_milestone and receive the context data back, you MUST analyze
                 result = {
                   type: "error",
                   message: `Failed to fetch from Linear: ${err.message}`,
+                };
+              }
+            }
+          } else if (toolUse.name === "auto_map_linear_projects") {
+            const linearApiKey = toolUse.input.linearApiKey;
+            if (!linearApiKey) {
+              result = {
+                type: "error",
+                message: "No Linear API key provided. Ask the user to configure their Linear API key first.",
+              };
+            } else {
+              try {
+                const projects = await fetchLinearProjectsWithIssues(linearApiKey);
+                const mappings = buildProjectMappings(projects, roadmapState, toolUse.input.milestoneId || null);
+                result = {
+                  type: "mutation",
+                  action: "auto_map_linear_projects",
+                  data: {
+                    mappings,
+                    projectCount: projects.length,
+                    matchedCount: mappings.length,
+                  },
+                };
+              } catch (err) {
+                result = {
+                  type: "error",
+                  message: `Failed to fetch Linear projects: ${err.message}`,
                 };
               }
             }
