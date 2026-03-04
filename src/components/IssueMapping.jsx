@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { getAreaColor, getAreaName } from '../utils/helpers';
+import { areas, getAreaColor, getAreaName } from '../utils/helpers';
 
 const STATUS_MAP = {
   done: { label: 'Done', color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
@@ -12,6 +12,8 @@ const STATUS_MAP = {
 const PRIORITY_ICONS = { 1: '!!!', 2: '!!', 3: '!', 4: '·' };
 const PRIORITY_COLORS = { 1: '#DC2626', 2: '#D97706', 3: '#2563EB', 4: '#9CA3AF' };
 
+const STOP_WORDS = new Set(['the','a','an','and','or','for','to','in','of','with','on','at','by','is','it','as','from']);
+
 const mapStatus = (state) => {
   if (!state) return 'not_started';
   const type = (state.type || '').toLowerCase();
@@ -23,6 +25,123 @@ const mapStatus = (state) => {
   return 'not_started';
 };
 
+/** Extract meaningful keywords from a title (>3 chars, no stop words) */
+const extractKeywords = (title) => {
+  if (!title) return [];
+  return title.toLowerCase().split(/[\s\-_/]+/)
+    .filter(w => w.length > 3 && !STOP_WORDS.has(w))
+    .map(w => w.replace(/[^a-z0-9]/g, ''))
+    .filter(Boolean);
+};
+
+// ========== Inline autocomplete input ==========
+const IssueAutocompleteInput = ({ allLinearIssues, onAdd, placeholder = 'PAL-1234 (Enter to add)' }) => {
+  const [value, setValue] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const inputRef = useRef(null);
+  const containerRef = useRef(null);
+
+  const suggestions = useMemo(() => {
+    if (!value.trim() || !allLinearIssues?.length) return [];
+    const q = value.toLowerCase();
+    return allLinearIssues
+      .filter(i => i.identifier.toLowerCase().includes(q) || i.title.toLowerCase().includes(q))
+      .slice(0, 5);
+  }, [value, allLinearIssues]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setShowDropdown(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const submit = (identifier) => {
+    if (identifier) {
+      onAdd(identifier);
+      setValue('');
+      setShowDropdown(false);
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={e => { setValue(e.target.value.toUpperCase()); setShowDropdown(true); }}
+        onFocus={() => setShowDropdown(true)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') { e.preventDefault(); submit(value.trim()); }
+          if (e.key === 'Escape') setShowDropdown(false);
+        }}
+        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-800 text-xs font-mono focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
+        placeholder={placeholder}
+      />
+      {showDropdown && suggestions.length > 0 && (
+        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 max-h-[200px] overflow-y-auto">
+          {suggestions.map(issue => {
+            const sc = STATUS_MAP[mapStatus(issue.state)] || STATUS_MAP.not_started;
+            return (
+              <button key={issue.identifier} type="button"
+                onClick={() => submit(issue.identifier)}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-indigo-50/50 border-b border-slate-50 last:border-b-0">
+                <span className="text-[10px] font-mono text-slate-500 flex-shrink-0 w-[60px]">{issue.identifier}</span>
+                <span className="text-xs text-slate-700 flex-1 min-w-0 truncate">{issue.title}</span>
+                <span className="text-[9px] font-medium px-1 py-0.5 rounded flex-shrink-0"
+                  style={{ backgroundColor: sc.bg, color: sc.color }}>{issue.state?.name || '?'}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ========== Quick Link Dropdown (anchored, for orphaned issues) ==========
+const QuickLinkDropdown = ({ issue, opportunities, onLink, onClose }) => {
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
+
+  const filtered = opportunities.filter(o =>
+    o.title.toLowerCase().includes(search.toLowerCase()) ||
+    (getAreaName(o.area) || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div ref={ref} className="absolute right-0 top-full mt-1 w-[280px] bg-white border border-slate-200 rounded-lg shadow-xl z-30 flex flex-col max-h-[300px]">
+      <div className="px-2 py-1.5 border-b border-slate-100">
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+          className="w-full text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1 focus:outline-none focus:border-indigo-400"
+          placeholder="Search opportunities..." autoFocus />
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {filtered.map(opp => (
+          <button key={opp.id} onClick={() => { onLink(issue.identifier, opp.id); onClose(); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-indigo-50/50 border-b border-slate-50 last:border-b-0">
+            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: getAreaColor(opp.area) }} />
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-slate-800 truncate">{opp.title}</div>
+              <div className="text-[10px] text-slate-400">{getAreaName(opp.area)} · {(opp.issues || []).length} issues</div>
+            </div>
+          </button>
+        ))}
+        {filtered.length === 0 && <div className="px-3 py-4 text-xs text-slate-400 text-center">No matches</div>}
+      </div>
+    </div>
+  );
+};
+
+// ========== MAIN COMPONENT ==========
 export default function IssueMapping({ opportunities, onSaveOpportunity, showNotification }) {
   const [allLinearIssues, setAllLinearIssues] = useState(null);
   const [linearLoading, setLinearLoading] = useState(false);
@@ -31,9 +150,13 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
   const [filterMapping, setFilterMapping] = useState('all');
   const [selectedIssues, setSelectedIssues] = useState(new Set());
   const [expandedOpps, setExpandedOpps] = useState(new Set());
+  const [expandedAreas, setExpandedAreas] = useState(new Set(areas.map(a => a.id)));
   const [moveModalIssue, setMoveModalIssue] = useState(null);
+  const [quickLinkIssue, setQuickLinkIssue] = useState(null);
   const [dragIssue, setDragIssue] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
+  const [oppSearch, setOppSearch] = useState('');
+  const [selectedOppId, setSelectedOppId] = useState(null);
   const searchRef = useRef(null);
 
   // Fetch all Linear issues on mount
@@ -92,6 +215,27 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
     }));
   }, [allLinearIssues, issueToOpp, opportunities]);
 
+  // Smart suggestions: keywords from selected opp
+  const selectedOppKeywords = useMemo(() => {
+    if (!selectedOppId) return [];
+    const opp = opportunities.find(o => o.id === selectedOppId);
+    return opp ? extractKeywords(opp.title) : [];
+  }, [selectedOppId, opportunities]);
+
+  const suggestedIssueIds = useMemo(() => {
+    if (selectedOppKeywords.length === 0) return new Set();
+    const ids = new Set();
+    allIssues.forEach(issue => {
+      if (issue.opportunityId) return; // only orphaned
+      const titleLower = issue.title.toLowerCase();
+      const labelsLower = (issue.labels || []).join(' ').toLowerCase();
+      if (selectedOppKeywords.some(kw => titleLower.includes(kw) || labelsLower.includes(kw))) {
+        ids.add(issue.identifier);
+      }
+    });
+    return ids;
+  }, [selectedOppKeywords, allIssues]);
+
   // Filtered + searched issues
   const filteredIssues = useMemo(() => {
     let list = allIssues;
@@ -108,14 +252,17 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
     }
     if (filterMapping === 'mapped') list = list.filter(i => i.opportunityId);
     if (filterMapping === 'orphaned') list = list.filter(i => !i.opportunityId);
-    // Sort: orphaned first, then by priority
+    // Sort: suggested first, then orphaned, then by priority
     list = [...list].sort((a, b) => {
+      const aSugg = suggestedIssueIds.has(a.identifier) ? 0 : 1;
+      const bSugg = suggestedIssueIds.has(b.identifier) ? 0 : 1;
+      if (aSugg !== bSugg) return aSugg - bSugg;
       if (!a.opportunityId && b.opportunityId) return -1;
       if (a.opportunityId && !b.opportunityId) return 1;
       return (a.priority || 9) - (b.priority || 9);
     });
     return list;
-  }, [allIssues, searchQuery, filterTeam, filterMapping]);
+  }, [allIssues, searchQuery, filterTeam, filterMapping, suggestedIssueIds]);
 
   const teams = useMemo(() => [...new Set(allIssues.map(i => i.teamName).filter(Boolean))].sort(), [allIssues]);
 
@@ -124,6 +271,31 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
     mapped: allIssues.filter(i => i.opportunityId).length,
     orphaned: allIssues.filter(i => !i.opportunityId).length,
   }), [allIssues]);
+
+  // Filter + group opportunities for left panel
+  const groupedOpportunities = useMemo(() => {
+    let opps = opportunities;
+    if (oppSearch) {
+      const q = oppSearch.toLowerCase();
+      opps = opps.filter(o => o.title.toLowerCase().includes(q));
+    }
+    // Group by area
+    const groups = [];
+    areas.forEach(area => {
+      const areaOpps = opps.filter(o => o.area === area.id);
+      if (areaOpps.length > 0) {
+        // Sort: opps with issues first, then alphabetically
+        areaOpps.sort((a, b) => {
+          const aEmpty = (a.issues || []).length === 0 ? 1 : 0;
+          const bEmpty = (b.issues || []).length === 0 ? 1 : 0;
+          if (aEmpty !== bEmpty) return aEmpty - bEmpty;
+          return a.title.localeCompare(b.title);
+        });
+        groups.push({ area, opps: areaOpps });
+      }
+    });
+    return groups;
+  }, [opportunities, oppSearch]);
 
   // --- Actions ---
   const unlinkIssue = useCallback((identifier) => {
@@ -136,13 +308,11 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
   }, [issueToOpp, opportunities, onSaveOpportunity, showNotification]);
 
   const linkIssue = useCallback((identifier, targetOppId) => {
-    // Unlink from current opp if any
     const currentOppId = issueToOpp[identifier];
     if (currentOppId) {
       const oldOpp = opportunities.find(o => o.id === currentOppId);
       if (oldOpp) onSaveOpportunity({ ...oldOpp, issues: oldOpp.issues.filter(i => i !== identifier) });
     }
-    // Link to new opp
     const targetOpp = opportunities.find(o => o.id === targetOppId);
     if (!targetOpp) return;
     onSaveOpportunity({ ...targetOpp, issues: [...new Set([...(targetOpp.issues || []), identifier])] });
@@ -151,7 +321,6 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
 
   const bulkLink = useCallback((oppId) => {
     if (selectedIssues.size === 0) return;
-    // Unlink all selected from their current opps
     const affectedOpps = new Map();
     selectedIssues.forEach(identifier => {
       const currentOppId = issueToOpp[identifier];
@@ -164,7 +333,6 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
       }
     });
     affectedOpps.forEach(opp => onSaveOpportunity(opp));
-    // Link all to target
     const targetOpp = opportunities.find(o => o.id === oppId);
     if (!targetOpp) return;
     onSaveOpportunity({ ...targetOpp, issues: [...new Set([...(targetOpp.issues || []), ...selectedIssues])] });
@@ -182,25 +350,33 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
 
   const toggleExpand = (id) => {
     setExpandedOpps(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    // Track selected opp for smart suggestions
+    setSelectedOppId(prev => prev === id ? null : id);
+  };
+
+  const toggleArea = (areaId) => {
+    setExpandedAreas(prev => { const n = new Set(prev); n.has(areaId) ? n.delete(areaId) : n.add(areaId); return n; });
   };
 
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); searchRef.current?.focus(); }
-      if (e.key === 'Escape') { setSelectedIssues(new Set()); setMoveModalIssue(null); setSearchQuery(''); }
+      if (e.key === 'Escape') { setSelectedIssues(new Set()); setMoveModalIssue(null); setQuickLinkIssue(null); setSearchQuery(''); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
   const hasLinearKey = !!localStorage.getItem('pulseboard_linear_key');
+  const selectedOpp = selectedOppId ? opportunities.find(o => o.id === selectedOppId) : null;
 
   // --- Issue Row ---
-  const IssueRow = ({ issue, showOpp = false, compact = false }) => {
+  const IssueRow = ({ issue, showOpp = false, compact = false, isSuggested = false }) => {
     const sc = STATUS_MAP[issue.mappedStatus] || STATUS_MAP.not_started;
     const isSelected = selectedIssues.has(issue.identifier);
     const isDragging = dragIssue === issue.identifier;
+    const isQuickLinkOpen = quickLinkIssue === issue.identifier;
 
     return (
       <div
@@ -209,8 +385,11 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
         onDragEnd={() => setDragIssue(null)}
         className={`flex items-center gap-2 px-3 py-2 border-b border-slate-50 last:border-b-0 transition-all group cursor-grab active:cursor-grabbing ${
           isDragging ? 'opacity-30 scale-[0.98]' : ''
-        } ${isSelected ? 'bg-indigo-50/60 border-l-2 border-l-indigo-400' : 'hover:bg-slate-50/80'}`}
+        } ${isSelected ? 'bg-indigo-50/60 border-l-2 border-l-indigo-400' : isSuggested ? 'bg-indigo-50/30 border-l-2 border-l-indigo-300' : 'hover:bg-slate-50/80'}`}
       >
+        {/* Grip handle */}
+        <span className="text-slate-300 group-hover:text-slate-400 flex-shrink-0 text-[10px] leading-none select-none" style={{ letterSpacing: '1px' }}>⠿</span>
+
         <button onClick={(e) => { e.stopPropagation(); toggleSelect(issue.identifier); }}
           className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
             isSelected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 hover:border-indigo-400'
@@ -225,7 +404,11 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
 
         <span className={`text-slate-700 flex-1 min-w-0 truncate ${compact ? 'text-xs' : 'text-sm'}`}>{issue.title}</span>
 
-        {showOpp && issue.opportunity && (
+        {isSuggested && (
+          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 flex-shrink-0">Suggested</span>
+        )}
+
+        {showOpp && issue.opportunity && !isSuggested && (
           <span className="text-[10px] font-medium px-2 py-0.5 rounded-full flex-shrink-0 max-w-[140px] truncate"
             style={{ backgroundColor: getAreaColor(issue.opportunity.area) + '12', color: getAreaColor(issue.opportunity.area), border: `1px solid ${getAreaColor(issue.opportunity.area)}25` }}>
             {issue.opportunity.title}
@@ -240,7 +423,7 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
           {issue.state?.name || 'Unknown'}
         </span>
 
-        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity relative">
           {issue.opportunityId ? (
             <>
               <button onClick={() => setMoveModalIssue(issue)} className="p-1 text-slate-400 hover:text-indigo-500 rounded" title="Move to another opportunity">
@@ -251,9 +434,14 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
               </button>
             </>
           ) : (
-            <button onClick={() => setMoveModalIssue(issue)} className="p-1 text-slate-400 hover:text-emerald-500 rounded" title="Link to opportunity">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
+            <>
+              <button onClick={() => setQuickLinkIssue(isQuickLinkOpen ? null : issue.identifier)} className="p-1 text-slate-400 hover:text-emerald-500 rounded" title="Link to opportunity">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+              {isQuickLinkOpen && (
+                <QuickLinkDropdown issue={issue} opportunities={opportunities} onLink={linkIssue} onClose={() => setQuickLinkIssue(null)} />
+              )}
+            </>
           )}
           <a href={issue.url || `https://linear.app/palazzo-ai/issue/${issue.identifier}`} target="_blank" rel="noopener noreferrer"
             className="p-1 text-slate-300 hover:text-indigo-500 rounded" title="Open in Linear">
@@ -269,11 +457,12 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
     const oppIssues = allIssues.filter(i => i.opportunityId === opp.id);
     const isExpanded = expandedOpps.has(opp.id);
     const isDropTgt = dropTarget === opp.id;
+    const isSelected = selectedOppId === opp.id;
     const doneCount = oppIssues.filter(i => i.mappedStatus === 'done').length;
 
     return (
       <div
-        className={`rounded-lg border transition-all ${isDropTgt ? 'border-indigo-400 bg-indigo-50/40 shadow-md' : 'border-slate-200 bg-white'}`}
+        className={`rounded-lg border transition-all ${isDropTgt ? 'border-indigo-400 bg-indigo-50/40 shadow-md' : isSelected ? 'border-indigo-300 bg-indigo-50/20' : 'border-slate-200 bg-white'}`}
         onDragOver={(e) => { e.preventDefault(); setDropTarget(opp.id); }}
         onDragLeave={() => setDropTarget(null)}
         onDrop={(e) => {
@@ -282,7 +471,6 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
           if (dragIssue) {
             const currentOpp = issueToOpp[dragIssue];
             if (currentOpp && currentOpp !== opp.id) {
-              // Move from one opp to another
               const oldOpp = opportunities.find(o => o.id === currentOpp);
               if (oldOpp) onSaveOpportunity({ ...oldOpp, issues: oldOpp.issues.filter(i => i !== dragIssue) });
               onSaveOpportunity({ ...opp, issues: [...new Set([...(opp.issues || []), dragIssue])] });
@@ -309,19 +497,27 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
         {isExpanded && (
           <div className="border-t border-slate-100">
             {oppIssues.length === 0 ? (
-              <div className={`px-4 py-6 text-center text-xs transition-colors ${isDropTgt ? 'text-indigo-500' : 'text-slate-400'}`}>
-                {isDropTgt ? 'Drop issue here to link' : 'No issues linked — drag issues here'}
+              <div className={`px-4 py-4 text-center text-xs transition-colors ${isDropTgt ? 'text-indigo-500' : 'text-slate-400'}`}>
+                {isDropTgt ? 'Drop issue here to link' : 'No issues linked — drag or add below'}
               </div>
             ) : (
               oppIssues.map(issue => <IssueRow key={issue.identifier} issue={issue} compact />)
             )}
+            {/* Quick-assign input */}
+            <div className="px-3 py-2 border-t border-slate-50">
+              <IssueAutocompleteInput
+                allLinearIssues={allLinearIssues}
+                onAdd={(identifier) => linkIssue(identifier, opp.id)}
+                placeholder="Add issue (PAL-1234)"
+              />
+            </div>
           </div>
         )}
       </div>
     );
   };
 
-  // --- Move/Link Modal ---
+  // --- Move Modal (for already-mapped issues) ---
   const MoveModal = () => {
     const [search, setSearch] = useState('');
     if (!moveModalIssue) return null;
@@ -335,9 +531,7 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
       <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setMoveModalIssue(null)}>
         <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-[480px] max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
           <div className="px-4 py-3 border-b border-slate-100">
-            <div className="text-sm font-semibold text-slate-800">
-              {currentOppId ? 'Move' : 'Link'} {moveModalIssue.identifier}
-            </div>
+            <div className="text-sm font-semibold text-slate-800">Move {moveModalIssue.identifier}</div>
             <div className="text-xs text-slate-500 mt-0.5 truncate">{moveModalIssue.title}</div>
           </div>
           <div className="px-4 py-2 border-b border-slate-100">
@@ -350,10 +544,7 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
               const isCurrent = opp.id === currentOppId;
               return (
                 <button key={opp.id} disabled={isCurrent}
-                  onClick={() => {
-                    linkIssue(moveModalIssue.identifier, opp.id);
-                    setMoveModalIssue(null);
-                  }}
+                  onClick={() => { linkIssue(moveModalIssue.identifier, opp.id); setMoveModalIssue(null); }}
                   className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left border-b border-slate-50 transition-colors ${
                     isCurrent ? 'bg-slate-50 opacity-50 cursor-not-allowed' : 'hover:bg-indigo-50/50'
                   }`}>
@@ -473,21 +664,49 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
 
       {/* Two-panel layout */}
       <div className="flex gap-5" style={{ height: 'calc(100vh - 280px)' }}>
-        {/* Left: Opportunities */}
+        {/* Left: Opportunities grouped by area */}
         <div className="w-[340px] flex-shrink-0 flex flex-col">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-1">
-            Opportunities ({opportunities.length})
+          {/* Left panel search */}
+          <div className="mb-2">
+            <div className="relative">
+              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" value={oppSearch} onChange={e => setOppSearch(e.target.value)}
+                className="w-full text-xs bg-white border border-slate-200 rounded-lg pl-7 pr-7 py-1.5 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
+                placeholder="Filter opportunities..." />
+              {oppSearch && (
+                <button onClick={() => setOppSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-            {[...opportunities]
-              .sort((a, b) => {
-                const aEmpty = (a.issues || []).length === 0 ? 1 : 0;
-                const bEmpty = (b.issues || []).length === 0 ? 1 : 0;
-                if (aEmpty !== bEmpty) return aEmpty - bEmpty;
-                return a.title.localeCompare(b.title);
-              })
-              .map(opp => <OppGroup key={opp.id} opp={opp} />)
-            }
+
+          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            {groupedOpportunities.map(({ area, opps }) => {
+              const isAreaExpanded = expandedAreas.has(area.id);
+              return (
+                <div key={area.id}>
+                  {/* Area header */}
+                  <button onClick={() => toggleArea(area.id)}
+                    className="w-full flex items-center gap-2 px-1 py-1 mb-1 text-left hover:bg-slate-50 rounded transition-colors">
+                    <svg className={`w-2.5 h-2.5 text-slate-400 transition-transform flex-shrink-0 ${isAreaExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: area.color }} />
+                    <span className="text-xs font-semibold text-slate-600 flex-1">{area.name}</span>
+                    <span className="text-[10px] text-slate-400">{opps.length}</span>
+                  </button>
+                  {isAreaExpanded && (
+                    <div className="space-y-1.5 ml-1">
+                      {opps.map(opp => <OppGroup key={opp.id} opp={opp} />)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {groupedOpportunities.length === 0 && (
+              <div className="px-4 py-8 text-center text-xs text-slate-400">No opportunities match</div>
+            )}
           </div>
         </div>
 
@@ -497,10 +716,14 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
             {filterMapping === 'orphaned' ? 'Orphaned Issues' : filterMapping === 'mapped' ? 'Mapped Issues' : 'All Issues'}
             <span className="text-slate-400 font-normal">({filteredIssues.length})</span>
             {selectedIssues.size > 0 && <span className="text-indigo-500">· {selectedIssues.size} selected</span>}
+            {selectedOpp && suggestedIssueIds.size > 0 && (
+              <span className="text-indigo-500 font-normal ml-1">· {suggestedIssueIds.size} suggested for "{selectedOpp.title}"</span>
+            )}
           </div>
 
           {/* Column headers */}
           <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-100/60 rounded-t-lg border border-b-0 border-slate-200">
+            <span className="w-4" />
             <span className="w-4" />
             <span className="w-4" />
             <span className="w-[68px]">ID</span>
@@ -518,14 +741,15 @@ export default function IssueMapping({ opportunities, onSaveOpportunity, showNot
               </div>
             ) : (
               filteredIssues.map(issue => (
-                <IssueRow key={issue.identifier} issue={issue} showOpp={filterMapping !== 'mapped'} />
+                <IssueRow key={issue.identifier} issue={issue} showOpp={filterMapping !== 'mapped'}
+                  isSuggested={suggestedIssueIds.has(issue.identifier)} />
               ))
             )}
           </div>
         </div>
       </div>
 
-      {/* Move/Link modal */}
+      {/* Move modal (for already-mapped issues) */}
       <MoveModal />
     </div>
   );

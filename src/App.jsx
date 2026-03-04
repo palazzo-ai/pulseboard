@@ -602,6 +602,44 @@ export default function PalazzoTimeline() {
     const [form, setForm] = useState(opportunity);
     const [issueIds, setIssueIds] = useState(opportunity.issues || []);
     const [issueInput, setIssueInput] = useState('');
+    const [issueSuggestions, setIssueSuggestions] = useState(null);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const issuesFetchedRef = useRef(false);
+    const suggestContainerRef = useRef(null);
+
+    // Lazy fetch Linear issues on first focus
+    const fetchIssuesForAutocomplete = async () => {
+      if (issuesFetchedRef.current) return;
+      issuesFetchedRef.current = true;
+      const apiKey = localStorage.getItem('pulseboard_linear_key');
+      if (!apiKey) return;
+      try {
+        const resp = await fetch('/api/fetch-issues', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ linearApiKey: apiKey }),
+        });
+        const data = await resp.json();
+        if (!data.error) setIssueSuggestions(data.issues || []);
+      } catch {} // eslint-disable-line no-empty
+    };
+
+    // Close suggestions on outside click
+    useEffect(() => {
+      const handler = (e) => {
+        if (suggestContainerRef.current && !suggestContainerRef.current.contains(e.target)) setShowSuggestions(false);
+      };
+      document.addEventListener('mousedown', handler);
+      return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const filteredSuggestions = issueInput.trim() && issueSuggestions
+      ? issueSuggestions
+          .filter(i => !issueIds.includes(i.identifier) &&
+            (i.identifier.toLowerCase().includes(issueInput.toLowerCase()) ||
+             i.title.toLowerCase().includes(issueInput.toLowerCase())))
+          .slice(0, 5)
+      : [];
 
     const handleSubmit = (e) => {
       e.preventDefault();
@@ -609,12 +647,13 @@ export default function PalazzoTimeline() {
       onSave({ ...form, issues: issueIds });
     };
 
-    const addIssueId = () => {
-      const id = issueInput.trim();
-      if (id && !issueIds.includes(id)) {
-        setIssueIds(prev => [...prev, id]);
+    const addIssueId = (id) => {
+      const trimmed = (id || issueInput).trim();
+      if (trimmed && !issueIds.includes(trimmed)) {
+        setIssueIds(prev => [...prev, trimmed]);
       }
       setIssueInput('');
+      setShowSuggestions(false);
     };
 
     return (
@@ -689,21 +728,38 @@ export default function PalazzoTimeline() {
                   </span>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={issueInput}
-                  onChange={e => setIssueInput(e.target.value.toUpperCase())}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' || e.key === ',') {
-                      e.preventDefault();
-                      addIssueId();
-                    }
-                  }}
-                  className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-800 text-sm font-mono focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                  placeholder="PAL-1234 (Enter to add)"
-                />
-                <button type="button" onClick={addIssueId} disabled={!issueInput.trim()}
+              <div className="flex gap-2" ref={suggestContainerRef}>
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={issueInput}
+                    onChange={e => { setIssueInput(e.target.value.toUpperCase()); setShowSuggestions(true); }}
+                    onFocus={() => { fetchIssuesForAutocomplete(); setShowSuggestions(true); }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        addIssueId();
+                      }
+                      if (e.key === 'Escape') setShowSuggestions(false);
+                    }}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-800 text-sm font-mono focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                    placeholder="PAL-1234 (Enter to add)"
+                  />
+                  {showSuggestions && filteredSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 max-h-[180px] overflow-y-auto">
+                      {filteredSuggestions.map(issue => (
+                        <button key={issue.identifier} type="button"
+                          onClick={() => addIssueId(issue.identifier)}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-indigo-50/50 border-b border-slate-50 last:border-b-0">
+                          <span className="text-[11px] font-mono text-slate-500 flex-shrink-0 w-[65px]">{issue.identifier}</span>
+                          <span className="text-xs text-slate-700 flex-1 min-w-0 truncate">{issue.title}</span>
+                          <span className="text-[9px] text-slate-400 flex-shrink-0">{issue.state?.name || ''}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button type="button" onClick={() => addIssueId()} disabled={!issueInput.trim()}
                   className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-600 text-sm rounded-lg transition-colors">
                   Add
                 </button>
