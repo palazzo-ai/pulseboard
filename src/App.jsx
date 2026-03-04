@@ -788,6 +788,12 @@ export default function PalazzoTimeline() {
             </div>
 
             <div>
+              <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Due Date</label>
+              <input type="date" value={form.targetDate || ''} onChange={e => setForm({ ...form, targetDate: e.target.value || null })}
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" />
+            </div>
+
+            <div>
               <label className="block text-xs text-slate-500 uppercase tracking-wide mb-1">Client / Partner</label>
               {!addingClient ? (
                 <select value={form.client || ''} onChange={e => handleClientChange(e.target.value)}
