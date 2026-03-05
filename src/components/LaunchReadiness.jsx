@@ -199,6 +199,22 @@ export default function LaunchReadiness({ showNotification }) {
     return () => clearTimeout(timer);
   }, [searchQuery, searchingClient, searchIssues]);
 
+  const moveToCrossClient = useCallback((fromClientId, identifier) => {
+    const next = { ...pinnedBlockers };
+    // Remove from source client
+    if (next[fromClientId]) {
+      next[fromClientId] = next[fromClientId].filter(id => id !== identifier);
+      if (next[fromClientId].length === 0) delete next[fromClientId];
+    }
+    // Add to cross-client
+    if (!next._crossClient) next._crossClient = [];
+    if (!next._crossClient.includes(identifier)) {
+      next._crossClient = [...next._crossClient, identifier];
+    }
+    savePinnedBlockers(next);
+    showNotification?.(`Moved ${identifier} to cross-client blockers`);
+  }, [pinnedBlockers, savePinnedBlockers, showNotification]);
+
   const saveLaunchDate = useCallback((clientId, dateStr) => {
     setLaunchDates(prev => {
       const next = { ...prev };
@@ -568,14 +584,23 @@ export default function LaunchReadiness({ showNotification }) {
                     <div key={b.id} className="flex items-center group">
                       <div className="flex-1"><BlockerRow issue={b} /></div>
                       {b.pinned && (
-                        <button onClick={(e) => { e.stopPropagation(); removePinnedBlocker(client.id, b.id); }}
-                          className="text-slate-300 hover:text-red-500 pr-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                          title="Remove from blockers">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <line x1="18" y1="6" x2="6" y2="18" strokeWidth={2} strokeLinecap="round" />
-                            <line x1="6" y1="6" x2="18" y2="18" strokeWidth={2} strokeLinecap="round" />
-                          </svg>
-                        </button>
+                        <div className="flex items-center gap-1 pr-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <button onClick={(e) => { e.stopPropagation(); moveToCrossClient(client.id, b.id); }}
+                            className="text-slate-300 hover:text-amber-500 transition-colors"
+                            title="Move to cross-client blockers">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round">
+                              <path d="M7 17l9.2-9.2M17 17V7H7" />
+                            </svg>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); removePinnedBlocker(client.id, b.id); }}
+                            className="text-slate-300 hover:text-red-500 transition-colors"
+                            title="Remove from blockers">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <line x1="18" y1="6" x2="6" y2="18" strokeWidth={2} strokeLinecap="round" />
+                              <line x1="6" y1="6" x2="18" y2="18" strokeWidth={2} strokeLinecap="round" />
+                            </svg>
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))
@@ -662,7 +687,16 @@ export default function LaunchReadiness({ showNotification }) {
     );
   }
 
-  const crossClientBlockers = blockersByClient._crossClient || [];
+  // Merge pinned cross-client blockers
+  const linearCrossBlockers = blockersByClient._crossClient || [];
+  const pinnedCrossIds = pinnedBlockers._crossClient || [];
+  const pinnedCrossIssues = pinnedCrossIds
+    .filter(id => !linearCrossBlockers.some(b => b.id === id))
+    .map(id => {
+      const data = pinnedBlockerData.get(id);
+      return data ? { ...data, id: data.identifier || id, status: data.state?.name || data.status || 'Unknown', pinned: true } : { id, identifier: id, title: 'Loading...', status: 'Unknown', pinned: true };
+    });
+  const crossClientBlockers = [...linearCrossBlockers, ...pinnedCrossIssues];
 
   return (
     <div>
@@ -732,14 +766,55 @@ export default function LaunchReadiness({ showNotification }) {
       ) : (
       <div className="px-2 pb-8">
         {/* Cross-client P0s */}
-        {(filterType === 'all' || filterType === 'showcase') && crossClientBlockers.length > 0 && (() => {
+        {(filterType === 'all' || filterType === 'showcase') && (() => {
           const activeCross = crossClientBlockers.filter(b => b.status !== 'Done' && b.status !== 'Deployed');
           const archivedCross = crossClientBlockers.filter(b => b.status === 'Done' || b.status === 'Deployed');
-          return (activeCross.length > 0 || archivedCross.length > 0) && (
+          return (
             <div className="mb-6 bg-red-50/50 rounded-xl border border-red-200 p-4">
-              <div className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">Cross-Client Platform Blockers</div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-red-600 uppercase tracking-wider">Cross-Client Platform Blockers</span>
+                <button onClick={() => { setSearchingClient(searchingClient === '_crossClient' ? null : '_crossClient'); setSearchQuery(''); setSearchResults([]); }}
+                  className="text-[10px] text-indigo-500 hover:text-indigo-700 font-medium">
+                  + Add
+                </button>
+              </div>
+              {/* Search UI for cross-client */}
+              {searchingClient === '_crossClient' && (
+                <div className="mb-3 p-2 bg-white rounded-lg border border-slate-200">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search by issue ID (PAL-1234) or keyword..."
+                    autoFocus
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5 text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30"
+                  />
+                  {searching && <div className="text-[10px] text-slate-400 mt-1.5 px-1">Searching...</div>}
+                  {searchResults.length > 0 && (
+                    <div className="mt-1.5 max-h-40 overflow-y-auto rounded-md border border-slate-200 bg-white divide-y divide-slate-50">
+                      {searchResults.map(issue => {
+                        const alreadyAdded = crossClientBlockers.some(b => b.id === issue.identifier);
+                        return (
+                          <button key={issue.identifier}
+                            onClick={() => { if (!alreadyAdded) addPinnedBlocker('_crossClient', issue); }}
+                            disabled={alreadyAdded}
+                            className={`w-full text-left px-2.5 py-1.5 flex items-center gap-2 hover:bg-slate-50 ${alreadyAdded ? 'opacity-40' : ''}`}>
+                            <span className="text-[10px] font-mono text-indigo-500 flex-shrink-0">{issue.identifier}</span>
+                            <span className="text-xs text-slate-700 flex-1 min-w-0 truncate">{issue.title}</span>
+                            {issue.project && <span className="text-[9px] text-slate-400 flex-shrink-0">{issue.project}</span>}
+                            {alreadyAdded && <span className="text-[9px] text-slate-400">Added</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+                    <div className="text-[10px] text-slate-400 mt-1.5 px-1">No issues found</div>
+                  )}
+                </div>
+              )}
               {activeCross.map(b => (
-                <div key={b.id} className="flex items-center gap-2.5 py-1.5">
+                <div key={b.id} className="flex items-center gap-2.5 py-1.5 group">
                   <span className="text-xs">{PRIORITY_ICONS[b.priority]}</span>
                   <span className="text-[11px] font-mono text-red-400">{b.id}</span>
                   <span className="text-sm text-red-700">{b.title}</span>
@@ -751,6 +826,16 @@ export default function LaunchReadiness({ showNotification }) {
                     style={{ backgroundColor: (STATUS_COLORS[b.status] || '#94A3B8') + '15', color: STATUS_COLORS[b.status] || '#94A3B8' }}>
                     {b.status}
                   </span>
+                  {b.pinned && (
+                    <button onClick={() => removePinnedBlocker('_crossClient', b.id)}
+                      className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                      title="Remove from cross-client blockers">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18" strokeWidth={2} strokeLinecap="round" />
+                        <line x1="6" y1="6" x2="18" y2="18" strokeWidth={2} strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               ))}
               {activeCross.length === 0 && (
