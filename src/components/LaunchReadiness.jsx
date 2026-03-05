@@ -104,6 +104,101 @@ export default function LaunchReadiness({ showNotification }) {
     catch { return {}; }
   });
 
+  // Pinned blockers (manually added issues per client)
+  const [pinnedBlockers, setPinnedBlockers] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('pulseboard_pinned_blockers') || '{}'); }
+    catch { return {}; }
+  });
+  const [pinnedBlockerData, setPinnedBlockerData] = useState(new Map());
+  const [searchingClient, setSearchingClient] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+
+  const savePinnedBlockers = useCallback((next) => {
+    setPinnedBlockers(next);
+    localStorage.setItem('pulseboard_pinned_blockers', JSON.stringify(next));
+  }, []);
+
+  const addPinnedBlocker = useCallback((clientId, issue) => {
+    const next = { ...pinnedBlockers };
+    if (!next[clientId]) next[clientId] = [];
+    if (!next[clientId].includes(issue.identifier)) {
+      next[clientId] = [...next[clientId], issue.identifier];
+      savePinnedBlockers(next);
+      // Store issue data immediately
+      setPinnedBlockerData(prev => new Map(prev).set(issue.identifier, issue));
+      showNotification?.(`Added ${issue.identifier} to ${SHOWCASE_CLIENTS.find(c => c.id === clientId)?.name || clientId} blockers`);
+    }
+    setSearchingClient(null);
+    setSearchQuery('');
+    setSearchResults([]);
+  }, [pinnedBlockers, savePinnedBlockers, showNotification]);
+
+  const removePinnedBlocker = useCallback((clientId, identifier) => {
+    const next = { ...pinnedBlockers };
+    if (next[clientId]) {
+      next[clientId] = next[clientId].filter(id => id !== identifier);
+      if (next[clientId].length === 0) delete next[clientId];
+      savePinnedBlockers(next);
+    }
+  }, [pinnedBlockers, savePinnedBlockers]);
+
+  // Fetch pinned blocker details from Linear
+  useEffect(() => {
+    const allPinnedIds = [...new Set(Object.values(pinnedBlockers).flat())];
+    if (allPinnedIds.length === 0) return;
+    const apiKey = typeof window !== 'undefined' ? localStorage.getItem('pulseboard_linear_key') : null;
+    if (!apiKey) return;
+
+    fetch('/api/launch-issues', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ linearApiKey: apiKey, issueIdentifiers: allPinnedIds }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.issues) {
+          const map = new Map();
+          data.issues.forEach(i => map.set(i.identifier, {
+            ...i, id: i.identifier, status: i.state?.name || 'Unknown',
+            url: i.url || `https://linear.app/palazzo-ai/issue/${i.identifier}`,
+          }));
+          setPinnedBlockerData(map);
+        }
+      })
+      .catch(() => {});
+  }, [pinnedBlockers]);
+
+  // Search Linear issues
+  const searchIssues = useCallback(async (q) => {
+    if (!q || q.trim().length < 2) { setSearchResults([]); return; }
+    const apiKey = typeof window !== 'undefined' ? localStorage.getItem('pulseboard_linear_key') : null;
+    if (!apiKey) return;
+
+    setSearching(true);
+    try {
+      const resp = await fetch('/api/search-issues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ linearApiKey: apiKey, query: q.trim() }),
+      });
+      const data = await resp.json();
+      setSearchResults(data.issues || []);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (!searchingClient) return;
+    const timer = setTimeout(() => searchIssues(searchQuery), 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchingClient, searchIssues]);
+
   const saveLaunchDate = useCallback((clientId, dateStr) => {
     setLaunchDates(prev => {
       const next = { ...prev };
@@ -326,7 +421,16 @@ export default function LaunchReadiness({ showNotification }) {
   // --- Client Card ---
   const ClientCard = ({ client }) => {
     const checklist = checklistsByClient[client.id];
-    const blockers = blockersByClient[client.id] || [];
+    const linearBlockers = blockersByClient[client.id] || [];
+    // Merge pinned blockers
+    const pinnedIds = pinnedBlockers[client.id] || [];
+    const pinnedIssues = pinnedIds
+      .filter(id => !linearBlockers.some(b => b.id === id))
+      .map(id => {
+        const data = pinnedBlockerData.get(id);
+        return data ? { ...data, id: data.identifier || id, status: data.state?.name || data.status || 'Unknown', pinned: true } : { id, identifier: id, title: 'Loading...', status: 'Unknown', pinned: true };
+      });
+    const blockers = [...linearBlockers, ...pinnedIssues];
     const isExpanded = expandedClients.has(client.id);
 
     if (!checklist) return null;
@@ -398,7 +502,7 @@ export default function LaunchReadiness({ showNotification }) {
         {isExpanded && (
           <div className="border-t border-slate-100">
             <div className="flex">
-              <div className={`${blockers.length > 0 ? 'flex-1 border-r border-slate-100' : 'w-full'}`}>
+              <div className="flex-1 border-r border-slate-100">
                 <div className="px-4 py-2 bg-slate-50/60 border-b border-slate-100 flex items-center justify-between">
                   <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Onboarding Phases</span>
                   <a href={checklist.url} target="_blank" rel="noopener noreferrer"
@@ -413,16 +517,72 @@ export default function LaunchReadiness({ showNotification }) {
                   <PhaseRow key={i} phase={phase} />
                 ))}
               </div>
-              {blockers.length > 0 && (
-                <div className="w-[420px] flex-shrink-0">
-                  <div className="px-4 py-2 bg-red-50/40 border-b border-slate-100">
-                    <span className="text-[10px] font-semibold text-red-500 uppercase tracking-wider">
-                      Engineering Blockers ({activeBlockers.length} active)
-                    </span>
-                  </div>
-                  {blockers.map(b => <BlockerRow key={b.id} issue={b} />)}
+              <div className="w-[420px] flex-shrink-0">
+                <div className="px-4 py-2 bg-red-50/40 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-[10px] font-semibold text-red-500 uppercase tracking-wider">
+                    Engineering Blockers ({activeBlockers.length} active)
+                  </span>
+                  <button onClick={(e) => { e.stopPropagation(); setSearchingClient(searchingClient === client.id ? null : client.id); setSearchQuery(''); setSearchResults([]); }}
+                    className="text-[10px] text-indigo-500 hover:text-indigo-700 font-medium">
+                    + Add
+                  </button>
                 </div>
-              )}
+                {/* Search UI */}
+                {searchingClient === client.id && (
+                  <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="Search by issue ID (PAL-1234) or keyword..."
+                      autoFocus
+                      onClick={e => e.stopPropagation()}
+                      className="w-full text-xs bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30"
+                    />
+                    {searching && <div className="text-[10px] text-slate-400 mt-1.5 px-1">Searching...</div>}
+                    {searchResults.length > 0 && (
+                      <div className="mt-1.5 max-h-40 overflow-y-auto rounded-md border border-slate-200 bg-white divide-y divide-slate-50">
+                        {searchResults.map(issue => {
+                          const alreadyAdded = blockers.some(b => b.id === issue.identifier);
+                          return (
+                            <button key={issue.identifier}
+                              onClick={(e) => { e.stopPropagation(); if (!alreadyAdded) addPinnedBlocker(client.id, issue); }}
+                              disabled={alreadyAdded}
+                              className={`w-full text-left px-2.5 py-1.5 flex items-center gap-2 hover:bg-slate-50 ${alreadyAdded ? 'opacity-40' : ''}`}>
+                              <span className="text-[10px] font-mono text-indigo-500 flex-shrink-0">{issue.identifier}</span>
+                              <span className="text-xs text-slate-700 flex-1 min-w-0 truncate">{issue.title}</span>
+                              {issue.project && <span className="text-[9px] text-slate-400 flex-shrink-0">{issue.project}</span>}
+                              {alreadyAdded && <span className="text-[9px] text-slate-400">Added</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+                      <div className="text-[10px] text-slate-400 mt-1.5 px-1">No issues found</div>
+                    )}
+                  </div>
+                )}
+                {blockers.length > 0 ? (
+                  blockers.map(b => (
+                    <div key={b.id} className="flex items-center group">
+                      <div className="flex-1"><BlockerRow issue={b} /></div>
+                      {b.pinned && (
+                        <button onClick={(e) => { e.stopPropagation(); removePinnedBlocker(client.id, b.id); }}
+                          className="text-slate-300 hover:text-red-500 pr-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          title="Remove from blockers">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <line x1="18" y1="6" x2="6" y2="18" strokeWidth={2} strokeLinecap="round" />
+                            <line x1="6" y1="6" x2="18" y2="18" strokeWidth={2} strokeLinecap="round" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-xs text-slate-400 italic">No blockers — use + Add to pin issues</div>
+                )}
+              </div>
             </div>
           </div>
         )}
