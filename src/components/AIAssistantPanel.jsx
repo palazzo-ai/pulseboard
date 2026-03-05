@@ -693,7 +693,7 @@ function ProjectMappingCard({ toolCall, applied, onApply }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
         </svg>
         <span className="text-xs font-semibold text-slate-900">
-          Link Linear {toolCall.result?.data?.sourceType === 'cycle' ? 'Cycles' : 'Projects'} ({activeMappings.length})
+          Link Linear {toolCall.result?.data?.sourceType === 'cycle' ? 'Cycles' : toolCall.result?.data?.sourceType === 'label' ? 'Issues by Label' : 'Projects'} ({activeMappings.length})
         </span>
       </div>
       <div className="max-h-72 overflow-y-auto">
@@ -822,7 +822,7 @@ function ToolCallCard({ toolCall, onUpdateOpportunities, onCreateOpportunity, on
   }
 
   // Auto-map Linear projects or cycles — confirmation card
-  if (name === "auto_map_linear_projects" || name === "auto_map_linear_cycles") {
+  if (name === "auto_map_linear_projects" || name === "auto_map_linear_cycles" || name === "import_linear_by_label") {
     return (
       <ProjectMappingCard
         toolCall={toolCall}

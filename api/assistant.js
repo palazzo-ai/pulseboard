@@ -46,12 +46,14 @@ LINEAR WRITE OPERATIONS:
 - For sub-issues, break work down into concrete implementation tasks (design, implement, test, etc.)
 - For comments, include relevant context like milestone deadlines, dependencies, and priority reasoning
 
-AUTO-MAPPING LINEAR PROJECTS AND CYCLES:
+AUTO-MAPPING LINEAR ISSUES:
 - When the user mentions connecting Linear projects, importing a launch plan, auto-mapping issues, or syncing a project to a milestone, use the auto_map_linear_projects tool
 - When the user mentions pulling issues by cycle, importing a cycle, or mapping a cycle to a milestone, use the auto_map_linear_cycles tool
-- Both tools fetch data from Linear and match to Pulseboard milestones/opportunities by name similarity
+- When the user mentions pulling issues by tag, label, or category, use the import_linear_by_label tool. This uses a focused query that avoids complexity limits.
+- All three tools fetch data from Linear and match to Pulseboard milestones/opportunities by name similarity
 - If the user specifies a milestone or client name, pass the milestoneId to focus the matching
-- Both tools return proposed mappings for user confirmation — describe what was found before showing the card
+- If the user specifies a specific opportunity, pass the opportunityId to link all issues directly there
+- All tools return proposed mappings for user confirmation — describe what was found before showing the card
 - If there are unmapped issues, tell the user and suggest creating new opportunities for them
 
 PROACTIVE LINEAR SUGGESTIONS:
@@ -501,6 +503,20 @@ When you call plan_milestone and receive the context data back, you MUST analyze
         required: ["linearApiKey"],
       },
     },
+    {
+      name: "import_linear_by_label",
+      description: "Search Linear issues by label/tag name and propose linking them to Pulseboard opportunities. Use when the user wants to pull in issues by tag, label, or category. Uses a focused Linear query that avoids complexity limits. Returns proposed issue mappings for user confirmation.",
+      input_schema: {
+        type: "object",
+        properties: {
+          linearApiKey: { type: "string", description: "The user's Linear API key" },
+          labelName: { type: "string", description: "The label/tag name to search for (exact match)" },
+          milestoneId: { type: "string", description: "Optional: focus on a specific milestone ID" },
+          opportunityId: { type: "number", description: "Optional: link all found issues directly to this opportunity ID" },
+        },
+        required: ["linearApiKey", "labelName"],
+      },
+    },
   ];
 
   // Process a tool call and return result
@@ -886,6 +902,60 @@ When you call plan_milestone and receive the context data back, you MUST analyze
     return cycles;
   }
 
+  // Fetch Linear issues filtered by label (focused query, avoids complexity limits)
+  async function fetchLinearIssuesByLabel(linearApiKey, labelName) {
+    let allIssues = [];
+    let hasNextPage = true;
+    let afterCursor = null;
+
+    while (hasNextPage && allIssues.length < 250) {
+      const afterClause = afterCursor ? `after: "${afterCursor}"` : "";
+      const response = await fetch("https://api.linear.app/graphql", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: linearApiKey,
+          "apollo-require-preflight": "true",
+        },
+        body: JSON.stringify({
+          query: `query {
+            issues(first: 100 ${afterClause} filter: {
+              labels: { name: { eq: "${labelName}" } }
+              state: { type: { nin: ["canceled"] } }
+            }) {
+              pageInfo { hasNextPage endCursor }
+              nodes {
+                id identifier title
+                state { name type }
+                project { name }
+                children { nodes { identifier } }
+              }
+            }
+          }`,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.errors) {
+        throw new Error(`Linear API error: ${data.errors.map((e) => e.message).join(", ")}`);
+      }
+
+      const nodes = data.data?.issues?.nodes || [];
+      allIssues = allIssues.concat(nodes);
+      hasNextPage = data.data?.issues?.pageInfo?.hasNextPage || false;
+      afterCursor = data.data?.issues?.pageInfo?.endCursor || null;
+    }
+
+    return allIssues.map((i) => ({
+      identifier: i.identifier,
+      title: i.title,
+      state: i.state?.name,
+      stateType: i.state?.type,
+      project: i.project?.name || null,
+      children: (i.children?.nodes || []).map((c) => c.identifier),
+    }));
+  }
+
   // Match Linear items (projects or cycles) to milestones and opportunities
   function buildProjectMappings(linearProjects, state, focusMilestoneId) {
     const milestones = state.milestones || [];
@@ -1110,6 +1180,79 @@ When you call plan_milestone and receive the context data back, you MUST analyze
                 result = {
                   type: "error",
                   message: `Failed to fetch Linear cycles: ${err.message}`,
+                };
+              }
+            }
+          } else if (toolUse.name === "import_linear_by_label") {
+            const linearApiKey = toolUse.input.linearApiKey;
+            if (!linearApiKey) {
+              result = {
+                type: "error",
+                message: "No Linear API key provided. Ask the user to configure their Linear API key first.",
+              };
+            } else {
+              try {
+                const issues = await fetchLinearIssuesByLabel(linearApiKey, toolUse.input.labelName);
+                // Collect all identifiers including children
+                const allIdentifiers = [];
+                issues.forEach((i) => {
+                  allIdentifiers.push(i.identifier);
+                  i.children.forEach((c) => allIdentifiers.push(c));
+                });
+
+                const opportunities = roadmapState.opportunities || [];
+                const milestones = roadmapState.milestones || [];
+
+                // If a specific opportunity is targeted, map all issues there
+                if (toolUse.input.opportunityId) {
+                  const opp = opportunities.find((o) => o.id === toolUse.input.opportunityId);
+                  result = {
+                    type: "mutation",
+                    action: "import_linear_by_label",
+                    data: {
+                      labelName: toolUse.input.labelName,
+                      issueCount: issues.length,
+                      totalIdentifiers: allIdentifiers.length,
+                      sourceType: "label",
+                      mappings: opp ? [{
+                        projectName: `Label: ${toolUse.input.labelName}`,
+                        projectId: toolUse.input.labelName,
+                        milestoneTitle: milestones.find((m) => m.id === opp.milestoneId)?.title || "—",
+                        milestoneId: opp.milestoneId || null,
+                        totalIssues: allIdentifiers.length,
+                        opportunityMappings: [{
+                          opportunityId: opp.id,
+                          opportunityTitle: opp.title,
+                          issueIdentifiers: allIdentifiers,
+                        }],
+                        unmappedIssues: [],
+                      }] : [],
+                    },
+                  };
+                } else {
+                  // Group issues as a virtual "project" and use the standard matching
+                  const virtualProject = [{
+                    id: toolUse.input.labelName,
+                    name: `Label: ${toolUse.input.labelName}`,
+                    issues: issues,
+                  }];
+                  const mappings = buildProjectMappings(virtualProject, roadmapState, toolUse.input.milestoneId || null);
+                  result = {
+                    type: "mutation",
+                    action: "import_linear_by_label",
+                    data: {
+                      labelName: toolUse.input.labelName,
+                      issueCount: issues.length,
+                      totalIdentifiers: allIdentifiers.length,
+                      sourceType: "label",
+                      mappings,
+                    },
+                  };
+                }
+              } catch (err) {
+                result = {
+                  type: "error",
+                  message: `Failed to search Linear by label: ${err.message}`,
                 };
               }
             }
