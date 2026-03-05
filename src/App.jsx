@@ -54,6 +54,8 @@ export default function PalazzoTimeline() {
   const [notification, setNotification] = useState(null);
   const [showDataModal, setShowDataModal] = useState(false);
   const [importText, setImportText] = useState('');
+  const [showLinearKeyModal, setShowLinearKeyModal] = useState(false);
+  const [linearKeyInput, setLinearKeyInput] = useState('');
   
   // Team state
   const [teamMembers, setTeamMembers] = useState([]);
@@ -1007,6 +1009,11 @@ export default function PalazzoTimeline() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             </button>
+            <button onClick={() => { setLinearKeyInput(localStorage.getItem('pulseboard_linear_key') || ''); setShowLinearKeyModal(true); }} className={`p-2 border rounded-lg transition-colors shadow-sm ${localStorage.getItem('pulseboard_linear_key') ? 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600' : 'bg-amber-50 border-amber-300 hover:bg-amber-100 text-amber-600 animate-pulse'}`} title="Linear API Key">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+            </button>
             <button onClick={() => setShowDataModal(true)} className="p-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors shadow-sm" title="Data Management">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
@@ -1793,6 +1800,38 @@ export default function PalazzoTimeline() {
         </div>
       )}
 
+
+      {/* Linear API Key Modal */}
+      {showLinearKeyModal && (
+        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4" onClick={() => setShowLinearKeyModal(false)}>
+          <div className="bg-white border border-slate-200 rounded-xl max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">Linear API Key</h2>
+              <button onClick={() => setShowLinearKeyModal(false)} className="text-slate-500 hover:text-slate-900 text-xl">&times;</button>
+            </div>
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-slate-600">Enter your Linear API key to sync issues, blockers, and launch data. You can generate one at <a href="https://linear.app/settings/api" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">linear.app/settings/api</a>.</p>
+              <input
+                type="password"
+                value={linearKeyInput}
+                onChange={e => setLinearKeyInput(e.target.value)}
+                placeholder="lin_api_..."
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                autoFocus
+              />
+              <div className="flex items-center justify-between">
+                {localStorage.getItem('pulseboard_linear_key') && (
+                  <button onClick={() => { localStorage.removeItem('pulseboard_linear_key'); setShowLinearKeyModal(false); showNotification('Linear API key removed', 'info'); setTimeout(() => window.location.reload(), 500); }} className="text-xs text-red-500 hover:text-red-700">Remove key</button>
+                )}
+                <div className="flex gap-2 ml-auto">
+                  <button onClick={() => setShowLinearKeyModal(false)} className="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-800">Cancel</button>
+                  <button onClick={() => { localStorage.setItem('pulseboard_linear_key', linearKeyInput.trim()); setShowLinearKeyModal(false); showNotification('Linear API key saved', 'success'); setTimeout(() => window.location.reload(), 500); }} disabled={!linearKeyInput.trim()} className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm rounded-lg transition-colors">Save</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Scoring Modal */}
       <AIScoringModal
