@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { CLIENTS } from '../utils/helpers';
+import LaunchTimeline from './LaunchTimeline';
 
 // ============================================================
 // LAUNCH READINESS v3 — Onboarding Checklist + P0 Blockers
@@ -97,6 +98,26 @@ export default function LaunchReadiness({ showNotification }) {
   const [expandedClients, setExpandedClients] = useState(new Set());
   const [filterType, setFilterType] = useState('all');
   const [showArchivedBlockers, setShowArchivedBlockers] = useState(false);
+  const [launchViewMode, setLaunchViewMode] = useState('list');
+  const [launchDates, setLaunchDates] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('pulseboard_launch_dates') || '{}'); }
+    catch { return {}; }
+  });
+
+  const saveLaunchDate = useCallback((clientId, dateStr) => {
+    setLaunchDates(prev => {
+      const next = { ...prev };
+      if (dateStr) next[clientId] = dateStr;
+      else delete next[clientId];
+      localStorage.setItem('pulseboard_launch_dates', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const handleTimelineClientClick = useCallback((clientId) => {
+    setLaunchViewMode('list');
+    setExpandedClients(new Set([clientId]));
+  }, []);
 
   // Fetch launch data from Linear
   const fetchData = useCallback(async () => {
@@ -346,6 +367,14 @@ export default function LaunchReadiness({ showNotification }) {
               Phase: <span className="font-medium text-slate-700">{currentPhase?.name || 'N/A'}</span>
               <span className="text-slate-400 mx-1.5">·</span>
               {totalChecked}/{totalTasks} tasks
+              {launchDates[client.id] && (
+                <>
+                  <span className="text-slate-400 mx-1.5">·</span>
+                  <span>Target: <span className="font-medium" style={{ color: client.color }}>
+                    {new Date(launchDates[client.id] + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span></span>
+                </>
+              )}
             </div>
           </div>
           <div className="w-40 flex-shrink-0">
@@ -494,6 +523,16 @@ export default function LaunchReadiness({ showNotification }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
+            <div className="flex bg-slate-100 rounded-lg p-0.5">
+              {[{ key: 'list', label: 'List' }, { key: 'timeline', label: 'Timeline' }].map(m => (
+                <button key={m.key} onClick={() => setLaunchViewMode(m.key)}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    launchViewMode === m.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                  }`}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
             <select value={filterType} onChange={e => setFilterType(e.target.value)}
               className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700">
               <option value="all">All Launches</option>
@@ -519,6 +558,18 @@ export default function LaunchReadiness({ showNotification }) {
         </div>
       </div>
 
+      {launchViewMode === 'timeline' ? (
+        <LaunchTimeline
+          clients={SHOWCASE_CLIENTS}
+          checklistsByClient={checklistsByClient}
+          blockersByClient={blockersByClient}
+          selfServeData={selfServeData}
+          launchDates={launchDates}
+          onSaveLaunchDate={saveLaunchDate}
+          onClientClick={handleTimelineClientClick}
+          filterType={filterType}
+        />
+      ) : (
       <div className="px-2 pb-8">
         {/* Cross-client P0s */}
         {(filterType === 'all' || filterType === 'showcase') && crossClientBlockers.length > 0 && (() => {
@@ -598,6 +649,7 @@ export default function LaunchReadiness({ showNotification }) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
