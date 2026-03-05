@@ -1,602 +1,567 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { getAreaColor, getAreaName, getMonthName, parseMonthId } from '../utils/helpers';
+import { CLIENTS } from '../utils/helpers';
 
-// ========== STATUS MAPPING ==========
-const mapStatus = (state) => {
-  if (!state) return 'not_started';
-  const type = (state.type || '').toLowerCase();
-  const name = (state.name || '').toLowerCase();
-  if (type === 'completed' || name === 'done') return 'done';
-  if (name === 'in review') return 'in_review';
-  if (type === 'started' || name === 'in progress') return 'in_progress';
-  if (name === 'blocked') return 'blocked';
-  return 'not_started';
-};
+// ============================================================
+// LAUNCH READINESS v3 — Onboarding Checklist + P0 Blockers
+// Fetches live data from Linear via /api/launch-data
+// ============================================================
 
-const STATUS_CONFIG = {
-  done: { label: 'Done', color: '#16A34A', bg: '#F0FDF4' },
-  in_review: { label: 'In Review', color: '#7C3AED', bg: '#F5F3FF' },
-  in_progress: { label: 'In Progress', color: '#2563EB', bg: '#EFF6FF' },
-  blocked: { label: 'Blocked', color: '#DC2626', bg: '#FEF2F2' },
-  not_started: { label: 'Not Started', color: '#9CA3AF', bg: '#F3F4F6' },
-};
+// --- Checklist Parser ---
+function parseOnboardingChecklist(markdown) {
+  if (!markdown) return { phases: [], totalChecked: 0, totalTasks: 0 };
 
-const PRIORITY_ICONS = {
-  0: { label: 'No priority', icon: '—', color: '#9CA3AF' },
-  1: { label: 'Urgent', icon: '!!!', color: '#DC2626' },
-  2: { label: 'High', icon: '!!', color: '#D97706' },
-  3: { label: 'Medium', icon: '!', color: '#2563EB' },
-  4: { label: 'Low', icon: '·', color: '#9CA3AF' },
-};
+  const phases = [];
+  const sections = markdown.split(/^## /gm).filter(s => s.trim());
 
-// ========== DATE HELPERS ==========
-/** Get the effective target date for a milestone — use targetDate if set, else last day of month */
-const getMilestoneDate = (milestone) => {
-  if (milestone.targetDate) return new Date(milestone.targetDate);
-  const monthDate = parseMonthId(milestone.month);
-  if (!monthDate) return null;
-  // Last day of that month
-  return new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
-};
+  for (const section of sections) {
+    const lines = section.split('\n');
+    const headerLine = lines[0].trim();
+    if (!headerLine.match(/^[📋📞🏗🔍📦⚙🧪🚀🔬🎉]/)) continue;
 
-/** Format a date as "Mar 15, 2026" */
-const formatDate = (date) => {
-  if (!date) return null;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-};
+    const phaseName = headerLine
+      .replace(/^[📋📞🏗️🔍📦⚙️🧪🚀🔬🎉]\s*/, '')
+      .replace(/\s*—.*$/, '')
+      .trim();
 
-/** Get countdown text and color relative to today */
-const getCountdown = (date) => {
-  if (!date) return null;
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const target = new Date(date);
-  target.setHours(0, 0, 0, 0);
-  const diffMs = target - now;
-  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    let checked = 0;
+    let unchecked = 0;
 
-  if (diffDays < 0) {
-    const abs = Math.abs(diffDays);
-    return { text: `${abs}d overdue`, color: '#DC2626', urgent: true };
+    for (const line of lines) {
+      const checkedMatch = line.match(/- \[X\]/gi);
+      const uncheckedMatch = line.match(/- \[ \]/g);
+      if (checkedMatch) checked += checkedMatch.length;
+      if (uncheckedMatch) unchecked += uncheckedMatch.length;
+    }
+
+    const total = checked + unchecked;
+    if (total > 0) {
+      phases.push({
+        name: phaseName,
+        checked,
+        total,
+        pct: Math.round((checked / total) * 100),
+        status: checked === total ? 'done' : checked > 0 ? 'in_progress' : 'not_started',
+      });
+    }
   }
-  if (diffDays === 0) return { text: 'Due today', color: '#DC2626', urgent: true };
-  if (diffDays <= 7) return { text: `${diffDays}d left`, color: '#DC2626', urgent: true };
-  if (diffDays <= 30) return { text: `${diffDays}d left`, color: '#D97706', urgent: false };
-  return { text: `${diffDays}d left`, color: '#6B7280', urgent: false };
+
+  const totalChecked = phases.reduce((s, p) => s + p.checked, 0);
+  const totalTasks = phases.reduce((s, p) => s + p.total, 0);
+
+  return { phases, totalChecked, totalTasks };
+}
+
+// --- Constants ---
+const PHASE_ICONS = {
+  'Discovery': '📋',
+  'Pre-Onboarding Call': '📞',
+  'Set Up': '🏗️',
+  'Pre-Ingestion (Sample Data)': '🔍',
+  'Product Ingestion (Full Catalog)': '📦',
+  'Tenant-Specific Flows': '⚙️',
+  'Internal QA': '🧪',
+  'Kickoff': '🚀',
+  'Customer QA': '🔬',
+  'Launch': '🎉',
 };
 
-// ========== PROGRESS BAR LEGEND ==========
-const BarLegend = () => (
-  <div className="flex items-center gap-3 text-[10px] text-slate-500">
-    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />Done</span>
-    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />In Progress</span>
-    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" />Blocked</span>
-    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-200 inline-block" />Todo</span>
-  </div>
+const PHASE_STATUS_COLORS = {
+  done: { color: '#10B981', bg: '#ECFDF5', label: 'Complete' },
+  in_progress: { color: '#2563EB', bg: '#EFF6FF', label: 'In Progress' },
+  not_started: { color: '#94A3B8', bg: '#F8FAFC', label: 'Not Started' },
+};
+
+const PRIORITY_ICONS = { 1: '🔴', 2: '🟠', 3: '🟡', 4: '🔵' };
+
+const STATUS_COLORS = {
+  'Done': '#10B981',
+  'Deployed': '#10B981',
+  'Post-Deploy QA': '#8B5CF6',
+  'In Review': '#8B5CF6',
+  'Ready For Deploy': '#8B5CF6',
+  'In Progress': '#2563EB',
+  'Todo': '#64748B',
+  'Triage': '#94A3B8',
+  'Backlog': '#94A3B8',
+};
+
+// Showcase clients for this view (subset of CLIENTS with linearLabel)
+const SHOWCASE_CLIENTS = CLIENTS.filter(c =>
+  ['homezone', 'mathis', 'atlantic', 'bel', 'hom', 'ashley'].includes(c.id)
 );
 
-// ========== PROGRESS RING ==========
-const ProgressRing = ({ percent, size = 40, strokeWidth = 4, color = '#16A34A' }) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (percent / 100) * circumference;
-
-  return (
-    <svg width={size} height={size} className="transform -rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#E2E8F0" strokeWidth={strokeWidth} />
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
-        strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
-        className="transition-all duration-500" />
-    </svg>
-  );
-};
-
-// ========== SEGMENTED PROGRESS BAR ==========
-const SegmentedBar = ({ done, inProgress, blocked, total }) => {
-  if (total === 0) return <div className="h-2 bg-slate-100 rounded-full w-full" />;
-  const todo = total - done - inProgress - blocked;
-  const pDone = (done / total) * 100;
-  const pProgress = (inProgress / total) * 100;
-  const pBlocked = (blocked / total) * 100;
-  const pTodo = (todo / total) * 100;
-
-  return (
-    <div className="h-2 rounded-full overflow-hidden flex bg-slate-100 w-full">
-      {pDone > 0 && <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${pDone}%` }} />}
-      {pProgress > 0 && <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${pProgress}%` }} />}
-      {pBlocked > 0 && <div className="h-full bg-red-500 transition-all duration-300" style={{ width: `${pBlocked}%` }} />}
-      {pTodo > 0 && <div className="h-full bg-slate-200 transition-all duration-300" style={{ width: `${pTodo}%` }} />}
-    </div>
-  );
-};
-
-// ========== READINESS BADGE ==========
-const ReadinessBadge = ({ status }) => {
-  const config = {
-    launched: { label: 'Launched', color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
-    on_track: { label: 'On Track', color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
-    at_risk: { label: 'At Risk', color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
-    needs_attention: { label: 'Needs Attention', color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
-  };
-  const c = config[status] || config.on_track;
-  return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border"
-      style={{ color: c.color, backgroundColor: c.bg, borderColor: c.border }}>
-      {c.label}
-    </span>
-  );
-};
-
-// ========== MAIN COMPONENT ==========
-export default function LaunchReadiness({ opportunities, milestones, areas, clients = [], showNotification, onSaveOpportunity }) {
-  const [issueData, setIssueData] = useState(null);
-  const [linearLoading, setLinearLoading] = useState(false);
-  const [lastFetched, setLastFetched] = useState(null);
+// ============================================================
+export default function LaunchReadiness({ showNotification }) {
+  const [launchData, setLaunchData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [expandedClients, setExpandedClients] = useState(new Set());
-  const [expandedMilestones, setExpandedMilestones] = useState(new Set());
-  const [expandedOpps, setExpandedOpps] = useState(new Set());
-  const [filterClient, setFilterClient] = useState('all');
-  const [filterReadiness, setFilterReadiness] = useState('all');
+  const [filterType, setFilterType] = useState('all');
 
-  // Get milestones with clients
-  const clientMilestones = useMemo(() =>
-    milestones.filter(m => m.client), [milestones]
-  );
-
-  // Collect all issue identifiers from client-linked opportunities
-  const allIssueIdentifiers = useMemo(() => {
-    const milestoneIds = new Set(clientMilestones.map(m => m.id));
-    const ids = [];
-    opportunities.forEach(opp => {
-      if (opp.milestoneId && milestoneIds.has(opp.milestoneId) && opp.issues?.length) {
-        ids.push(...opp.issues);
-      }
-    });
-    return [...new Set(ids)];
-  }, [opportunities, clientMilestones]);
-
-  // Fetch Linear data
-  const fetchLinearData = useCallback(async () => {
+  // Fetch launch data from Linear
+  const fetchData = useCallback(async () => {
     const apiKey = typeof window !== 'undefined' ? localStorage.getItem('pulseboard_linear_key') : null;
-    if (!apiKey || allIssueIdentifiers.length === 0) {
-      setIssueData(new Map());
+    if (!apiKey) {
+      setLoading(false);
       return;
     }
 
-    setLinearLoading(true);
+    setLoading(true);
     try {
-      const resp = await fetch('/api/launch-issues', {
+      const resp = await fetch('/api/launch-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ linearApiKey: apiKey, issueIdentifiers: allIssueIdentifiers }),
+        body: JSON.stringify({ linearApiKey: apiKey }),
       });
       const data = await resp.json();
       if (data.error) {
         showNotification?.(`Linear fetch error: ${data.error}`, 'error');
-        setIssueData(new Map());
       } else {
-        const map = new Map();
-        (data.issues || []).forEach(issue => map.set(issue.identifier, issue));
-        setIssueData(map);
-        setLastFetched(new Date());
+        setLaunchData(data);
       }
     } catch (err) {
       showNotification?.(`Linear fetch failed: ${err.message}`, 'error');
-      setIssueData(new Map());
     } finally {
-      setLinearLoading(false);
+      setLoading(false);
     }
-  }, [allIssueIdentifiers, showNotification]);
+  }, [showNotification]);
 
-  useEffect(() => {
-    fetchLinearData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Compute issue stats for a list of issue identifiers
-  const getIssueStats = useCallback((issueIds) => {
-    if (!issueData || !issueIds?.length) return { done: 0, inProgress: 0, blocked: 0, total: issueIds?.length || 0, percent: 0 };
-    let done = 0, inProgress = 0, blocked = 0;
-    issueIds.forEach(id => {
-      const issue = issueData.get(id);
-      if (!issue) return;
-      const status = mapStatus(issue.state);
-      if (status === 'done') done++;
-      else if (status === 'in_progress' || status === 'in_review') inProgress++;
-      else if (status === 'blocked') blocked++;
-    });
-    return { done, inProgress, blocked, total: issueIds.length, percent: issueIds.length > 0 ? Math.round((done / issueIds.length) * 100) : 0 };
-  }, [issueData]);
-
-  // Compute readiness for a milestone
-  const getMilestoneReadiness = useCallback((milestoneId) => {
-    const opps = opportunities.filter(o => o.milestoneId === milestoneId);
-    if (opps.length === 0) return 'on_track';
-    const allDone = opps.every(o => o.status === 'done');
-    if (allDone) return 'launched';
-    const blockedCount = opps.filter(o => o.status === 'blocked').length;
-    const atRiskCount = opps.filter(o => o.atRisk).length;
-    if (blockedCount > 0 || atRiskCount > 1) return 'at_risk';
-    if (atRiskCount === 1) return 'needs_attention';
-    return 'on_track';
-  }, [opportunities]);
-
-  // Compute readiness for a client
-  const getClientReadiness = useCallback((clientId) => {
-    const cms = clientMilestones.filter(m => m.client === clientId);
-    const statuses = cms.map(m => getMilestoneReadiness(m.id));
-    if (statuses.every(s => s === 'launched')) return 'launched';
-    if (statuses.some(s => s === 'at_risk')) return 'at_risk';
-    if (statuses.some(s => s === 'needs_attention')) return 'needs_attention';
-    return 'on_track';
-  }, [clientMilestones, getMilestoneReadiness]);
-
-  // Client-level issue stats
-  const getClientIssueStats = useCallback((clientId) => {
-    const cms = clientMilestones.filter(m => m.client === clientId);
-    const milestoneIds = new Set(cms.map(m => m.id));
-    const allIds = [];
-    opportunities.forEach(opp => {
-      if (opp.milestoneId && milestoneIds.has(opp.milestoneId) && opp.issues?.length) {
-        allIds.push(...opp.issues);
+  // Parse onboarding checklists → map by client
+  const checklistsByClient = useMemo(() => {
+    if (!launchData?.onboardingChecklists) return {};
+    const map = {};
+    for (const issue of launchData.onboardingChecklists) {
+      // Extract client name from title: "ClientName - Tenant Onboarding Checklist" or similar
+      const titleLower = issue.title.toLowerCase();
+      const matched = SHOWCASE_CLIENTS.find(c =>
+        titleLower.includes(c.name.toLowerCase()) ||
+        titleLower.includes(c.linearLabel?.toLowerCase())
+      );
+      if (matched) {
+        const parsed = parseOnboardingChecklist(issue.description);
+        map[matched.id] = {
+          issueId: issue.identifier,
+          url: `https://linear.app/palazzo-ai/issue/${issue.identifier}`,
+          ...parsed,
+        };
       }
-    });
-    return getIssueStats([...new Set(allIds)]);
-  }, [clientMilestones, opportunities, getIssueStats]);
-
-  // Build grouped data
-  const groupedData = useMemo(() => {
-    const clientIds = [...new Set(clientMilestones.map(m => m.client))];
-    return clientIds.map(clientId => {
-      const client = clients.find(c => c.id === clientId) || { id: clientId, name: clientId, color: '#6B7280', logo: '??' };
-      const cms = clientMilestones.filter(m => m.client === clientId);
-      const readiness = getClientReadiness(clientId);
-      const stats = getClientIssueStats(clientId);
-      return { client, milestones: cms, readiness, stats };
-    });
-  }, [clientMilestones, getClientReadiness, getClientIssueStats]);
-
-  // Filter
-  const filteredData = useMemo(() => {
-    let data = groupedData;
-    if (filterClient !== 'all') data = data.filter(d => d.client.id === filterClient);
-    if (filterReadiness !== 'all') {
-      data = data.map(d => ({
-        ...d,
-        milestones: d.milestones.filter(m => getMilestoneReadiness(m.id) === filterReadiness),
-      })).filter(d => d.milestones.length > 0);
     }
-    return data;
-  }, [groupedData, filterClient, filterReadiness, getMilestoneReadiness]);
+    return map;
+  }, [launchData]);
+
+  // Group P0 blockers by client label
+  const blockersByClient = useMemo(() => {
+    if (!launchData?.p0Blockers) return {};
+    const map = {};
+    const crossClient = [];
+
+    for (const issue of launchData.p0Blockers) {
+      const matchedClients = [];
+      for (const client of SHOWCASE_CLIENTS) {
+        if (issue.labels.some(l => l.toLowerCase() === client.linearLabel?.toLowerCase())) {
+          matchedClients.push(client.id);
+        }
+      }
+
+      if (matchedClients.length === 0) {
+        crossClient.push(issue);
+      } else {
+        // Track which other clients share this issue
+        const sharedWith = matchedClients.length > 1 ? matchedClients : [];
+        for (const clientId of matchedClients) {
+          if (!map[clientId]) map[clientId] = [];
+          map[clientId].push({
+            ...issue,
+            id: issue.identifier,
+            status: issue.state?.name || 'Unknown',
+            shared: sharedWith.filter(c => c !== clientId),
+          });
+        }
+      }
+    }
+
+    map._crossClient = crossClient.map(issue => ({
+      ...issue,
+      id: issue.identifier,
+      status: issue.state?.name || 'Unknown',
+      affects: issue.labels.filter(l => l.toLowerCase().includes('impact') || l.toLowerCase().includes('all')),
+    }));
+
+    return map;
+  }, [launchData]);
+
+  // Self-serve issues
+  const selfServeData = useMemo(() => {
+    if (!launchData) return { spaces: [], studio: [] };
+    return {
+      spaces: (launchData.spacesIssues || []).map(i => ({
+        ...i, id: i.identifier, status: i.state?.name || 'Unknown',
+      })),
+      studio: (launchData.studioIssues || []).map(i => ({
+        ...i, id: i.identifier, status: i.state?.name || 'Unknown',
+      })),
+    };
+  }, [launchData]);
 
   // Summary stats
   const summary = useMemo(() => {
-    const total = groupedData.length;
-    const launched = groupedData.filter(d => d.readiness === 'launched').length;
-    const onTrack = groupedData.filter(d => d.readiness === 'on_track').length;
-    const atRisk = groupedData.filter(d => d.readiness === 'at_risk' || d.readiness === 'needs_attention').length;
-    return { total, launched, onTrack, atRisk };
-  }, [groupedData]);
-
-  const toggleSet = (setter, id) => {
-    setter(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
+    let totalPhases = 0, completedPhases = 0, totalTasks = 0, completedTasks = 0;
+    Object.values(checklistsByClient).forEach(c => {
+      c.phases.forEach(p => {
+        totalPhases++;
+        if (p.status === 'done') completedPhases++;
+        totalTasks += p.total;
+        completedTasks += p.checked;
+      });
     });
+
+    let activeBlockers = 0;
+    Object.entries(blockersByClient).forEach(([key, arr]) => {
+      if (key === '_crossClient') {
+        activeBlockers += arr.filter(b => b.status !== 'Done' && b.status !== 'Deployed').length;
+      } else {
+        // Avoid double-counting shared blockers — count only if this is the first client
+        const seen = new Set();
+        arr.forEach(b => {
+          if (!seen.has(b.id) && b.status !== 'Done' && b.status !== 'Deployed') {
+            if (!b.shared || b.shared.length === 0) {
+              activeBlockers++;
+            } else {
+              // Only count once for the first client alphabetically
+              const allClients = [key, ...b.shared].sort();
+              if (allClients[0] === key) activeBlockers++;
+            }
+          }
+          seen.add(b.id);
+        });
+      }
+    });
+
+    return {
+      tenantsOnboarding: Object.keys(checklistsByClient).length,
+      totalTasks, completedTasks,
+      totalPhases, completedPhases,
+      activeBlockers,
+    };
+  }, [checklistsByClient, blockersByClient]);
+
+  const toggle = (id) => setExpandedClients(prev => {
+    const n = new Set(prev);
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
+  });
+
+  // --- Phase Row ---
+  const PhaseRow = ({ phase }) => {
+    const sc = PHASE_STATUS_COLORS[phase.status];
+    const icon = PHASE_ICONS[phase.name] || '📌';
+    return (
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-slate-50 last:border-b-0 hover:bg-slate-50/50">
+        <span className="text-sm flex-shrink-0">{icon}</span>
+        <span className="text-sm text-slate-700 flex-1 min-w-0">{phase.name}</span>
+        <div className="w-32 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${phase.pct}%`, backgroundColor: sc.color }} />
+            </div>
+            <span className="text-[11px] text-slate-500 tabular-nums w-10 text-right">{phase.checked}/{phase.total}</span>
+          </div>
+        </div>
+        <span className="text-[10px] font-medium px-2 py-0.5 rounded flex-shrink-0 w-20 text-center"
+          style={{ backgroundColor: sc.bg, color: sc.color }}>{sc.label}</span>
+      </div>
+    );
   };
 
-  const hasLinearKey = typeof window !== 'undefined' && !!localStorage.getItem('pulseboard_linear_key');
+  // --- Blocker Issue Row ---
+  const BlockerRow = ({ issue }) => {
+    const color = STATUS_COLORS[issue.status] || '#94A3B8';
+    const isDone = issue.status === 'Done' || issue.status === 'Deployed';
+    return (
+      <div className={`flex items-center gap-2.5 px-4 py-2 border-b border-slate-50 last:border-b-0 ${isDone ? 'opacity-50' : ''} group hover:bg-slate-50/50`}>
+        <span className="text-xs flex-shrink-0">{PRIORITY_ICONS[issue.priority] || '·'}</span>
+        <span className="text-[11px] font-mono text-slate-400 flex-shrink-0">{issue.id}</span>
+        <span className={`text-sm flex-1 min-w-0 truncate ${isDone ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{issue.title}</span>
+        {issue.shared && issue.shared.length > 0 && (
+          <span className="text-[9px] text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded flex-shrink-0">
+            +{issue.shared.length} clients
+          </span>
+        )}
+        {issue.assignee && <span className="text-[10px] text-slate-400 flex-shrink-0">{issue.assignee}</span>}
+        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded flex-shrink-0"
+          style={{ backgroundColor: color + '15', color }}>{issue.status}</span>
+        <a href={issue.url || `https://linear.app/palazzo-ai/issue/${issue.id}`} target="_blank" rel="noopener noreferrer"
+          className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-indigo-500 transition-opacity flex-shrink-0">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+        </a>
+      </div>
+    );
+  };
 
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-800">Launch Readiness</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Client & partner launch progress with live Linear data</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* Live indicator */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            {linearLoading ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                Fetching from Linear...
-              </>
-            ) : lastFetched ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                Live · {lastFetched.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </>
-            ) : !hasLinearKey ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-slate-300" />
-                No Linear key configured
-              </>
-            ) : null}
+  // --- Client Card ---
+  const ClientCard = ({ client }) => {
+    const checklist = checklistsByClient[client.id];
+    const blockers = blockersByClient[client.id] || [];
+    const isExpanded = expandedClients.has(client.id);
+
+    if (!checklist) return null;
+
+    const totalChecked = checklist.phases.reduce((s, p) => s + p.checked, 0);
+    const totalTasks = checklist.phases.reduce((s, p) => s + p.total, 0);
+    const overallPct = totalTasks > 0 ? Math.round((totalChecked / totalTasks) * 100) : 0;
+    const currentPhase = checklist.phases.find(p => p.status === 'in_progress') || checklist.phases[0];
+    const activeBlockers = blockers.filter(b => b.status !== 'Done' && b.status !== 'Deployed');
+
+    let statusLabel = 'On Track';
+    let statusColor = '#2563EB';
+    let statusBg = '#EFF6FF';
+    if (overallPct === 100) { statusLabel = 'Ready'; statusColor = '#10B981'; statusBg = '#ECFDF5'; }
+    else if (activeBlockers.length > 1) { statusLabel = 'At Risk'; statusColor = '#DC2626'; statusBg = '#FEF2F2'; }
+    else if (activeBlockers.length === 1) { statusLabel = 'Needs Attention'; statusColor = '#D97706'; statusBg = '#FFFBEB'; }
+
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-4 hover:shadow-md transition-shadow">
+        <button onClick={() => toggle(client.id)}
+          className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-slate-50/30 transition-colors">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+            style={{ backgroundColor: client.color }}>
+            {client.logo}
           </div>
-          {/* Refresh */}
-          <button onClick={fetchLinearData} disabled={linearLoading}
-            className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50">
-            <svg className={`w-4 h-4 ${linearLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: 'Client Launches', value: summary.total, color: '#6366F1', bg: '#EEF2FF' },
-          { label: 'Launched', value: summary.launched, color: '#16A34A', bg: '#F0FDF4' },
-          { label: 'On Track', value: summary.onTrack, color: '#2563EB', bg: '#EFF6FF' },
-          { label: 'At Risk', value: summary.atRisk, color: '#DC2626', bg: '#FEF2F2' },
-        ].map(card => (
-          <div key={card.label} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
-            <div className="text-[10px] uppercase tracking-wide font-medium" style={{ color: card.color }}>{card.label}</div>
-            <div className="text-2xl font-bold mt-1" style={{ color: card.color }}>{card.value}</div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2.5">
+              <span className="text-base font-bold text-slate-800">{client.name}</span>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider"
+                style={{ backgroundColor: statusBg, color: statusColor, border: `1px solid ${statusColor}30` }}>
+                {statusLabel}
+              </span>
+              {activeBlockers.length > 0 && (
+                <span className="text-[10px] text-red-500 font-medium">{activeBlockers.length} blocker{activeBlockers.length !== 1 ? 's' : ''}</span>
+              )}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">
+              Phase: <span className="font-medium text-slate-700">{currentPhase?.name || 'N/A'}</span>
+              <span className="text-slate-400 mx-1.5">·</span>
+              {totalChecked}/{totalTasks} tasks
+            </div>
           </div>
-        ))}
-      </div>
+          <div className="w-40 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden flex">
+                {checklist.phases.map((p, i) => (
+                  <div key={i} className="h-full transition-all" title={`${p.name}: ${p.pct}%`}
+                    style={{
+                      width: `${(p.total / totalTasks) * 100}%`,
+                      backgroundColor: PHASE_STATUS_COLORS[p.status].color,
+                      opacity: p.status === 'done' ? 0.4 : p.status === 'in_progress' ? 0.85 : 0.15,
+                    }} />
+                ))}
+              </div>
+              <span className="text-sm font-bold text-slate-700 w-10 text-right">{overallPct}%</span>
+            </div>
+          </div>
+          <span className="text-slate-400 text-sm ml-1">{isExpanded ? '▾' : '▸'}</span>
+        </button>
 
-      {/* Filters & Legend */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
-            className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
-            <option value="all">All Clients</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <select value={filterReadiness} onChange={e => setFilterReadiness(e.target.value)}
-            className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
-            <option value="all">All Statuses</option>
-            <option value="launched">Launched</option>
-            <option value="on_track">On Track</option>
-            <option value="needs_attention">Needs Attention</option>
-            <option value="at_risk">At Risk</option>
-          </select>
-        </div>
-        <BarLegend />
-      </div>
-
-      {/* Client List */}
-      <div className="space-y-3">
-        {filteredData.map(({ client, milestones: cms, readiness, stats }) => {
-          const isExpanded = expandedClients.has(client.id);
-          // Find the nearest upcoming target date across this client's milestones
-          const clientDates = cms.map(m => getMilestoneDate(m)).filter(Boolean).sort((a, b) => a - b);
-          const nextDate = clientDates.find(d => d >= new Date()) || clientDates[clientDates.length - 1];
-          const clientCountdown = nextDate ? getCountdown(nextDate) : null;
-          return (
-            <div key={client.id} className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-              {/* Client Header */}
-              <button onClick={() => toggleSet(setExpandedClients, client.id)}
-                className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors text-left">
-                {/* Expand chevron */}
-                <svg className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                {/* Logo badge */}
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-                  style={{ backgroundColor: client.color }}>
-                  {client.logo}
+        {isExpanded && (
+          <div className="border-t border-slate-100">
+            <div className="flex">
+              <div className={`${blockers.length > 0 ? 'flex-1 border-r border-slate-100' : 'w-full'}`}>
+                <div className="px-4 py-2 bg-slate-50/60 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Onboarding Phases</span>
+                  <a href={checklist.url} target="_blank" rel="noopener noreferrer"
+                    className="text-[10px] text-indigo-500 hover:text-indigo-700 flex items-center gap-1">
+                    View in Linear
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                    </svg>
+                  </a>
                 </div>
-                {/* Client name & badge */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-800">{client.name}</span>
-                    <ReadinessBadge status={readiness} />
-                    {clientCountdown && (
-                      <span className="text-[10px] font-semibold" style={{ color: clientCountdown.color }}>
-                        {clientCountdown.text}
-                      </span>
-                    )}
+                {checklist.phases.map((phase, i) => (
+                  <PhaseRow key={i} phase={phase} />
+                ))}
+              </div>
+              {blockers.length > 0 && (
+                <div className="w-[420px] flex-shrink-0">
+                  <div className="px-4 py-2 bg-red-50/40 border-b border-slate-100">
+                    <span className="text-[10px] font-semibold text-red-500 uppercase tracking-wider">
+                      Engineering Blockers ({activeBlockers.length} active)
+                    </span>
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    {cms.length} milestone{cms.length !== 1 ? 's' : ''} · {stats.done}/{stats.total} issues done
-                    {nextDate && <span className="text-slate-400"> · Next: {formatDate(nextDate)}</span>}
-                  </div>
-                </div>
-                {/* Progress ring */}
-                <div className="relative shrink-0">
-                  <ProgressRing percent={stats.percent} size={44} strokeWidth={4}
-                    color={readiness === 'launched' ? '#16A34A' : readiness === 'at_risk' ? '#DC2626' : '#2563EB'} />
-                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-700">
-                    {stats.percent}%
-                  </span>
-                </div>
-              </button>
-
-              {/* Expanded: Milestones */}
-              {isExpanded && (
-                <div className="border-t border-slate-100">
-                  {cms.length === 0 ? (
-                    <div className="px-4 py-3 text-xs text-slate-400 italic">No milestones linked</div>
-                  ) : cms.map(milestone => {
-                    const mReadiness = getMilestoneReadiness(milestone.id);
-                    const mOpps = opportunities.filter(o => o.milestoneId === milestone.id);
-                    const mIssueIds = [];
-                    mOpps.forEach(o => { if (o.issues?.length) mIssueIds.push(...o.issues); });
-                    const mStats = getIssueStats([...new Set(mIssueIds)]);
-                    const isMExpanded = expandedMilestones.has(milestone.id);
-                    const mDate = getMilestoneDate(milestone);
-                    const mCountdown = mReadiness !== 'launched' ? getCountdown(mDate) : null;
-
-                    return (
-                      <div key={milestone.id} className="border-b border-slate-50 last:border-b-0">
-                        {/* Milestone Header */}
-                        <button onClick={() => toggleSet(setExpandedMilestones, milestone.id)}
-                          className="w-full flex items-center gap-3 px-4 py-3 pl-12 hover:bg-slate-50 transition-colors text-left">
-                          <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${isMExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-medium text-slate-800">{milestone.title}</span>
-                              <ReadinessBadge status={mReadiness} />
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full border font-medium"
-                                style={{ color: getAreaColor(milestone.area), borderColor: getAreaColor(milestone.area) + '40', backgroundColor: getAreaColor(milestone.area) + '10' }}>
-                                {getAreaName(milestone.area)}
-                              </span>
-                              <span className="text-[10px] text-slate-400">{mDate ? formatDate(mDate) : getMonthName(milestone.month)}</span>
-                              {mCountdown && (
-                                <span className="text-[10px] font-semibold" style={{ color: mCountdown.color }}>
-                                  {mCountdown.text}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 mt-1.5">
-                              <div className="flex-1 max-w-[200px]">
-                                <SegmentedBar done={mStats.done} inProgress={mStats.inProgress} blocked={mStats.blocked} total={mStats.total} />
-                              </div>
-                              <span className="text-[10px] text-slate-500 tabular-nums">{mStats.done}/{mStats.total}</span>
-                            </div>
-                          </div>
-                        </button>
-
-                        {/* Expanded: Opportunities */}
-                        {isMExpanded && (
-                          <div className="bg-slate-50/50">
-                            {mOpps.length === 0 ? (
-                              <div className="px-4 py-3 pl-20 text-xs text-slate-400 italic">No opportunities linked</div>
-                            ) : mOpps.map(opp => {
-                              const oppStats = getIssueStats(opp.issues || []);
-                              const isOppExpanded = expandedOpps.has(opp.id);
-                              const blockers = (opp.blockedBy || []).map(bid => opportunities.find(o => o.id === bid)).filter(Boolean);
-
-                              return (
-                                <div key={opp.id} className="border-b border-slate-100 last:border-b-0">
-                                  {/* Opportunity Row */}
-                                  <button onClick={() => toggleSet(setExpandedOpps, opp.id)}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 pl-20 hover:bg-white/60 transition-colors text-left">
-                                    <svg className={`w-3 h-3 text-slate-400 transition-transform shrink-0 ${isOppExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-xs font-medium text-slate-700">{opp.title}</span>
-                                        {opp.atRisk && (
-                                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200 font-medium">At Risk</span>
-                                        )}
-                                        {opp.status === 'blocked' && (
-                                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200 font-medium">Blocked</span>
-                                        )}
-                                        {opp.status === 'done' && (
-                                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 font-medium">Done</span>
-                                        )}
-                                      </div>
-                                      {blockers.length > 0 && (
-                                        <div className="text-[10px] text-red-500 mt-0.5">
-                                          Blocked by: {blockers.map(b => b.title).join(', ')}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <div className="w-24">
-                                        <SegmentedBar done={oppStats.done} inProgress={oppStats.inProgress} blocked={oppStats.blocked} total={oppStats.total} />
-                                      </div>
-                                      <span className="text-[10px] text-slate-500 tabular-nums w-8 text-right">
-                                        {(opp.issues || []).length > 0 ? `${oppStats.done}/${oppStats.total}` : ''}
-                                      </span>
-                                    </div>
-                                  </button>
-
-                                  {/* Expanded: Issues */}
-                                  {isOppExpanded && (
-                                    <div className="bg-white/80 border-t border-slate-100">
-                                      {(!opp.issues || opp.issues.length === 0) ? (
-                                        <div className="px-4 py-2.5 pl-28 text-xs text-slate-400 italic">No issues linked</div>
-                                      ) : (
-                                        <div className="divide-y divide-slate-50">
-                                          {[...(opp.issues || [])].sort((a, b) => {
-                                            // Sort: blocked first, then in_progress, then not_started, then done
-                                            const order = { blocked: 0, in_progress: 1, in_review: 1, not_started: 2, done: 3 };
-                                            const issueA = issueData?.get(a);
-                                            const issueB = issueData?.get(b);
-                                            const sA = issueA ? mapStatus(issueA.state) : 'not_started';
-                                            const sB = issueB ? mapStatus(issueB.state) : 'not_started';
-                                            return (order[sA] ?? 2) - (order[sB] ?? 2);
-                                          }).map(identifier => {
-                                            const issue = issueData?.get(identifier);
-                                            const status = issue ? mapStatus(issue.state) : 'not_started';
-                                            const statusConf = STATUS_CONFIG[status];
-                                            const priorityConf = PRIORITY_ICONS[issue?.priority] || PRIORITY_ICONS[0];
-
-                                            return (
-                                              <div key={identifier} className="flex items-center gap-3 px-4 py-2 pl-28 hover:bg-slate-50/50">
-                                                {/* Identifier */}
-                                                <a href={issue?.url || `https://linear.app/palazzo-ai/issue/${identifier}`}
-                                                  target="_blank" rel="noopener noreferrer"
-                                                  className="text-[10px] font-mono text-indigo-600 hover:text-indigo-800 hover:underline shrink-0 w-16">
-                                                  {identifier}
-                                                </a>
-                                                {/* Title */}
-                                                <span className="text-xs text-slate-700 flex-1 min-w-0 truncate">
-                                                  {issue?.title || <span className="text-slate-400 italic">Loading...</span>}
-                                                </span>
-                                                {/* Priority */}
-                                                <span className="text-[10px] font-bold shrink-0" style={{ color: priorityConf.color }}>
-                                                  {priorityConf.icon}
-                                                </span>
-                                                {/* Assignee */}
-                                                {issue?.assignee && (
-                                                  <span className="text-[10px] text-slate-500 shrink-0 max-w-[80px] truncate">{issue.assignee}</span>
-                                                )}
-                                                {/* Status badge */}
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0"
-                                                  style={{ color: statusConf.color, backgroundColor: statusConf.bg }}>
-                                                  {statusConf.label}
-                                                </span>
-                                                {/* Linear link */}
-                                                <a href={issue?.url || `https://linear.app/palazzo-ai/issue/${identifier}`}
-                                                  target="_blank" rel="noopener noreferrer"
-                                                  className="text-slate-400 hover:text-indigo-600 shrink-0">
-                                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                  </svg>
-                                                </a>
-                                                {/* Remove */}
-                                                {onSaveOpportunity && (
-                                                  <button
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      const updatedOpp = { ...opp, issues: (opp.issues || []).filter(i => i !== identifier) };
-                                                      onSaveOpportunity(updatedOpp);
-                                                      showNotification?.(`Removed ${identifier} from ${opp.title}`);
-                                                    }}
-                                                    className="text-slate-300 hover:text-red-500 shrink-0 transition-colors"
-                                                    title="Remove from launch">
-                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                      <line x1="18" y1="6" x2="6" y2="18" strokeWidth={2} strokeLinecap="round" />
-                                                      <line x1="6" y1="6" x2="18" y2="18" strokeWidth={2} strokeLinecap="round" />
-                                                    </svg>
-                                                  </button>
-                                                )}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {blockers.map(b => <BlockerRow key={b.id} issue={b} />)}
                 </div>
               )}
             </div>
-          );
-        })}
+          </div>
+        )}
+      </div>
+    );
+  };
 
-        {filteredData.length === 0 && (
-          <div className="bg-white border border-slate-200 rounded-lg p-8 text-center">
-            <p className="text-slate-400 text-sm">No client launches match your filters</p>
+  // --- Self-Serve Section ---
+  const SelfServeSection = ({ issues, name, color, logo, defaultExpanded }) => {
+    const [expanded, setExpanded] = useState(defaultExpanded);
+    const done = issues.filter(i => i.status === 'Done' || i.status === 'Deployed').length;
+    const inProgress = issues.filter(i => i.status === 'In Progress' || i.status === 'In Review' || i.status === 'Ready For Deploy').length;
+    const pct = issues.length > 0 ? Math.round((done / issues.length) * 100) : 0;
+
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-4">
+        <button onClick={() => setExpanded(!expanded)}
+          className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-slate-50/30 transition-colors">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+            style={{ backgroundColor: color }}>
+            {logo}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-base font-bold text-slate-800">{name}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">Self-Serve</span>
+            </div>
+            <span className="text-xs text-slate-500">{done}/{issues.length} done · {inProgress} in progress</span>
+          </div>
+          <div className="w-32 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${pct}%` }} />
+              </div>
+              <span className="text-sm font-bold text-slate-600">{pct}%</span>
+            </div>
+          </div>
+          <span className="text-slate-400 text-sm">{expanded ? '▾' : '▸'}</span>
+        </button>
+        {expanded && (
+          <div className="border-t border-slate-100">
+            {issues.map(issue => <BlockerRow key={issue.id} issue={issue} />)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // --- No Linear key state ---
+  if (!loading && !launchData) {
+    const hasKey = typeof window !== 'undefined' && !!localStorage.getItem('pulseboard_linear_key');
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <p className="text-sm text-slate-400">
+            {hasKey ? 'Failed to load launch data from Linear.' : 'Set your Linear API key in settings to see launch readiness data.'}
+          </p>
+          {hasKey && (
+            <button onClick={fetchData} className="mt-3 text-sm text-indigo-500 hover:text-indigo-700">
+              Try Again
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // --- Loading state ---
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="w-10 h-10 border-3 border-slate-200 border-t-indigo-500 rounded-full animate-spin mx-auto mb-3" style={{ borderWidth: 3 }} />
+          <p className="text-sm text-slate-400">Parsing onboarding checklists from Linear...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const crossClientBlockers = blockersByClient._crossClient || [];
+
+  return (
+    <div>
+      <div className="px-2 pt-2 pb-4">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h1 className="text-xl font-bold text-slate-800 tracking-tight">Launch Readiness</h1>
+            <p className="text-sm text-slate-500 mt-0.5">Onboarding progress + engineering blockers per client</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              Live from Linear
+            </div>
+            <button onClick={fetchData}
+              className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            <select value={filterType} onChange={e => setFilterType(e.target.value)}
+              className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700">
+              <option value="all">All Launches</option>
+              <option value="showcase">Showcase Tenants</option>
+              <option value="selfserve">Self-Serve Products</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Summary */}
+        <div className="grid grid-cols-4 gap-3 mb-6">
+          {[
+            { label: 'Tenants Onboarding', value: summary.tenantsOnboarding, color: '#334155', bg: '#F8FAFC', border: '#E2E8F0' },
+            { label: 'Tasks Complete', value: `${summary.completedTasks}/${summary.totalTasks}`, color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
+            { label: 'Phases Done', value: `${summary.completedPhases}/${summary.totalPhases}`, color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
+            { label: 'Active Blockers', value: summary.activeBlockers, color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
+          ].map(s => (
+            <div key={s.label} className="px-4 py-3 rounded-xl border" style={{ backgroundColor: s.bg, borderColor: s.border }}>
+              <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
+              <div className="text-xs font-medium mt-0.5" style={{ color: s.color, opacity: 0.7 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="px-2 pb-8">
+        {/* Cross-client P0s */}
+        {(filterType === 'all' || filterType === 'showcase') && crossClientBlockers.length > 0 && (
+          <div className="mb-6 bg-red-50/50 rounded-xl border border-red-200 p-4">
+            <div className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">Cross-Client Platform Blockers</div>
+            {crossClientBlockers.map(b => (
+              <div key={b.id} className="flex items-center gap-2.5 py-1.5">
+                <span className="text-xs">{PRIORITY_ICONS[b.priority]}</span>
+                <span className="text-[11px] font-mono text-red-400">{b.id}</span>
+                <span className="text-sm text-red-700">{b.title}</span>
+                {b.affects && b.affects.length > 0 && (
+                  <span className="text-[10px] text-red-400 flex-shrink-0">Affects: {b.affects.join(', ')}</span>
+                )}
+                {b.assignee && <span className="text-[10px] text-red-400 ml-auto">{b.assignee}</span>}
+                <span className="text-[10px] px-1.5 py-0.5 rounded"
+                  style={{ backgroundColor: (STATUS_COLORS[b.status] || '#94A3B8') + '15', color: STATUS_COLORS[b.status] || '#94A3B8' }}>
+                  {b.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Showcase Clients */}
+        {(filterType === 'all' || filterType === 'showcase') && (
+          <>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-1">Showcase Tenants</div>
+            {SHOWCASE_CLIENTS.map(c => <ClientCard key={c.id} client={c} />)}
+          </>
+        )}
+
+        {/* Self-Serve Launches */}
+        {(filterType === 'all' || filterType === 'selfserve') && (
+          <>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 mt-6 px-1">Self-Serve Product Launches</div>
+            <SelfServeSection issues={selfServeData.spaces} name="Spaces Self-Serve" color="#7C3AED" logo="SP" defaultExpanded={false} />
+            <SelfServeSection issues={selfServeData.studio} name="Studio Self-Serve" color="#D97706" logo="ST" defaultExpanded={false} />
+          </>
+        )}
+
+        {/* Empty state */}
+        {Object.keys(checklistsByClient).length === 0 && !loading && launchData && (
+          <div className="bg-white border border-slate-200 rounded-lg p-8 text-center mt-4">
+            <p className="text-slate-400 text-sm">No onboarding checklists found in the "Showcase Onboarding" project</p>
           </div>
         )}
       </div>

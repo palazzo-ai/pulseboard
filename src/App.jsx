@@ -1223,12 +1223,7 @@ export default function PalazzoTimeline() {
       {/* Launch Readiness View */}
       {viewMode === 'launches' && (
         <LaunchReadiness
-          opportunities={opportunities}
-          milestones={milestones}
-          areas={areas}
-          clients={clients}
           showNotification={showNotification}
-          onSaveOpportunity={saveOpportunity}
         />
       )}
 

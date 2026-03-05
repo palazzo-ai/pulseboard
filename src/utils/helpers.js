@@ -210,11 +210,16 @@ export const getMonthsForQuarter = (quarter) => months.filter(m => m.quarter ===
 
 // ========== CLIENTS ==========
 export const CLIENTS = [
-  { id: 'homezone', name: 'HomeZone', color: '#2563EB', logo: 'HZ' },
-  { id: 'serhant', name: 'Serhant', color: '#7C3AED', logo: 'SR' },
-  { id: 'wonder', name: 'Wonder', color: '#059669', logo: 'WD' },
-  { id: 'maxa', name: 'Maxa', color: '#D97706', logo: 'MX' },
-  { id: 'storis', name: 'Storis', color: '#DC2626', logo: 'ST' },
+  { id: 'homezone', name: 'HomeZone', color: '#2563EB', logo: 'HZ', linearLabel: 'Homezone' },
+  { id: 'serhant', name: 'Serhant', color: '#7C3AED', logo: 'SR', linearLabel: 'Serhant' },
+  { id: 'wonder', name: 'Wonder', color: '#059669', logo: 'WD', linearLabel: 'Wonder' },
+  { id: 'maxa', name: 'Maxa', color: '#D97706', logo: 'MX', linearLabel: 'Maxa' },
+  { id: 'storis', name: 'Storis', color: '#DC2626', logo: 'ST', linearLabel: 'Storis' },
+  { id: 'mathis', name: 'Mathis', color: '#8B5CF6', logo: 'MA', linearLabel: 'Mathis' },
+  { id: 'atlantic', name: 'Atlantic', color: '#0EA5E9', logo: 'AT', linearLabel: 'Atlantic' },
+  { id: 'bel', name: 'Bel Furniture', color: '#F59E0B', logo: 'BF', linearLabel: 'Bel Furniture' },
+  { id: 'hom', name: 'HOM', color: '#14B8A6', logo: 'HM', linearLabel: 'HOM' },
+  { id: 'ashley', name: 'Ashley', color: '#EF4444', logo: 'AS', linearLabel: 'Ashley' },
 ];
 
 export const CLIENT_COLORS = [
