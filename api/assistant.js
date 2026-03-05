@@ -46,12 +46,13 @@ LINEAR WRITE OPERATIONS:
 - For sub-issues, break work down into concrete implementation tasks (design, implement, test, etc.)
 - For comments, include relevant context like milestone deadlines, dependencies, and priority reasoning
 
-AUTO-MAPPING LINEAR PROJECTS:
+AUTO-MAPPING LINEAR PROJECTS AND CYCLES:
 - When the user mentions connecting Linear projects, importing a launch plan, auto-mapping issues, or syncing a project to a milestone, use the auto_map_linear_projects tool
-- This tool fetches all Linear projects and their issues, then matches them to Pulseboard milestones and opportunities by name similarity
+- When the user mentions pulling issues by cycle, importing a cycle, or mapping a cycle to a milestone, use the auto_map_linear_cycles tool
+- Both tools fetch data from Linear and match to Pulseboard milestones/opportunities by name similarity
 - If the user specifies a milestone or client name, pass the milestoneId to focus the matching
-- The tool returns proposed mappings for user confirmation — describe what was found before showing the card
-- If there are unmapped issues (issues in the Linear project that didn't match any opportunity), tell the user and suggest creating new opportunities for them
+- Both tools return proposed mappings for user confirmation — describe what was found before showing the card
+- If there are unmapped issues, tell the user and suggest creating new opportunities for them
 
 PROACTIVE LINEAR SUGGESTIONS:
 - When you complete a roadmap action, suggest the natural Linear follow-up if one exists. Don't just wait for the user to ask.
@@ -487,6 +488,19 @@ When you call plan_milestone and receive the context data back, you MUST analyze
         required: ["linearApiKey"],
       },
     },
+    {
+      name: "auto_map_linear_cycles",
+      description: "Fetch Linear cycles and their issues, then match them to Pulseboard milestones and opportunities by name/title similarity. Use when the user wants to pull in issues by cycle, import a sprint/cycle's work, or map a cycle to a milestone. Returns proposed issue mappings for user confirmation.",
+      input_schema: {
+        type: "object",
+        properties: {
+          linearApiKey: { type: "string", description: "The user's Linear API key" },
+          milestoneId: { type: "string", description: "Optional: focus on a specific milestone ID. If omitted, matches across all milestones with clients." },
+          cycleName: { type: "string", description: "Optional: filter to a specific cycle by name (partial match supported)." },
+        },
+        required: ["linearApiKey"],
+      },
+    },
   ];
 
   // Process a tool call and return result
@@ -815,7 +829,64 @@ When you call plan_milestone and receive the context data back, you MUST analyze
     }));
   }
 
-  // Match Linear projects to milestones and opportunities
+  // Fetch Linear cycles with their issues
+  async function fetchLinearCycles(linearApiKey, cycleName) {
+    const response = await fetch("https://api.linear.app/graphql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: linearApiKey,
+        "apollo-require-preflight": "true",
+      },
+      body: JSON.stringify({
+        query: `query {
+          cycles(first: 50, orderBy: createdAt) {
+            nodes {
+              id name number
+              startsAt endsAt
+              issues(first: 250) {
+                nodes {
+                  id identifier title
+                  state { name type }
+                  children { nodes { identifier } }
+                }
+              }
+            }
+          }
+        }`,
+      }),
+    });
+
+    const data = await response.json();
+    if (data.errors) {
+      throw new Error(`Linear API error: ${data.errors.map((e) => e.message).join(", ")}`);
+    }
+
+    let cycles = (data.data?.cycles?.nodes || []).map((c) => ({
+      id: c.id,
+      name: c.name || `Cycle ${c.number}`,
+      number: c.number,
+      startsAt: c.startsAt,
+      endsAt: c.endsAt,
+      issues: (c.issues?.nodes || []).map((i) => ({
+        identifier: i.identifier,
+        title: i.title,
+        state: i.state?.name,
+        stateType: i.state?.type,
+        children: (i.children?.nodes || []).map((ch) => ch.identifier),
+      })),
+    }));
+
+    // Filter by name if specified
+    if (cycleName) {
+      const q = cycleName.toLowerCase();
+      cycles = cycles.filter((c) => c.name.toLowerCase().includes(q));
+    }
+
+    return cycles;
+  }
+
+  // Match Linear items (projects or cycles) to milestones and opportunities
   function buildProjectMappings(linearProjects, state, focusMilestoneId) {
     const milestones = state.milestones || [];
     const opportunities = state.opportunities || [];
@@ -1010,6 +1081,35 @@ When you call plan_milestone and receive the context data back, you MUST analyze
                 result = {
                   type: "error",
                   message: `Failed to fetch Linear projects: ${err.message}`,
+                };
+              }
+            }
+          } else if (toolUse.name === "auto_map_linear_cycles") {
+            const linearApiKey = toolUse.input.linearApiKey;
+            if (!linearApiKey) {
+              result = {
+                type: "error",
+                message: "No Linear API key provided. Ask the user to configure their Linear API key first.",
+              };
+            } else {
+              try {
+                const cycles = await fetchLinearCycles(linearApiKey, toolUse.input.cycleName || null);
+                // Reuse the same matching logic — cycles have the same shape (name + issues)
+                const mappings = buildProjectMappings(cycles, roadmapState, toolUse.input.milestoneId || null);
+                result = {
+                  type: "mutation",
+                  action: "auto_map_linear_cycles",
+                  data: {
+                    mappings,
+                    cycleCount: cycles.length,
+                    matchedCount: mappings.length,
+                    sourceType: "cycle",
+                  },
+                };
+              } catch (err) {
+                result = {
+                  type: "error",
+                  message: `Failed to fetch Linear cycles: ${err.message}`,
                 };
               }
             }
