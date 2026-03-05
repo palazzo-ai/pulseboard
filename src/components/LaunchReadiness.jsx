@@ -96,6 +96,7 @@ export default function LaunchReadiness({ showNotification }) {
   const [loading, setLoading] = useState(true);
   const [expandedClients, setExpandedClients] = useState(new Set());
   const [filterType, setFilterType] = useState('all');
+  const [showArchivedBlockers, setShowArchivedBlockers] = useState(false);
 
   // Fetch launch data from Linear
   const fetchData = useCallback(async () => {
@@ -520,26 +521,58 @@ export default function LaunchReadiness({ showNotification }) {
 
       <div className="px-2 pb-8">
         {/* Cross-client P0s */}
-        {(filterType === 'all' || filterType === 'showcase') && crossClientBlockers.length > 0 && (
-          <div className="mb-6 bg-red-50/50 rounded-xl border border-red-200 p-4">
-            <div className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">Cross-Client Platform Blockers</div>
-            {crossClientBlockers.map(b => (
-              <div key={b.id} className="flex items-center gap-2.5 py-1.5">
-                <span className="text-xs">{PRIORITY_ICONS[b.priority]}</span>
-                <span className="text-[11px] font-mono text-red-400">{b.id}</span>
-                <span className="text-sm text-red-700">{b.title}</span>
-                {b.affects && b.affects.length > 0 && (
-                  <span className="text-[10px] text-red-400 flex-shrink-0">Affects: {b.affects.join(', ')}</span>
-                )}
-                {b.assignee && <span className="text-[10px] text-red-400 ml-auto">{b.assignee}</span>}
-                <span className="text-[10px] px-1.5 py-0.5 rounded"
-                  style={{ backgroundColor: (STATUS_COLORS[b.status] || '#94A3B8') + '15', color: STATUS_COLORS[b.status] || '#94A3B8' }}>
-                  {b.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        {(filterType === 'all' || filterType === 'showcase') && crossClientBlockers.length > 0 && (() => {
+          const activeCross = crossClientBlockers.filter(b => b.status !== 'Done' && b.status !== 'Deployed');
+          const archivedCross = crossClientBlockers.filter(b => b.status === 'Done' || b.status === 'Deployed');
+          return (activeCross.length > 0 || archivedCross.length > 0) && (
+            <div className="mb-6 bg-red-50/50 rounded-xl border border-red-200 p-4">
+              <div className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">Cross-Client Platform Blockers</div>
+              {activeCross.map(b => (
+                <div key={b.id} className="flex items-center gap-2.5 py-1.5">
+                  <span className="text-xs">{PRIORITY_ICONS[b.priority]}</span>
+                  <span className="text-[11px] font-mono text-red-400">{b.id}</span>
+                  <span className="text-sm text-red-700">{b.title}</span>
+                  {b.affects && b.affects.length > 0 && (
+                    <span className="text-[10px] text-red-400 flex-shrink-0">Affects: {b.affects.join(', ')}</span>
+                  )}
+                  {b.assignee && <span className="text-[10px] text-red-400 ml-auto">{b.assignee}</span>}
+                  <span className="text-[10px] px-1.5 py-0.5 rounded"
+                    style={{ backgroundColor: (STATUS_COLORS[b.status] || '#94A3B8') + '15', color: STATUS_COLORS[b.status] || '#94A3B8' }}>
+                    {b.status}
+                  </span>
+                </div>
+              ))}
+              {activeCross.length === 0 && (
+                <div className="text-xs text-slate-400 italic py-1">No active cross-client blockers</div>
+              )}
+              {archivedCross.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-red-100">
+                  <button onClick={() => setShowArchivedBlockers(!showArchivedBlockers)}
+                    className="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-1">
+                    <span>{showArchivedBlockers ? '▾' : '▸'}</span>
+                    {archivedCross.length} resolved blocker{archivedCross.length !== 1 ? 's' : ''}
+                  </button>
+                  {showArchivedBlockers && (
+                    <div className="mt-1.5 opacity-50">
+                      {archivedCross.map(b => (
+                        <div key={b.id} className="flex items-center gap-2.5 py-1.5">
+                          <span className="text-xs">{PRIORITY_ICONS[b.priority]}</span>
+                          <span className="text-[11px] font-mono text-red-400">{b.id}</span>
+                          <span className="text-sm text-slate-400 line-through">{b.title}</span>
+                          {b.assignee && <span className="text-[10px] text-slate-400 ml-auto">{b.assignee}</span>}
+                          <span className="text-[10px] px-1.5 py-0.5 rounded"
+                            style={{ backgroundColor: (STATUS_COLORS[b.status] || '#94A3B8') + '15', color: STATUS_COLORS[b.status] || '#94A3B8' }}>
+                            {b.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Showcase Clients */}
         {(filterType === 'all' || filterType === 'showcase') && (
